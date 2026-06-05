@@ -215,8 +215,13 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        if (typeof renderReactionsPage === 'function') {
-            renderReactionsPage();
+        const initialClass = "{{ selected_class }}";
+        if (initialClass && initialClass !== 'all') {
+            selectClassFilter(initialClass, "Class " + initialClass);
+        } else {
+            if (typeof renderReactionsPage === 'function') {
+                renderReactionsPage();
+            }
         }
 
         // Custom Dropdown Menu Toggle Handler (Type filter)

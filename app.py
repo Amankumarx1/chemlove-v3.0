@@ -691,8 +691,15 @@ def student_dashboard():
 @app.route('/student/chapters')
 @student_required
 def student_chapters():
-    chapters = all_chapters()
-    return render_template('student/chapters.html', current_user=get_current_user(), chapters=chapters, active_tab='chapters')
+    user = get_current_user()
+    class_level = request.args.get('class_level', user.get('classLevel') or '11')
+    with get_db() as conn:
+        if class_level == 'all':
+            rows = conn.execute("SELECT * FROM chapters ORDER BY class_level ASC, chapter_number ASC").fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM chapters WHERE class_level = %s ORDER BY chapter_number ASC", (class_level,)).fetchall()
+    chapters = [parse_chapter_json_fields(row) for row in rows]
+    return render_template('student/chapters.html', current_user=user, chapters=chapters, selected_class=class_level, active_tab='chapters')
 
 
 @app.route('/student/chapter/<int:chapter_id>')
@@ -708,13 +715,28 @@ def student_chapter_view(chapter_id):
 @app.route('/student/reactions')
 @student_required
 def student_reactions():
-    return render_template('student/reactions.html', current_user=get_current_user(), active_tab='reactions')
+    user = get_current_user()
+    class_level = request.args.get('class_level', user.get('classLevel') or '11')
+    return render_template('student/reactions.html', current_user=user, selected_class=class_level, active_tab='reactions')
 
 
 @app.route('/student/experiments')
 @student_required
 def student_experiments():
-    return render_template('student/experiments.html', current_user=get_current_user(), experiments=all_experiments(), active_tab='experiments')
+    user = get_current_user()
+    class_level = request.args.get('class_level', user.get('classLevel') or '11')
+    with get_db() as conn:
+        if class_level == 'all':
+            rows = conn.execute("SELECT e.*, c.class_level FROM experiments e LEFT JOIN chapters c ON e.chapter_id = c.id ORDER BY e.id ASC").fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT e.*, c.class_level FROM experiments e
+                LEFT JOIN chapters c ON e.chapter_id = c.id
+                WHERE c.class_level = %s OR (c.class_level IS NULL AND %s = '11')
+                ORDER BY e.id ASC
+            """, (class_level, class_level)).fetchall()
+    experiments = [parse_experiment_json_fields(row) for row in rows]
+    return render_template('student/experiments.html', current_user=user, experiments=experiments, selected_class=class_level, active_tab='experiments')
 
 
 @app.route('/student/experiment/<int:experiment_id>')
@@ -730,7 +752,37 @@ def student_experiment_view(experiment_id):
 @app.route('/student/quizzes')
 @student_required
 def student_quizzes():
-    return render_template('student/quizzes.html', current_user=get_current_user(), quizzes=all_quizzes(), active_tab='quizzes')
+    user = get_current_user()
+    class_level = request.args.get('class_level', user.get('classLevel') or '11')
+    quizzes = []
+    with get_db() as conn:
+        if class_level == 'all':
+            quiz_rows = conn.execute("SELECT q.*, c.class_level FROM quizzes q LEFT JOIN chapters c ON q.chapter_id = c.id ORDER BY q.id ASC").fetchall()
+        else:
+            quiz_rows = conn.execute("""
+                SELECT q.*, c.class_level FROM quizzes q
+                LEFT JOIN chapters c ON q.chapter_id = c.id
+                WHERE c.class_level = %s
+                ORDER BY q.id ASC
+            """, (class_level,)).fetchall()
+    for q_row in quiz_rows:
+        q_dict = dict(q_row)
+        with get_db() as conn:
+            questions = conn.execute("SELECT * FROM quiz_questions WHERE quiz_id = %s ORDER BY id ASC", (q_dict['id'],)).fetchall()
+        enriched_questions = []
+        for ques in questions:
+            q_info = dict(ques)
+            opts = [q_info['option_a'], q_info['option_b'], q_info['option_c'], q_info['option_d']]
+            q_info['options'] = [o for o in opts if o]
+            letter_idx = ord(q_info['correct_answer'].upper()) - 65
+            if 0 <= letter_idx < len(q_info['options']):
+                q_info['answer'] = q_info['options'][letter_idx]
+            else:
+                q_info['answer'] = q_info['option_a']
+            enriched_questions.append(q_info)
+        q_dict['questions'] = enriched_questions
+        quizzes.append(q_dict)
+    return render_template('student/quizzes.html', current_user=user, quizzes=quizzes, selected_class=class_level, active_tab='quizzes')
 
 
 @app.route('/student/quiz/<int:chapter_id>')
@@ -1413,9 +1465,13 @@ def api_quizzes():
 
 @app.route('/api/reactions')
 def api_reactions():
+    class_level = request.args.get('class_level')
     try:
         with get_db() as conn:
-            rows = conn.execute("SELECT * FROM reactions ORDER BY id ASC").fetchall()
+            if class_level and class_level != 'all':
+                rows = conn.execute("SELECT * FROM reactions WHERE class_level = %s ORDER BY id ASC", (class_level,)).fetchall()
+            else:
+                rows = conn.execute("SELECT * FROM reactions ORDER BY id ASC").fetchall()
         reactions = []
         for r in rows:
             parsed = parse_reaction_json_fields(r)

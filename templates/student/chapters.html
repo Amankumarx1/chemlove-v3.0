@@ -13,6 +13,25 @@
         <p class="text-slate-400 mt-2 text-sm">Select a chapter from your Class {{ current_user.classLevel or '9-12' }} syllabus to deploy key points, formulas, reactions, and practice modules.</p>
     </div>
 
+    <!-- Class Level Filter Tabs -->
+    <div class="flex gap-2.5 overflow-x-auto pb-4 border-b border-white/5 mb-8">
+        <a href="?class_level=9" class="px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 {% if selected_class == '9' %}text-cyan-400 bg-cyan-950/20 border border-cyan-500/10{% else %}text-slate-400 hover:text-white{% endif %}">
+            <span class="material-symbols-outlined text-base">filter_9</span> Class 9
+        </a>
+        <a href="?class_level=10" class="px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 {% if selected_class == '10' %}text-cyan-400 bg-cyan-950/20 border border-cyan-500/10{% else %}text-slate-400 hover:text-white{% endif %}">
+            <span class="material-symbols-outlined text-base">filter_10</span> Class 10
+        </a>
+        <a href="?class_level=11" class="px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 {% if selected_class == '11' %}text-cyan-400 bg-cyan-950/20 border border-cyan-500/10{% else %}text-slate-400 hover:text-white{% endif %}">
+            <span class="material-symbols-outlined text-base">looks_one</span> Class 11
+        </a>
+        <a href="?class_level=12" class="px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 {% if selected_class == '12' %}text-cyan-400 bg-cyan-950/20 border border-cyan-500/10{% else %}text-slate-400 hover:text-white{% endif %}">
+            <span class="material-symbols-outlined text-base">looks_two</span> Class 12
+        </a>
+        <a href="?class_level=all" class="px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 {% if selected_class == 'all' %}text-cyan-400 bg-cyan-950/20 border border-cyan-500/10{% else %}text-slate-400 hover:text-white{% endif %}">
+            <span class="material-symbols-outlined text-base">grid_view</span> All Grades
+        </a>
+    </div>
+
     <!-- Chapters Cards List -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for ch in chapters %}

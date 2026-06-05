@@ -132,7 +132,122 @@
 
                 <!-- Quest Cards Grid -->
                 <div class="space-y-5">
-                    
+                    {% if current_user.classLevel == '9' %}
+                    <!-- CLASS 9 QUESTS -->
+                    <!-- Quest 1 -->
+                    <div id="quest-1" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q1-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Particulate Study</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Open and read the Chapter 4 (Matter in Our Surroundings) study notes to secure early tokens.</p>
+                        </div>
+                        <a id="q1-btn" href="/student/chapter/4" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Open Notes</a>
+                    </div>
+
+                    <!-- Quest 2 -->
+                    <div id="quest-2" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q2-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Ice Melting Point Experiment</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Review the Melting Point of Ice experiment procedure, apparatus requirements, and results.</p>
+                        </div>
+                        <a id="q2-btn" href="/student/experiment/3" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">View Lab</a>
+                    </div>
+
+                    <!-- Quest 3 -->
+                    <div id="quest-3" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q3-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Matter Evaluation Challenge</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Score a passing result on the Matter in Our Surroundings practice evaluation module.</p>
+                        </div>
+                        <a id="q3-btn" href="/student/quiz/4" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Launch Quiz</a>
+                    </div>
+
+                    {% elif current_user.classLevel == '10' %}
+                    <!-- CLASS 10 QUESTS -->
+                    <!-- Quest 1 -->
+                    <div id="quest-1" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q1-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Acids & Bases Study</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Open and read the Chapter 5 (Acids, Bases and Salts) study notes to secure early tokens.</p>
+                        </div>
+                        <a id="q1-btn" href="/student/chapter/5" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Open Notes</a>
+                    </div>
+
+                    <!-- Quest 2 -->
+                    <div id="quest-2" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q2-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">pH Solution Testing</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Observe indicators and pH values of solutions in the pH determination lab.</p>
+                        </div>
+                        <a id="q2-btn" href="/student/experiment/4" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">View Lab</a>
+                    </div>
+
+                    <!-- Quest 3 -->
+                    <div id="quest-3" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q3-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Acids & Bases Evaluation</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Score a passing result on the Acids, Bases and Salts practice evaluation module.</p>
+                        </div>
+                        <a id="q3-btn" href="/student/quiz/5" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Launch Quiz</a>
+                    </div>
+
+                    {% elif current_user.classLevel == '12' %}
+                    <!-- CLASS 12 QUESTS -->
+                    <!-- Quest 1 -->
+                    <div id="quest-1" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q1-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Kinetics Theory Study</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Open and read the Chapter 6 (Chemical Kinetics) study notes to secure early tokens.</p>
+                        </div>
+                        <a id="q1-btn" href="/student/chapter/6" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Open Notes</a>
+                    </div>
+
+                    <!-- Quest 2 -->
+                    <div id="quest-2" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q2-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Reaction Rates Study</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Observe the effect of thiosulphate concentration in the kinetics laboratory experiment.</p>
+                        </div>
+                        <a id="q2-btn" href="/student/experiment/5" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">View Lab</a>
+                    </div>
+
+                    <!-- Quest 3 -->
+                    <div id="quest-3" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q3-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Kinetics Evaluation</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Score a passing result on the Chemical Kinetics practice evaluation module.</p>
+                        </div>
+                        <a id="q3-btn" href="/student/quiz/6" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Launch Quiz</a>
+                    </div>
+
+                    {% else %}
+                    <!-- CLASS 11 QUESTS (DEFAULT) -->
                     <!-- Quest 1 -->
                     <div id="quest-1" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
                         <div class="space-y-2">
@@ -168,7 +283,7 @@
                         </div>
                         <a id="q3-btn" href="/student/virtual-lab" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Launch Lab</a>
                     </div>
-
+                    {% endif %}
                 </div>
             </div>
 
@@ -208,8 +323,9 @@
             const data = await res.json();
             
             const history = data.history || [];
+            const userClassLevel = "{{ current_user.classLevel or '11' }}";
             
-            // Check quest criteria
+            // Check quest criteria based on class level
             let q1Done = false;
             let q2Done = false;
             let q3Done = false;
@@ -218,19 +334,59 @@
                 const eventType = log.event_type;
                 const eventData = log.event_data || '';
                 
-                // Quest 1: Wurtz Reaction in Virtual Lab
-                if (eventType === 'reaction_success' && eventData.includes('Wurtz Reaction')) {
-                    q1Done = true;
-                }
-                
-                // Quest 2: Titration Complete
-                if (eventType === 'titration_complete') {
-                    q2Done = true;
-                }
-                
-                // Quest 3: Kolbe's Reaction in Virtual Lab
-                if (eventType === 'reaction_success' && eventData.includes("Kolbe's Reaction")) {
-                    q3Done = true;
+                if (userClassLevel === '9') {
+                    // Quest 1: read_notes for chapter_id=4
+                    if (eventType === 'read_notes' && eventData.includes('chapter_id=4')) {
+                        q1Done = true;
+                    }
+                    // Quest 2: view_experiment for experiment_id=3
+                    if (eventType === 'view_experiment' && eventData.includes('experiment_id=3')) {
+                        q2Done = true;
+                    }
+                    // Quest 3: quiz_passed for chapter_id=4
+                    if (eventType === 'quiz_passed' && eventData.includes('chapter_id=4')) {
+                        q3Done = true;
+                    }
+                } else if (userClassLevel === '10') {
+                    // Quest 1: read_notes for chapter_id=5
+                    if (eventType === 'read_notes' && eventData.includes('chapter_id=5')) {
+                        q1Done = true;
+                    }
+                    // Quest 2: view_experiment for experiment_id=4
+                    if (eventType === 'view_experiment' && eventData.includes('experiment_id=4')) {
+                        q2Done = true;
+                    }
+                    // Quest 3: quiz_passed for chapter_id=5
+                    if (eventType === 'quiz_passed' && eventData.includes('chapter_id=5')) {
+                        q3Done = true;
+                    }
+                } else if (userClassLevel === '12') {
+                    // Quest 1: read_notes for chapter_id=6
+                    if (eventType === 'read_notes' && eventData.includes('chapter_id=6')) {
+                        q1Done = true;
+                    }
+                    // Quest 2: view_experiment for experiment_id=5
+                    if (eventType === 'view_experiment' && eventData.includes('experiment_id=5')) {
+                        q2Done = true;
+                    }
+                    // Quest 3: quiz_passed for chapter_id=6
+                    if (eventType === 'quiz_passed' && eventData.includes('chapter_id=6')) {
+                        q3Done = true;
+                    }
+                } else {
+                    // Class 11 (Default)
+                    // Quest 1: Wurtz Reaction in Virtual Lab
+                    if (eventType === 'reaction_success' && eventData.includes('Wurtz Reaction')) {
+                        q1Done = true;
+                    }
+                    // Quest 2: Titration Complete
+                    if (eventType === 'titration_complete') {
+                        q2Done = true;
+                    }
+                    // Quest 3: Kolbe's Reaction in Virtual Lab
+                    if (eventType === 'reaction_success' && eventData.includes("Kolbe's Reaction")) {
+                        q3Done = true;
+                    }
                 }
             });
             
