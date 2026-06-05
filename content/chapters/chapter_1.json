@@ -1,0 +1,180 @@
+{
+  "id": 1,
+  "number": 1,
+  "class": 11,
+  "subject": "Chemistry",
+  "title": "Some Basic Concepts of Chemistry",
+  "description": "This chapter introduces the fundamental principles of chemistry including laws of chemical combination, atomic and molecular masses, mole concept, stoichiometry, concentration terms, and calculations involving chemical equations.",
+
+  "learning_objectives": [
+    "Understand the nature of matter and its classification.",
+    "Learn the laws of chemical combination.",
+    "Apply the mole concept in numerical problems.",
+    "Perform stoichiometric calculations.",
+    "Calculate concentration using molarity and molality.",
+    "Interpret balanced chemical equations."
+  ],
+
+  "key_points": [
+    "Matter is anything that occupies space and has mass.",
+    "Atoms are the smallest units of matter.",
+    "Molecules are formed by the combination of atoms.",
+    "Chemical reactions follow the Law of Conservation of Mass.",
+    "The mole is the SI unit for amount of substance.",
+    "One mole contains 6.022 × 10^23 particles.",
+    "Balanced chemical equations obey stoichiometric relationships.",
+    "Concentration of solutions can be expressed using molarity and molality."
+  ],
+
+  "important_laws": [
+    {
+      "name": "Law of Conservation of Mass",
+      "statement": "Mass can neither be created nor destroyed during a chemical reaction."
+    },
+    {
+      "name": "Law of Definite Proportions",
+      "statement": "A chemical compound always contains the same elements in the same proportion by mass."
+    },
+    {
+      "name": "Law of Multiple Proportions",
+      "statement": "When two elements combine to form more than one compound, the masses of one element that combine with a fixed mass of the other are in simple whole-number ratios."
+    },
+    {
+      "name": "Gay-Lussac's Law of Gaseous Volumes",
+      "statement": "Gases combine in simple whole-number ratios by volume."
+    },
+    {
+      "name": "Avogadro's Law",
+      "statement": "Equal volumes of gases at the same temperature and pressure contain equal numbers of molecules."
+    }
+  ],
+
+  "formulas": [
+    {
+      "name": "Number of Moles",
+      "formula": "n = Mass / Molar Mass"
+    },
+    {
+      "name": "Number of Particles",
+      "formula": "N = n × NA"
+    },
+    {
+      "name": "Molarity",
+      "formula": "M = Moles of Solute / Volume of Solution (L)"
+    },
+    {
+      "name": "Molality",
+      "formula": "m = Moles of Solute / Mass of Solvent (kg)"
+    },
+    {
+      "name": "Percentage Composition",
+      "formula": "% Element = (Mass of Element / Molecular Mass) × 100"
+    },
+    {
+      "name": "Empirical Formula",
+      "formula": "Molecular Formula = n × Empirical Formula"
+    }
+  ],
+
+  "constants": [
+    {
+      "name": "Avogadro Constant",
+      "value": "6.022 × 10^23 mol^-1"
+    },
+    {
+      "name": "Molar Volume at STP",
+      "value": "22.4 L"
+    }
+  ],
+
+  "important_reactions": [
+    {
+      "equation": "2H2 + O2 → 2H2O",
+      "type": "Combination Reaction"
+    },
+    {
+      "equation": "C + O2 → CO2",
+      "type": "Combustion Reaction"
+    },
+    {
+      "equation": "N2 + 3H2 → 2NH3",
+      "type": "Haber Process"
+    }
+  ],
+
+  "notes": [
+    "Chemistry is the science of matter and its transformations.",
+    "The mole concept forms the foundation of quantitative chemistry.",
+    "Stoichiometry helps determine reactant and product quantities.",
+    "Balanced equations are essential for chemical calculations.",
+    "Atomic mass is measured in atomic mass units (u)."
+  ],
+
+  "real_life_applications": [
+    "Calculation of medicine dosages.",
+    "Industrial production of chemicals.",
+    "Fertilizer manufacturing.",
+    "Environmental pollution analysis.",
+    "Food chemistry and nutrition."
+  ],
+
+  "virtual_labs": [
+    {
+      "id": 101,
+      "title": "Mole Concept Simulator",
+      "description": "Convert between mass, moles and particles interactively."
+    },
+    {
+      "id": 102,
+      "title": "Stoichiometry Calculator",
+      "description": "Perform reactant-product calculations."
+    },
+    {
+      "id": 103,
+      "title": "Solution Concentration Lab",
+      "description": "Prepare solutions and calculate molarity."
+    }
+  ],
+
+  "practice_questions": [
+    {
+      "id": 1,
+      "question": "Calculate the molecular mass of glucose (C6H12O6).",
+      "hint": "C = 12, H = 1, O = 16"
+    },
+    {
+      "id": 2,
+      "question": "How many moles are present in 180 g of water?",
+      "hint": "Molar mass of water = 18 g/mol"
+    },
+    {
+      "id": 3,
+      "question": "Calculate the number of molecules present in 2 moles of oxygen."
+    },
+    {
+      "id": 4,
+      "question": "Find the molarity of a solution containing 2 moles of NaCl dissolved in 1 litre of solution."
+    },
+    {
+      "id": 5,
+      "question": "Calculate the percentage composition of oxygen in water."
+    }
+  ],
+
+  "quiz_id": 1,
+
+  "difficulty": "Beginner",
+
+  "estimated_study_time": "4 Hours",
+
+  "chapter_weightage": {
+    "boards": "High",
+    "jee": "Very High",
+    "neet": "Very High"
+  },
+
+  "next_chapter": {
+    "id": 2,
+    "title": "Structure of Atom"
+  }
+}

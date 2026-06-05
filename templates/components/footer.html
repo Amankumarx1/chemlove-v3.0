@@ -1,0 +1,48 @@
+<footer id="site-footer" class="w-full py-16 px-8 flex flex-col md:flex-row justify-between items-start gap-8 bg-[#090f11] border-t border-white/5 mt-auto relative z-10">
+    <div class="max-w-md">
+        <div class="text-2xl font-black text-cyan-500 italic mb-3 font-headline uppercase">
+            CHEMLOVE
+        </div>
+        <p class="text-slate-400 text-xs font-semibold mb-6">
+            Where Chemistry Comes Alive Through Interactive Learning.
+        </p>
+        <p class="text-slate-500 font-bold uppercase text-[10px] mb-8 tracking-widest">
+            © 2026 CHEMLOVE. THE MOLECULAR VANGUARD.
+        </p>
+        <div class="flex gap-4">
+            <a class="w-10 h-10 rounded-xl bg-slate-900/40 border border-white/5 flex items-center justify-center hover:bg-cyan-500 hover:text-on-primary transition-all shadow-md" href="#">
+                <span class="material-symbols-outlined text-sm">share</span>
+            </a>
+            <a class="w-10 h-10 rounded-xl bg-slate-900/40 border border-white/5 flex items-center justify-center hover:bg-cyan-500 hover:text-on-primary transition-all shadow-md" href="#">
+                <span class="material-symbols-outlined text-sm">alternate_email</span>
+            </a>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-xl">
+        <div class="flex flex-col gap-4">
+            <span class="text-slate-400 font-black uppercase tracking-widest text-xs mb-2">Ecosystem Matrix</span>
+            <p class="text-slate-500 font-bold uppercase text-[10px] tracking-wider leading-relaxed">
+                Virtual Labs • Reaction Simulators • Smart Quizzes • Practical Records • Analytics • Achievement System
+            </p>
+        </div>
+        <div class="flex flex-col gap-4">
+            <span class="text-slate-400 font-black uppercase tracking-widest text-xs mb-2">Quick Navigation</span>
+            {% if current_user and current_user.role == 'student' %}
+                <a href="/student/chapters" class="text-slate-500 font-bold uppercase text-[10px] tracking-wider hover:text-cyan-400 transition-colors">Syllabus Notes</a>
+                <a href="/student/virtual-lab" class="text-slate-500 font-bold uppercase text-[10px] tracking-wider hover:text-cyan-400 transition-colors">Virtual sandbox</a>
+            {% else %}
+                <a href="/login" class="text-slate-500 font-bold uppercase text-[10px] tracking-wider hover:text-cyan-400 transition-colors">Syllabus Notes</a>
+                <a href="/login" class="text-slate-500 font-bold uppercase text-[10px] tracking-wider hover:text-cyan-400 transition-colors">Virtual sandbox</a>
+            {% endif %}
+            <a class="text-slate-500 font-bold uppercase text-[10px] tracking-wider hover:text-cyan-400 transition-colors" href="/about">About Us</a>
+            <a class="text-slate-500 font-bold uppercase text-[10px] tracking-wider hover:text-cyan-400 transition-colors" href="/contact">Contact</a>
+        </div>
+    </div>
+    <div class="w-full md:w-auto border border-white/10 bg-slate-900/40 p-8 rounded-2xl shadow-xl max-w-xs">
+        <span class="text-on-surface font-bold uppercase block mb-4 text-sm tracking-wider">Join Scientific Journal</span>
+        <div class="flex gap-2">
+            <input class="bg-[#0e1416] border border-white/5 rounded-xl text-on-surface placeholder:text-slate-600 focus:outline-none focus:border-primary py-2.5 px-4 text-xs font-bold uppercase w-full" placeholder="EMAIL" type="text" />
+            <button class="kinetic-gradient text-on-primary rounded-xl px-5 py-2.5 text-xs font-bold uppercase hover:scale-102 transition-all active:scale-98">Join</button>
+        </div>
+    </div>
+</footer>

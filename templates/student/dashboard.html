@@ -1,0 +1,313 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Student Dashboard{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Welcome Header -->
+    <div class="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+            <div class="inline-flex items-center gap-2 bg-primary-container/20 text-primary px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
+                <span class="w-2 h-2 rounded-full bg-primary live-pulse"></span>
+                Learning Terminal
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Welcome back, @{{ current_user.name.split(' ')[0]|lower }}</h1>
+            <p class="text-slate-400 mt-2 text-sm">Deploying interactive labs and real-time concept tracking for Class {{ current_user.classLevel or '9-12' }}.</p>
+        </div>
+        
+        <!-- Quick stats summary badge -->
+        <div class="flex items-center gap-4 bg-slate-900/40 border border-white/5 px-6 py-3.5 rounded-2xl backdrop-blur-md">
+            <div class="relative w-12 h-12 flex items-center justify-center">
+                <span class="material-symbols-outlined text-3xl text-cyan-400">verified</span>
+            </div>
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Institution</div>
+                <div class="text-sm font-black text-white">{{ current_user.institution }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        
+        <!-- Left Column: Rank Progression & Mastery -->
+        <div class="lg:col-span-1 space-y-8">
+            
+            <!-- Rank & XP Progression -->
+            <div class="glass-morphism p-8 rounded-3xl relative overflow-hidden flex flex-col items-center">
+                <div class="absolute -right-16 -top-16 w-36 h-36 bg-primary/5 rounded-full blur-2xl"></div>
+                <div class="absolute -left-16 -bottom-16 w-36 h-36 bg-tertiary/5 rounded-full blur-2xl"></div>
+                
+                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-6 w-full text-center">Rank Progression</h3>
+                
+                <!-- SVG XP Ring -->
+                <div class="relative w-36 h-36 flex items-center justify-center mb-6">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.05)" stroke-width="7" fill="transparent" />
+                        <circle id="xp-dial" cx="50" cy="50" r="40" stroke="url(#cyan-magenta-grad)" stroke-width="7" fill="transparent"
+                            stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" class="transition-all duration-1000 ease-out" />
+                        <defs>
+                            <linearGradient id="cyan-magenta-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#4cd7f6" />
+                                <stop offset="100%" stop-color="#ec4899" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="absolute flex flex-col items-center">
+                        <span id="xp-text" class="text-3xl font-black tracking-tight text-white">{{ current_user.current_xp or 100 }}</span>
+                        <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">XP TOTAL</span>
+                    </div>
+                </div>
+                
+                <!-- Rank Description -->
+                <div class="text-center space-y-1">
+                    <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Current Title</div>
+                    <div id="rank-title" class="text-lg font-black uppercase text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary">Apprentice Chemist</div>
+                    <p id="rank-next" class="text-xs text-slate-400 pt-2 font-medium">Complete more lab quests to level up.</p>
+                </div>
+            </div>
+
+            <!-- Concept Mastery -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-cyan-400" style="font-variation-settings: 'FILL' 1;">analytics</span>
+                    Concept Telemetry
+                </h3>
+                <div class="space-y-6">
+                    <div>
+                        <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                            <span class="text-slate-400">Organic Chemistry</span>
+                            <span class="text-cyan-400">85%</span>
+                        </div>
+                        <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
+                            <div class="h-full bg-gradient-to-r from-primary to-cyan-500 rounded-full" style="width: 85%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                            <span class="text-slate-400">Inorganic Reactions</span>
+                            <span class="text-tertiary">60%</span>
+                        </div>
+                        <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
+                            <div class="h-full bg-gradient-to-r from-tertiary to-pink-500 rounded-full" style="width: 60%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                            <span class="text-slate-400">Acid-Base Titration</span>
+                            <span class="text-cyan-400">75%</span>
+                        </div>
+                        <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
+                            <div class="h-full bg-gradient-to-r from-primary to-cyan-500 rounded-full" style="width: 75%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                            <span class="text-slate-400">Virtual Lab Practice</span>
+                            <span class="text-tertiary">95%</span>
+                        </div>
+                        <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
+                            <div class="h-full bg-gradient-to-r from-tertiary to-pink-500 rounded-full" style="width: 95%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Interactive Quest Board -->
+        <div class="lg:col-span-2 space-y-8">
+            
+            <!-- Quest Board Container -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-xl font-bold flex items-center gap-2">
+                            <span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">assignment</span>
+                            Lab Quest Board
+                        </h3>
+                        <p class="text-slate-400 text-xs mt-1">Complete virtual objectives to secure experience tokens.</p>
+                    </div>
+                    <span id="quest-ratio" class="text-xs font-bold uppercase bg-slate-800 text-slate-300 border border-white/5 px-3 py-1 rounded-xl">0 / 3 Done</span>
+                </div>
+
+                <!-- Quest Cards Grid -->
+                <div class="space-y-5">
+                    
+                    <!-- Quest 1 -->
+                    <div id="quest-1" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q1-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Wurtz Alkane Synthesis</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Perform a Wurtz reaction in the Virtual Lab. Mix methyl chloride (<code class="text-cyan-400 font-mono">CH₃Cl</code>) and sodium metal (<code class="text-cyan-400 font-mono">Na</code>) in dry ether.</p>
+                        </div>
+                        <a id="q1-btn" href="/student/virtual-lab" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Launch Lab</a>
+                    </div>
+
+                    <!-- Quest 2 -->
+                    <div id="quest-2" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q2-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Acid-Base Neutralization</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Run a titration workbench simulation using phenolphthalein. Add titrant drop-wise to neutralize the analyte flask.</p>
+                        </div>
+                        <a id="q2-btn" href="/student/virtual-lab#titration" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Open Titrator</a>
+                    </div>
+
+                    <!-- Quest 3 -->
+                    <div id="quest-3" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2.5">
+                                <span id="q3-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Kolbe's Salicylic Synthesis</h4>
+                            </div>
+                            <p class="text-xs text-slate-400 max-w-md">Synthesize salicylic acid (<code class="text-cyan-400 font-mono">C₆H₄OHCOOH</code>) in the Virtual Lab. Mix phenol (<code class="text-cyan-400 font-mono">C₆H₅OH</code>), carbon dioxide (<code class="text-cyan-400 font-mono">CO₂</code>), and sodium hydroxide (<code class="text-cyan-400 font-mono">NaOH</code>) in the reaction flask.</p>
+                        </div>
+                        <a id="q3-btn" href="/student/virtual-lab" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Launch Lab</a>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Quick Action Board -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Card 1 -->
+                <div class="bg-[#1b2122]/40 backdrop-blur-md border border-white/5 p-6 rounded-2xl hover:border-white/10 transition-all flex flex-col justify-between">
+                    <div>
+                        <span class="material-symbols-outlined text-cyan-400 text-3xl mb-3">explore</span>
+                        <h4 class="font-bold text-white mb-2 uppercase text-sm">Study Mechanisms</h4>
+                        <p class="text-xs text-slate-400 mb-4">Read reaction steps, carbocation rearrangements, and explanations for over 50 syllabus reactions.</p>
+                    </div>
+                    <a href="/student/reactions" class="text-cyan-400 text-[10px] font-bold uppercase tracking-widest hover:text-cyan-200 transition-colors mt-2">Catalog →</a>
+                </div>
+                <!-- Card 2 -->
+                <div class="bg-[#1b2122]/40 backdrop-blur-md border border-white/5 p-6 rounded-2xl hover:border-white/10 transition-all flex flex-col justify-between">
+                    <div>
+                        <span class="material-symbols-outlined text-tertiary text-3xl mb-3">account_circle</span>
+                        <h4 class="font-bold text-white mb-2 uppercase text-sm">Profile Logs</h4>
+                        <p class="text-xs text-slate-400 mb-4">View your connection telemetry registry and change your student information parameters.</p>
+                    </div>
+                    <a href="/student/profile" class="text-tertiary text-[10px] font-bold uppercase tracking-widest hover:text-tertiary-container transition-colors mt-2">Go to Profile →</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Sync quest completion using database event log telemetry
+    async function syncQuests() {
+        try {
+            const res = await fetch('/api/history');
+            if (res.status === 401) return;
+            const data = await res.json();
+            
+            const history = data.history || [];
+            
+            // Check quest criteria
+            let q1Done = false;
+            let q2Done = false;
+            let q3Done = false;
+            
+            history.forEach(log => {
+                const eventType = log.event_type;
+                const eventData = log.event_data || '';
+                
+                // Quest 1: Wurtz Reaction in Virtual Lab
+                if (eventType === 'reaction_success' && eventData.includes('Wurtz Reaction')) {
+                    q1Done = true;
+                }
+                
+                // Quest 2: Titration Complete
+                if (eventType === 'titration_complete') {
+                    q2Done = true;
+                }
+                
+                // Quest 3: Kolbe's Reaction in Virtual Lab
+                if (eventType === 'reaction_success' && eventData.includes("Kolbe's Reaction")) {
+                    q3Done = true;
+                }
+            });
+            
+            // Render updates
+            let completedCount = 0;
+            
+            if (q1Done) {
+                completedCount++;
+                markQuestCompleted('quest-1', 'q1-status-badge', 'q1-btn');
+            }
+            if (q2Done) {
+                completedCount++;
+                markQuestCompleted('quest-2', 'q2-status-badge', 'q2-btn');
+            }
+            if (q3Done) {
+                completedCount++;
+                markQuestCompleted('quest-3', 'q3-status-badge', 'q3-btn');
+            }
+            
+            // Update counts & XP telemetry
+            document.getElementById('quest-ratio').textContent = `${completedCount} / 3 Done`;
+            
+            const totalXP = 100 + (completedCount * 100);
+            document.getElementById('xp-text').textContent = totalXP;
+            
+            // Update SVG XP progress dial
+            // Completed states map to total progress: 0 -> 25%, 1 -> 50%, 2 -> 75%, 3 -> 100%
+            const pct = (completedCount + 1) * 25;
+            const circumference = 251.2;
+            const offset = circumference - (pct / 100) * circumference;
+            document.getElementById('xp-dial').style.strokeDashoffset = offset;
+            
+            // Rank titles based on XP
+            const rankTitle = document.getElementById('rank-title');
+            const rankNext = document.getElementById('rank-next');
+            
+            if (completedCount === 0) {
+                rankTitle.textContent = 'Apprentice Chemist';
+                rankNext.textContent = 'Complete 1 quest to reach Molecular Navigator.';
+            } else if (completedCount === 1) {
+                rankTitle.textContent = 'Molecular Navigator';
+                rankNext.textContent = 'Complete 1 more quest to reach Reaction Engineer.';
+            } else if (completedCount === 2) {
+                rankTitle.textContent = 'Reaction Engineer';
+                rankNext.textContent = 'Complete 1 more quest to reach Vanguard Alchemist.';
+            } else if (completedCount === 3) {
+                rankTitle.textContent = 'Vanguard Alchemist';
+                rankNext.textContent = 'All core simulation quests completed! Master level.';
+            }
+            
+        } catch (err) {
+            console.error('Failed to sync quest telemetry', err);
+        }
+    }
+
+    function markQuestCompleted(cardId, badgeId, btnId) {
+        const card = document.getElementById(cardId);
+        const badge = document.getElementById(badgeId);
+        const btn = document.getElementById(btnId);
+        
+        if (card) {
+            card.classList.remove('hover:border-cyan-500/20');
+            card.classList.add('border-emerald-500/30', 'bg-emerald-950/10');
+        }
+        if (badge) {
+            badge.className = 'px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-emerald-500/20 bg-emerald-500/20 text-emerald-300 uppercase shadow-[0_0_8px_rgba(16,185,129,0.3)] animate-pulse';
+            badge.textContent = 'Completed';
+        }
+        if (btn) {
+            btn.className = 'shrink-0 bg-slate-800 border border-white/5 text-slate-500 text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl cursor-default pointer-events-none';
+            btn.textContent = 'Complete';
+        }
+    }
+
+    // Boot
+    document.addEventListener('DOMContentLoaded', () => {
+        syncQuests();
+    });
+</script>
+{% endblock %}

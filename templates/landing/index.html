@@ -1,0 +1,471 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}ChemLove | Remove Fear from Chemistry{% endblock %}
+
+{% block content %}
+<!-- HOME PAGE CONTENT -->
+<div id="page-home" class="landing-page">
+    
+    <!-- Hero Section -->
+    <section class="relative min-h-[calc(100vh-80px)] flex items-center overflow-hidden px-8 py-20">
+        <div class="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 items-center z-10 w-full">
+            <div class="space-y-8 lg:col-span-7">
+                <div class="inline-flex items-center gap-2 bg-cyan-500/10 text-cyan-400 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase border border-cyan-500/20">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 live-pulse"></span>
+                    🔬 India's First Interactive Chemistry Learning Ecosystem
+                </div>
+                <h1 class="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[0.95] text-on-surface uppercase">
+                    Remove Fear <br />From <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">Chemistry</span>
+                </h1>
+                <p class="text-sm md:text-base text-slate-300 max-w-2xl leading-relaxed border-l-4 border-cyan-400 pl-6">
+                    Learn chemistry through interactive simulations, virtual experiments, reaction visualizations, quizzes, and AI-powered guidance.
+                </p>
+                <div class="flex flex-wrap gap-4 pt-4">
+                    {% if current_user %}
+                        {% if current_user.role == 'student' %}
+                            <a href="/student/dashboard" class="kinetic-gradient text-on-primary font-bold px-8 py-4 rounded-xl text-sm shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider">Start Learning Free</a>
+                            <a href="/student/virtual-lab" class="glass-morphism border-white/10 text-on-surface font-bold px-8 py-4 rounded-xl text-sm hover:bg-slate-800/40 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider">Enter Virtual Laboratory</a>
+                        {% elif current_user.role == 'teacher' %}
+                            <a href="/teacher/dashboard" class="kinetic-gradient text-on-primary font-bold px-8 py-4 rounded-xl text-sm shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider">Teacher Dashboard</a>
+                            <a href="/login" class="glass-morphism border-white/10 text-on-surface font-bold px-8 py-4 rounded-xl text-sm hover:bg-slate-800/40 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider">Enter Virtual Laboratory</a>
+                        {% else %}
+                            <a href="/admin/dashboard" class="kinetic-gradient text-on-primary font-bold px-8 py-4 rounded-xl text-sm shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider">Admin Dashboard</a>
+                            <a href="/login" class="glass-morphism border-white/10 text-on-surface font-bold px-8 py-4 rounded-xl text-sm hover:bg-slate-800/40 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider">Enter Virtual Laboratory</a>
+                        {% endif %}
+                    {% else %}
+                        <a href="/signup" class="kinetic-gradient text-on-primary font-bold px-8 py-4 rounded-xl text-sm shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] hover:scale-105 active:scale-95 transition-all uppercase tracking-wider">Start Learning Free</a>
+                        <a href="/login" class="glass-morphism border-white/10 text-on-surface font-bold px-8 py-4 rounded-xl text-sm hover:bg-slate-800/40 hover:scale-105 active:scale-95 transition-all uppercase tracking-wider">Enter Virtual Laboratory</a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Graphic Element -->
+            <div class="relative group flex justify-center items-center lg:col-span-5">
+                <div class="absolute -inset-2 bg-gradient-to-r from-cyan-500 to-pink-500 rounded-3xl blur opacity-20 group-hover:opacity-35 transition duration-1000"></div>
+                <div class="relative rounded-3xl overflow-hidden border border-white/10 bg-slate-950 p-4 max-w-md w-full shadow-2xl">
+                    <img class="w-full h-auto aspect-square object-cover rounded-2xl" alt="Futuristic chemistry lab setup" src="https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&q=80&w=600"/>
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-60"></div>
+                    <div class="absolute bottom-8 right-8 bg-pink-500 text-on-primary px-4 py-2 font-black text-lg rounded-xl uppercase tracking-wider shadow-lg transform rotate-2">
+                        LIVE STUDY
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Background Blurs -->
+        <div class="absolute top-1/4 -right-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-0 -left-20 w-[500px] h-[500px] bg-pink-500/5 rounded-full blur-[150px]"></div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="bg-slate-950/60 border-y border-white/5 py-16 px-8 backdrop-blur-xl">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 text-center">
+            <div class="space-y-1">
+                <span class="text-3xl lg:text-4xl font-black text-cyan-400 leading-none">320+</span>
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Chemical Reactions</p>
+            </div>
+            <div class="space-y-1 border-l border-white/5 md:border-l-0 lg:border-l lg:pl-4">
+                <span class="text-3xl lg:text-4xl font-black text-pink-400 leading-none">150+</span>
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Virtual Experiments</p>
+            </div>
+            <div class="space-y-1 border-l-0 md:border-l border-white/5 pl-0 md:pl-4 lg:pl-4">
+                <span class="text-3xl lg:text-4xl font-black text-cyan-300 leading-none">4</span>
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Academic Levels</p>
+            </div>
+            <div class="space-y-1 border-l border-white/5 lg:border-l lg:pl-4">
+                <span class="text-3xl lg:text-4xl font-black text-pink-300 leading-none">1000+</span>
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Concept Notes</p>
+            </div>
+            <div class="space-y-1 border-l-0 md:border-l border-white/5 pl-0 md:pl-4 lg:pl-4">
+                <span class="text-3xl lg:text-4xl font-black text-cyan-400 leading-none">50,000+</span>
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Student Interactions</p>
+            </div>
+            <div class="space-y-1 border-l border-white/5 lg:border-l lg:pl-4">
+                <span class="text-3xl lg:text-4xl font-black text-pink-400 leading-none">100%</span>
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Practical Learning Focus</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why ChemLove Section -->
+    <section class="py-32 px-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-24 text-center">
+                <h2 class="text-3xl md:text-4xl font-black uppercase tracking-tight">Why ChemLove?</h2>
+                <div class="h-1 w-32 bg-gradient-to-r from-cyan-400 to-pink-400 mx-auto mt-4 rounded-full"></div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Pillar 1 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-3 hover:border-cyan-500/30 hover:shadow-[0_16px_48px_-8px_rgba(6,182,212,0.25)] hover:bg-white/[0.05] transition-all duration-300 group flex flex-col justify-between min-h-[250px]">
+                    <div>
+                        <div class="w-12 h-12 bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:rotate-6 transition-transform">
+                            <span class="material-symbols-outlined text-2xl text-cyan-400">psychology</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase mb-3 text-on-surface">Interactive Chemistry Learning</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Visual explanations, animations, simulations, and experiments.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Pillar 2 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-3 hover:border-cyan-500/30 hover:shadow-[0_16px_48px_-8px_rgba(6,182,212,0.25)] hover:bg-white/[0.05] transition-all duration-300 group flex flex-col justify-between min-h-[250px]">
+                    <div>
+                        <div class="w-12 h-12 bg-pink-500/10 border border-pink-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:-rotate-6 transition-transform">
+                            <span class="material-symbols-outlined text-2xl text-pink-400">science</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase mb-3 text-on-surface">Virtual Laboratory</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Perform practicals without chemicals, safety risks, or equipment.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Pillar 3 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-3 hover:border-cyan-500/30 hover:shadow-[0_16px_48px_-8px_rgba(6,182,212,0.25)] hover:bg-white/[0.05] transition-all duration-300 group flex flex-col justify-between min-h-[250px]">
+                    <div>
+                        <div class="w-12 h-12 bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:scale-105 transition-transform">
+                            <span class="material-symbols-outlined text-2xl text-cyan-400">menu_book</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase mb-3 text-on-surface">Chapter-wise Learning</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            NCERT-aligned structured learning.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Pillar 4 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-3 hover:border-cyan-500/30 hover:shadow-[0_16px_48px_-8px_rgba(6,182,212,0.25)] hover:bg-white/[0.05] transition-all duration-300 group flex flex-col justify-between min-h-[250px]">
+                    <div>
+                        <div class="w-12 h-12 bg-pink-500/10 border border-pink-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:scale-105 transition-transform">
+                            <span class="material-symbols-outlined text-2xl text-pink-400">forum</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase mb-3 text-on-surface">Instant Feedback</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Real-time evaluation and performance insights.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Pillar 5 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-3 hover:border-cyan-500/30 hover:shadow-[0_16px_48px_-8px_rgba(6,182,212,0.25)] hover:bg-white/[0.05] transition-all duration-300 group flex flex-col justify-between min-h-[250px]">
+                    <div>
+                        <div class="w-12 h-12 bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:-rotate-6 transition-transform">
+                            <span class="material-symbols-outlined text-2xl text-cyan-400">insights</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase mb-3 text-on-surface">Progress Tracking</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Monitor completion and learning analytics.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Pillar 6 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-3 hover:border-cyan-500/30 hover:shadow-[0_16px_48px_-8px_rgba(6,182,212,0.25)] hover:bg-white/[0.05] transition-all duration-300 group flex flex-col justify-between min-h-[250px]">
+                    <div>
+                        <div class="w-12 h-12 bg-pink-500/10 border border-pink-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:rotate-6 transition-transform">
+                            <span class="material-symbols-outlined text-2xl text-pink-400">assignment_ind</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase mb-3 text-on-surface">Teacher Guided Learning</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Assignments, tests, reports, and classroom monitoring.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Learning Ecosystem Section -->
+    <section class="py-32 px-8 bg-slate-950/30 border-y border-white/5 relative">
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="mb-24 text-center">
+                <h2 class="text-3xl md:text-4xl font-black uppercase tracking-tight">Learning Ecosystem</h2>
+                <div class="h-1 w-32 bg-gradient-to-r from-cyan-400 to-pink-400 mx-auto mt-4 rounded-full"></div>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Ecosystem 1 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-2 hover:border-cyan-500/40 hover:shadow-[0_16px_48px_-8px_rgba(6,182,212,0.22)] hover:bg-white/[0.04] transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-3xl">📚</span>
+                            <span class="text-xs font-bold uppercase tracking-widest text-cyan-400 bg-cyan-400/10 px-3 py-1 rounded-full">Concept Notes</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase text-white mb-4">Chapter Key Points</h3>
+                        <p class="text-slate-400 text-sm mb-6">Study chemistry chapters through structured modules, summaries, and exam-oriented definitions.</p>
+                    </div>
+                </div>
+
+                <!-- Ecosystem 2 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-2 hover:border-pink-500/40 hover:shadow-[0_16px_48px_-8px_rgba(236,72,153,0.18)] hover:bg-white/[0.04] transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-3xl">🧪</span>
+                            <span class="text-xs font-bold uppercase tracking-widest text-pink-400 bg-pink-400/10 px-3 py-1 rounded-full">Simulated Labs</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase text-white mb-4">Virtual Experiments</h3>
+                        <p class="text-slate-400 text-sm mb-6">Perform realistic chemistry practicals safely, covering pH tests, titrations, salt analysis, and more.</p>
+                    </div>
+                </div>
+
+                <!-- Ecosystem 3 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-2 hover:border-cyan-500/40 hover:shadow-[0_16px_48px_-8px_rgba(6,182,212,0.22)] hover:bg-white/[0.04] transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-3xl">⚛️</span>
+                            <span class="text-xs font-bold uppercase tracking-widest text-cyan-400 bg-cyan-400/10 px-3 py-1 rounded-full">Real-time Sandbox</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase text-white mb-4">Reaction Simulator</h3>
+                        <p class="text-slate-400 text-sm mb-6">Explore chemical equations, select reactants, predict products, and observe reactions dynamically.</p>
+                    </div>
+                </div>
+
+                <!-- Ecosystem 4 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-2 hover:border-pink-500/40 hover:shadow-[0_16px_48px_-8px_rgba(236,72,153,0.18)] hover:bg-white/[0.04] transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-3xl">🧠</span>
+                            <span class="text-xs font-bold uppercase tracking-widest text-pink-400 bg-pink-400/10 px-3 py-1 rounded-full">Testing Hub</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase text-white mb-4">Smart Quiz Arena</h3>
+                        <p class="text-slate-400 text-sm mb-6">Practice and prepare with curriculum-aligned quiz sets, MCQs, and assertion reasoning.</p>
+                    </div>
+                </div>
+
+                <!-- Ecosystem 5 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-2 hover:border-cyan-500/40 hover:shadow-[0_16px_48px_-8px_rgba(6,182,212,0.22)] hover:bg-white/[0.04] transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-3xl">📊</span>
+                            <span class="text-xs font-bold uppercase tracking-widest text-cyan-400 bg-cyan-400/10 px-3 py-1 rounded-full">Telemetry</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase text-white mb-4">Performance Analytics</h3>
+                        <p class="text-slate-400 text-sm mb-6">Track your concepts mastery in real-time, highlighting strengths, weaknesses, and progress.</p>
+                    </div>
+                </div>
+
+                <!-- Ecosystem 6 -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-2 hover:border-pink-500/40 hover:shadow-[0_16px_48px_-8px_rgba(236,72,153,0.18)] hover:bg-white/[0.04] transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-3xl">🏆</span>
+                            <span class="text-xs font-bold uppercase tracking-widest text-pink-400 bg-pink-400/10 px-3 py-1 rounded-full">Gamification</span>
+                        </div>
+                        <h3 class="text-xl font-bold uppercase text-white mb-4">Achievements & Badges</h3>
+                        <p class="text-slate-400 text-sm mb-6">Earn experiences (XP), level up, and unlock scientific achievement badges.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="absolute top-1/2 left-0 w-96 h-96 bg-pink-500/5 rounded-full blur-[150px]"></div>
+    </section>
+
+    <!-- Student / Teacher / Institution Section -->
+    <section class="py-32 px-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-24 text-center">
+                <h2 class="text-3xl md:text-4xl font-black uppercase tracking-tight">Ecosystem Portals</h2>
+                <div class="h-1 w-32 bg-gradient-to-r from-cyan-400 to-pink-400 mx-auto mt-4 rounded-full"></div>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-8">
+                <!-- For Students -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-2 hover:border-cyan-500/40 hover:shadow-[0_16px_48px_-8px_rgba(6,182,212,0.22)] hover:bg-white/[0.04] transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="text-xs font-black text-cyan-400 tracking-wider uppercase mb-2">Individual Learners</div>
+                        <h3 class="text-2xl font-black uppercase text-white mb-6">For Students</h3>
+                        <div class="space-y-6">
+                            <div class="flex gap-4">
+                                <span class="material-symbols-outlined text-cyan-400 text-2xl shrink-0">book</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white uppercase">Learn Concepts</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Study curriculum-aligned chapters, formulas, and visual concept maps.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <span class="material-symbols-outlined text-cyan-400 text-2xl shrink-0">science</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white uppercase">Perform Practicals</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Conduct interactive chemical experiments safely inside the virtual lab.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <span class="material-symbols-outlined text-cyan-400 text-2xl shrink-0">quiz</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white uppercase">Attempt Quizzes</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Challenge yourself with assertion-reason and mock test questions.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <span class="material-symbols-outlined text-cyan-400 text-2xl shrink-0">emoji_events</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white uppercase">Earn XP</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Acquire experience points (XP) to unlock profile levels and custom badges.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- For Teachers -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-2 hover:border-pink-500/40 hover:shadow-[0_16px_48px_-8px_rgba(236,72,153,0.18)] hover:bg-white/[0.04] transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="text-xs font-black text-pink-400 tracking-wider uppercase mb-2">Educators & Mentors</div>
+                        <h3 class="text-2xl font-black uppercase text-white mb-6">For Teachers</h3>
+                        <div class="space-y-6">
+                            <div class="flex gap-4">
+                                <span class="material-symbols-outlined text-pink-400 text-2xl shrink-0">add_task</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white uppercase">Assign Experiments</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Create and dispatch custom virtual practical tasks to your students.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <span class="material-symbols-outlined text-pink-400 text-2xl shrink-0">schedule</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white uppercase">Schedule Tests</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Plan and coordinate timed quizzes and digital evaluation papers.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <span class="material-symbols-outlined text-pink-400 text-2xl shrink-0">group</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white uppercase">Monitor Students</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Audit student practical sheets, completed homework, and scores.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <span class="material-symbols-outlined text-pink-400 text-2xl shrink-0">assessment</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white uppercase">Generate Reports</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Produce classroom performance sheets and export analytical trends.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- For Institutions -->
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:-translate-y-2 hover:border-cyan-500/40 hover:shadow-[0_16px_48px_-8px_rgba(6,182,212,0.22)] hover:bg-white/[0.04] transition-all duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="text-xs font-black text-cyan-300 tracking-wider uppercase mb-2">Institutions & Academies</div>
+                        <h3 class="text-2xl font-black uppercase text-white mb-6">For Institutions</h3>
+                        <div class="space-y-6">
+                            <div class="flex gap-4">
+                                <span class="material-symbols-outlined text-cyan-300 text-2xl shrink-0">domain</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white uppercase">Manage Classrooms</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Coordinate classes, sections, and user accounts from a central admin portal.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <span class="material-symbols-outlined text-cyan-300 text-2xl shrink-0">analytics</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white uppercase">Track Performance</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Audit total active users, quiz success metrics, and syllabus completion speeds.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <span class="material-symbols-outlined text-cyan-300 text-2xl shrink-0">dashboard</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white uppercase">Centralized Dashboard</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Consolidate school metrics, teacher outputs, and student enrollments.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Learning Journey Section -->
+    <section class="py-32 px-8 bg-slate-950/40 border-y border-white/5 relative">
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="mb-24 text-center">
+                <h2 class="text-3xl md:text-4xl font-black uppercase tracking-tight">Learning Journey</h2>
+                <div class="h-1 w-32 bg-gradient-to-r from-cyan-400 to-pink-400 mx-auto mt-4 rounded-full"></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 relative">
+                <!-- Connecting lines styling on desktop -->
+                <div class="absolute top-1/2 left-0 w-full h-0.5 bg-white/5 -translate-y-1/2 z-0 hidden lg:block"></div>
+
+                <!-- Step 1 -->
+                <div class="glass-morphism p-6 rounded-2xl relative z-10 text-center flex flex-col items-center justify-between min-h-[220px] hover:-translate-y-2 hover:border-cyan-500/40 hover:shadow-[0_12px_36px_-6px_rgba(6,182,212,0.25)] hover:bg-white/[0.05] transition-all duration-300">
+                    <span class="w-10 h-10 rounded-full bg-cyan-500/10 text-cyan-400 font-bold text-sm flex items-center justify-center border border-cyan-500/20 mb-4 shadow-[0_0_15px_rgba(6,182,212,0.2)]">1</span>
+                    <h4 class="font-bold uppercase text-sm text-white mb-2">Create Account</h4>
+                    <p class="text-[10px] text-slate-400 leading-relaxed">Establish your login credentials as a student or teacher.</p>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="glass-morphism p-6 rounded-2xl relative z-10 text-center flex flex-col items-center justify-between min-h-[220px] hover:-translate-y-2 hover:border-pink-500/40 hover:shadow-[0_12px_36px_-6px_rgba(236,72,153,0.2)] hover:bg-white/[0.05] transition-all duration-300">
+                    <span class="w-10 h-10 rounded-full bg-pink-500/10 text-pink-400 font-bold text-sm flex items-center justify-center border border-pink-500/20 mb-4 shadow-[0_0_15px_rgba(236,72,153,0.2)]">2</span>
+                    <h4 class="font-bold uppercase text-sm text-white mb-2">Select Class</h4>
+                    <p class="text-[10px] text-slate-400 leading-relaxed">Configure class level curriculum parameters (Class 9-12).</p>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="glass-morphism p-6 rounded-2xl relative z-10 text-center flex flex-col items-center justify-between min-h-[220px] hover:-translate-y-2 hover:border-cyan-500/40 hover:shadow-[0_12px_36px_-6px_rgba(6,182,212,0.25)] hover:bg-white/[0.05] transition-all duration-300">
+                    <span class="w-10 h-10 rounded-full bg-cyan-500/10 text-cyan-400 font-bold text-sm flex items-center justify-center border border-cyan-500/20 mb-4 shadow-[0_0_15px_rgba(6,182,212,0.2)]">3</span>
+                    <h4 class="font-bold uppercase text-sm text-white mb-2">Study Concepts</h4>
+                    <p class="text-[10px] text-slate-400 leading-relaxed">Examine concept maps, formula boards, and revision files.</p>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="glass-morphism p-6 rounded-2xl relative z-10 text-center flex flex-col items-center justify-between min-h-[220px] hover:-translate-y-2 hover:border-pink-500/40 hover:shadow-[0_12px_36px_-6px_rgba(236,72,153,0.2)] hover:bg-white/[0.05] transition-all duration-300">
+                    <span class="w-10 h-10 rounded-full bg-pink-500/10 text-pink-400 font-bold text-sm flex items-center justify-center border border-pink-500/20 mb-4 shadow-[0_0_15px_rgba(236,72,153,0.2)]">4</span>
+                    <h4 class="font-bold uppercase text-sm text-white mb-2">Perform Experiments</h4>
+                    <p class="text-[10px] text-slate-400 leading-relaxed">Operate titrations, pH tests, and molecular sandboxes.</p>
+                </div>
+
+                <!-- Step 5 -->
+                <div class="glass-morphism p-6 rounded-2xl relative z-10 text-center flex flex-col items-center justify-between min-h-[220px] hover:-translate-y-2 hover:border-cyan-500/40 hover:shadow-[0_12px_36px_-6px_rgba(6,182,212,0.25)] hover:bg-white/[0.05] transition-all duration-300">
+                    <span class="w-10 h-10 rounded-full bg-cyan-500/10 text-cyan-400 font-bold text-sm flex items-center justify-center border border-cyan-500/20 mb-4 shadow-[0_0_15px_rgba(6,182,212,0.2)]">5</span>
+                    <h4 class="font-bold uppercase text-sm text-white mb-2">Attempt Quizzes</h4>
+                    <p class="text-[10px] text-slate-400 leading-relaxed">Solve chapter tests and evaluate question modules.</p>
+                </div>
+
+                <!-- Step 6 -->
+                <div class="glass-morphism p-6 rounded-2xl relative z-10 text-center flex flex-col items-center justify-between min-h-[220px] hover:-translate-y-2 hover:border-pink-500/40 hover:shadow-[0_12px_36px_-6px_rgba(236,72,153,0.2)] hover:bg-white/[0.05] transition-all duration-300">
+                    <span class="w-10 h-10 rounded-full bg-pink-500/10 text-pink-400 font-bold text-sm flex items-center justify-center border border-pink-500/20 mb-4 shadow-[0_0_15px_rgba(236,72,153,0.2)]">6</span>
+                    <h4 class="font-bold uppercase text-sm text-white mb-2">Earn Rewards</h4>
+                    <p class="text-[10px] text-slate-400 leading-relaxed">Unlock achievement badges and advance profile XP ranks.</p>
+                </div>
+            </div>
+        </div>
+        <div class="absolute bottom-0 right-10 w-96 h-96 bg-cyan-500/5 rounded-full blur-[150px]"></div>
+    </section>
+
+    <!-- Call to Action Section -->
+    <section class="py-40 px-8 relative overflow-hidden">
+        <div class="max-w-4xl mx-auto text-center relative z-10 space-y-8">
+            <h2 class="text-4xl md:text-5xl font-black uppercase leading-tight">
+                Ready to transform the way<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">you learn chemistry?</span>
+            </h2>
+            <p class="text-sm text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                Join thousands of students and educators using ChemLove to make chemistry interactive, practical, and engaging.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+                {% if current_user %}
+                    {% if current_user.role == 'student' %}
+                        <a href="/student/dashboard" class="kinetic-gradient text-on-primary font-bold px-12 py-5 rounded-xl text-sm hover:scale-105 transition-all shadow-[0_0_30px_rgba(6,182,212,0.4)] uppercase tracking-wider">Start Learning Now</a>
+                        <a href="/student/virtual-lab" class="glass-morphism border-white/10 text-on-surface font-bold px-12 py-5 rounded-xl text-sm hover:bg-slate-800/40 transition-all uppercase tracking-wider">Explore Virtual Lab</a>
+                    {% elif current_user.role == 'teacher' %}
+                        <a href="/teacher/dashboard" class="kinetic-gradient text-on-primary font-bold px-12 py-5 rounded-xl text-sm hover:scale-105 transition-all shadow-[0_0_30px_rgba(6,182,212,0.4)] uppercase tracking-wider">Teacher Dashboard</a>
+                        <a href="/login" class="glass-morphism border-white/10 text-on-surface font-bold px-12 py-5 rounded-xl text-sm hover:bg-slate-800/40 transition-all uppercase tracking-wider">Explore Virtual Lab</a>
+                    {% else %}
+                        <a href="/admin/dashboard" class="kinetic-gradient text-on-primary font-bold px-12 py-5 rounded-xl text-sm hover:scale-105 transition-all shadow-[0_0_30px_rgba(6,182,212,0.4)] uppercase tracking-wider">Admin Dashboard</a>
+                        <a href="/login" class="glass-morphism border-white/10 text-on-surface font-bold px-12 py-5 rounded-xl text-sm hover:bg-slate-800/40 transition-all uppercase tracking-wider">Explore Virtual Lab</a>
+                    {% endif %}
+                {% else %}
+                    <a href="/signup" class="kinetic-gradient text-on-primary font-bold px-12 py-5 rounded-xl text-sm hover:scale-105 transition-all shadow-[0_0_30px_rgba(6,182,212,0.4)] uppercase tracking-wider">Start Learning Now</a>
+                    <a href="/login" class="glass-morphism border-white/10 text-on-surface font-bold px-12 py-5 rounded-xl text-sm hover:bg-slate-800/40 transition-all uppercase tracking-wider">Explore Virtual Lab</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-cyan-500/5 rounded-full blur-[180px]"></div>
+    </section>
+</div>
+{% endblock %}

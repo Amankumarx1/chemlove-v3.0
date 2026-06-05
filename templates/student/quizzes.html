@@ -1,0 +1,53 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Quizzes Directory{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Header -->
+    <div class="mb-12">
+        <div class="inline-flex items-center gap-2 bg-primary-container/20 text-primary px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
+            <span class="w-2 h-2 rounded-full bg-primary live-pulse"></span>
+            Practice Center
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Chapter Quizzes</h1>
+        <p class="text-slate-400 mt-2 text-sm">Deploy chapter quizzes to test your understanding of chemistry concepts and earn XP tokens.</p>
+    </div>
+
+    <!-- Quizzes Directory -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for quiz in quizzes %}
+            <div class="glass-morphism p-6 rounded-3xl border border-white/5 bg-[#171d1e]/40 hover:border-cyan-500/20 hover:scale-[1.01] transition-all duration-300 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-[9px] font-black tracking-widest uppercase text-cyan-400 bg-cyan-950/40 px-2.5 py-1 rounded-full">Quiz {{ quiz.chapter_id }}</span>
+                        <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500">{{ quiz.time_limit_minutes }} Mins</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white uppercase tracking-tight mb-2">{{ quiz.title }}</h3>
+                    <p class="text-xs text-slate-400 mb-6">Chapter: {{ quiz.chapter }}</p>
+                    
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="flex items-center gap-1.5 text-xs text-slate-300">
+                            <span class="material-symbols-outlined text-sm text-cyan-400">help</span>
+                            <span class="font-bold text-[10px] uppercase">{{ quiz.questions|length }} Questions</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs text-slate-300">
+                            <span class="material-symbols-outlined text-sm text-tertiary">workspace_premium</span>
+                            <span class="font-bold text-[10px] uppercase">{{ quiz.total_marks }} Marks</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between pt-4 border-t border-white/5">
+                    <a href="/student/quiz/{{ quiz.chapter_id }}" class="kinetic-gradient text-on-primary text-xs font-bold uppercase tracking-wider py-2.5 px-5 rounded-xl hover:scale-102 transition-colors flex items-center gap-1.5">
+                        Start Quiz <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-span-full glass-morphism p-12 rounded-3xl text-center">
+                <span class="material-symbols-outlined text-5xl text-slate-600 mb-4">quiz</span>
+                <h3 class="text-lg font-bold text-white uppercase mb-2">No Quizzes Found</h3>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto">Please ask your administrator to upload quiz files to the content database.</p>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

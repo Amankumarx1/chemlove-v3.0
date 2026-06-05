@@ -1,0 +1,22 @@
+{
+  "id": 3,
+  "number": 3,
+  "title": "Classification of Elements",
+  "description": "Periodic laws, table groupings, electron affinities, and atomic radii configurations.",
+  "key_points": [
+    "Mendeleev's Periodic Law",
+    "Modern Periodic Law",
+    "Trends in physical properties (atomic size, ionization energy)",
+    "Chemical reactivity trends"
+  ],
+  "formulas": [],
+  "important_reactions": [],
+  "notes": "The modern periodic table arranges elements by increasing atomic number. Periodic properties such as electronegativity and electron gain enthalpy trend periodically down groups and across periods.",
+  "practice_questions": [
+    {
+      "question": "Why does ionization enthalpy decrease down a group?",
+      "hint": "Consider nuclear shielding and atomic size."
+    }
+  ],
+  "quiz_id": 3
+}

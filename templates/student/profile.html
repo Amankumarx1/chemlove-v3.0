@@ -1,0 +1,350 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Profile Settings{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Header Page Description -->
+    <div class="mb-10">
+        <div class="inline-flex items-center gap-2 bg-primary-container/20 text-primary px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
+            <span class="w-2 h-2 rounded-full bg-primary live-pulse"></span>
+            Profile Dashboard
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">User Telemetry Panel</h1>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        
+        <!-- Left Side: Profile Summary Card & Form -->
+        <div class="lg:col-span-1 space-y-8">
+            
+            <!-- Summary Profile Card -->
+            <div class="glass-morphism p-8 rounded-3xl relative overflow-hidden flex flex-col">
+                <div class="flex flex-col items-center mb-8 pb-8 border-b border-white/5">
+                    <div class="relative w-28 h-28 mb-4">
+                        <!-- Glowing Ring -->
+                        <div class="absolute -inset-1 bg-gradient-to-r from-primary to-tertiary rounded-full blur opacity-40 animate-[pulse_3s_infinite]"></div>
+                        <!-- Avatar Box -->
+                        <div class="relative w-full h-full bg-[#1b2122] rounded-full border border-white/10 flex items-center justify-center overflow-hidden">
+                            <span class="material-symbols-outlined text-5xl text-cyan-400" style="font-variation-settings: 'wght' 200, 'FILL' 1;">account_circle</span>
+                        </div>
+                    </div>
+                    <h2 id="profile-display-name" class="text-2xl font-black tracking-tight mb-1 text-center">{{ current_user.name }}</h2>
+                    <span class="px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase mb-4 {% if current_user.role == 'teacher' %}bg-tertiary-container/20 text-tertiary{% else %}bg-primary-container/20 text-primary{% endif %}">
+                        {{ current_user.role }}
+                    </span>
+                    <div class="space-y-1 text-center">
+                        <div id="profile-display-inst" class="text-sm font-semibold text-slate-400">{{ current_user.institution }}</div>
+                        {% if current_user.role == 'student' %}
+                        <div id="profile-display-class" class="text-xs font-bold uppercase tracking-widest text-cyan-400">Class {{ current_user.classLevel }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Profile Edit Form -->
+                <form id="profile-form" class="space-y-5">
+                    <div>
+                        <label class="block font-bold uppercase text-[9px] mb-1.5 tracking-widest text-slate-500">Edit Full Name</label>
+                        <input type="text" id="name-input" name="name" value="{{ current_user.name }}" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300" required>
+                    </div>
+                    <div>
+                        <label class="block font-bold uppercase text-[9px] mb-1.5 tracking-widest text-slate-500">Academic Institution</label>
+                        <input type="text" id="institution-input" name="institution" value="{{ current_user.institution }}" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300" required>
+                    </div>
+                    {% if current_user.role == 'student' %}
+                    <div>
+                        <label class="block font-bold uppercase text-[9px] mb-1.5 tracking-widest text-slate-500">Academic Level</label>
+                        <!-- Hidden input for value compatibility with form submit -->
+                        <input type="hidden" id="class-level-input" name="classLevel" value="{{ current_user.classLevel or '9' }}">
+
+                        <div class="relative inline-block text-left w-full" id="class-level-dropdown-container">
+                            <button id="class-level-dropdown-btn" type="button" class="w-full flex items-center justify-between gap-2 bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-on-surface hover:bg-slate-800/40 hover:scale-101 transition-all duration-300 shadow-xl cursor-pointer">
+                                <span id="selected-class-level-label">Class {{ current_user.classLevel or '9' }}</span>
+                                <span id="class-level-dropdown-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
+                            </button>
+                            <!-- Dropdown Menu -->
+                            <div id="class-level-dropdown-menu" class="hidden absolute left-0 right-0 mt-2.5 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
+                                <div class="space-y-1">
+                                    <button type="button" onclick="selectClassLevelEdit('9', 'Class 9')" class="class-level-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold {% if current_user.classLevel == '9' or not current_user.classLevel %}active text-cyan-400 bg-cyan-950/20{% else %}text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400{% endif %} transition-all text-left">
+                                        <span class="material-symbols-outlined text-sm">filter_9</span> Class 9
+                                    </button>
+                                    <button type="button" onclick="selectClassLevelEdit('10', 'Class 10')" class="class-level-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold {% if current_user.classLevel == '10' %}active text-cyan-400 bg-cyan-950/20{% else %}text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400{% endif %} transition-all text-left">
+                                        <span class="material-symbols-outlined text-sm">filter_10</span> Class 10
+                                    </button>
+                                    <button type="button" onclick="selectClassLevelEdit('11', 'Class 11')" class="class-level-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold {% if current_user.classLevel == '11' %}active text-cyan-400 bg-cyan-950/20{% else %}text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400{% endif %} transition-all text-left">
+                                        <span class="material-symbols-outlined text-sm">looks_one</span> Class 11
+                                    </button>
+                                    <button type="button" onclick="selectClassLevelEdit('12', 'Class 12')" class="class-level-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold {% if current_user.classLevel == '12' %}active text-cyan-400 bg-cyan-950/20{% else %}text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400{% endif %} transition-all text-left">
+                                        <span class="material-symbols-outlined text-sm">looks_two</span> Class 12
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <button type="submit" id="save-btn" class="w-full bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98 shadow-[0_4px_15px_rgba(6,182,212,0.15)] flex justify-center items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">sync</span>
+                        Save Changes
+                    </button>
+                </form>
+
+                <!-- Feedback alert box -->
+                <div id="alert-box" class="mt-4 hidden p-4 rounded-xl text-sm transition-all duration-300"></div>
+            </div>
+        </div>
+
+        <!-- Right Side: Concept Mastery & Console log -->
+        <div class="lg:col-span-2 space-y-8">
+            
+            {% if current_user.role == 'student' %}
+            <!-- Concept Mastery -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-cyan-400" style="font-variation-settings: 'FILL' 1;">analytics</span>
+                    Concept Mastery Telemetry
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                                <span class="text-slate-400">Organic Chemistry</span>
+                                <span class="text-cyan-400">85%</span>
+                            </div>
+                            <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
+                                <div class="h-full bg-gradient-to-r from-primary to-cyan-500 rounded-full shadow-[0_0_10px_rgba(76,215,246,0.3)]" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                                <span class="text-slate-400">Inorganic Reactions</span>
+                                <span class="text-tertiary">60%</span>
+                            </div>
+                            <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
+                                <div class="h-full bg-gradient-to-r from-tertiary to-pink-500 rounded-full shadow-[0_0_10px_rgba(255,176,205,0.3)]" style="width: 60%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                                <span class="text-slate-400">Acid-Base Titration</span>
+                                <span class="text-cyan-400">75%</span>
+                            </div>
+                            <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
+                                <div class="h-full bg-gradient-to-r from-primary to-cyan-500 rounded-full shadow-[0_0_10px_rgba(76,215,246,0.3)]" style="width: 75%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                                <span class="text-slate-400">Virtual Lab Practice</span>
+                                <span class="text-tertiary">95%</span>
+                            </div>
+                            <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
+                                <div class="h-full bg-gradient-to-r from-tertiary to-pink-500 rounded-full shadow-[0_0_10px_rgba(255,176,205,0.3)]" style="width: 95%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Terminal console block -->
+            <div class="glass-morphism p-8 rounded-3xl flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">terminal</span>
+                        Database Activity Registry
+                    </h3>
+                    <button onclick="loadHistory()" class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider bg-slate-800/40 hover:bg-slate-800 text-slate-300 border border-white/5 hover:border-white/10 px-3 py-1.5 rounded-xl transition-all duration-300">
+                        <span class="material-symbols-outlined text-xs">refresh</span>
+                        Refresh Logs
+                    </button>
+                </div>
+                
+                <!-- Retro terminal body -->
+                <div class="bg-black/90 font-mono text-[11px] p-6 rounded-2xl border border-white/5 shadow-[inset_0_0_30px_rgba(0,0,0,0.95)] max-h-72 overflow-y-auto scrollbar-thin select-text">
+                    <div class="text-slate-500 border-b border-white/5 pb-2 mb-3 flex justify-between">
+                        <span>CHEMLOVE(v2) SECURITY VANGUARD SHELL - LOGS ACTIVE</span>
+                        <span class="text-cyan-500 animate-pulse">● ONLINE</span>
+                    </div>
+                    <div id="terminal-content" class="space-y-2">
+                        <div class="text-slate-500">// Querying database logs...</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load event history logs from Flask database API
+    async function loadHistory() {
+        const terminalContent = document.getElementById('terminal-content');
+        terminalContent.innerHTML = '<div class="text-cyan-600 animate-pulse">// Querying database logs...</div>';
+        
+        try {
+            const res = await fetch('/api/history');
+            if (res.status === 401) {
+                terminalContent.innerHTML = '<div class="text-red-400">// ERROR: Access unauthorized. Please re-authenticate session.</div>';
+                return;
+            }
+            const data = await res.json();
+            
+            if (!data.history || data.history.length === 0) {
+                terminalContent.innerHTML = '<div class="text-slate-500">// No historical telemetry logs found for this user context.</div>';
+                return;
+            }
+            
+            let html = '';
+            data.history.forEach(log => {
+                const date = new Date(log.created_at || log.createdAt);
+                const timestamp = date.toISOString().replace('T', ' ').substring(0, 19);
+                
+                let typeColor = 'text-cyan-400';
+                let eventDesc = '';
+                
+                switch(log.event_type) {
+                    case 'signup_success':
+                        typeColor = 'text-green-400';
+                        eventDesc = `PROFILE_INITIALIZED: User connection established (${log.event_data || ''})`;
+                        break;
+                    case 'login_success':
+                        typeColor = 'text-cyan-400';
+                        eventDesc = `SESSION_START: User context authenticated via access token`;
+                        break;
+                    case 'logout':
+                        typeColor = 'text-yellow-400';
+                        eventDesc = `SESSION_TERMINATE: Connection gracefully closed by client`;
+                        break;
+                    case 'profile_updated':
+                        typeColor = 'text-pink-400';
+                        eventDesc = `TELEMETRY_SYNC: User metadata fields successfully written to DB`;
+                        break;
+                    default:
+                        eventDesc = `${log.event_type.toUpperCase()}: ${log.event_data || 'No metadata'}`;
+                }
+                
+                html += `<div class="mb-1.5 flex items-start gap-2">
+                    <span class="text-slate-600 select-none">[${timestamp}]</span>
+                    <span class="${typeColor} font-bold">${log.event_type.toUpperCase()}</span>
+                    <span class="text-slate-300">${eventDesc}</span>
+                </div>`;
+            });
+            
+            terminalContent.innerHTML = html;
+        } catch (err) {
+            terminalContent.innerHTML = `<div class="text-red-500">// ERROR: Failed to poll database registry. ${err.message}</div>`;
+        }
+    }
+
+    // Profile form saving logic
+    const form = document.getElementById('profile-form');
+    const saveBtn = document.getElementById('save-btn');
+    const alertBox = document.getElementById('alert-box');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Saving...';
+        alertBox.classList.add('hidden');
+        
+        const name = document.getElementById('name-input').value;
+        const institution = document.getElementById('institution-input').value;
+        const classLevelEl = document.getElementById('class-level-input');
+        const classLevel = classLevelEl ? classLevelEl.value : null;
+
+        try {
+            const res = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, institution, classLevel })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                // Update local storage session
+                const session = JSON.parse(localStorage.getItem('chemLove_session')) || {};
+                session.name = name;
+                session.institution = institution;
+                if (classLevel) session.classLevel = classLevel;
+                localStorage.setItem('chemLove_session', JSON.stringify(session));
+
+                // Show success message
+                alertBox.className = "mt-4 p-4 rounded-xl text-sm bg-cyan-950/40 border border-cyan-500/30 text-cyan-200 flex items-center gap-2";
+                alertBox.innerHTML = '<span class="material-symbols-outlined text-sm">check_circle</span> Profile telemetry synced successfully.';
+                alertBox.classList.remove('hidden');
+                
+                // Update UI elements
+                document.getElementById('profile-display-name').textContent = name;
+                document.getElementById('profile-display-inst').textContent = institution;
+                const classDisp = document.getElementById('profile-display-class');
+                if (classDisp && classLevel) {
+                    classDisp.textContent = 'Class ' + classLevel;
+                }
+
+                // Reload logs
+                loadHistory();
+            } else {
+                throw new Error(data.error || 'Failed to update profile');
+            }
+        } catch (err) {
+            alertBox.className = "mt-4 p-4 rounded-xl text-sm bg-red-950/40 border border-red-500/30 text-red-300 flex items-center gap-2";
+            alertBox.innerHTML = `<span class="material-symbols-outlined text-sm">error</span> Error: ${err.message}`;
+            alertBox.classList.remove('hidden');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<span class="material-symbols-outlined text-sm">sync</span> Save Changes';
+        }
+    });
+
+    function selectClassLevelEdit(classVal, label) {
+        const inputEl = document.getElementById('class-level-input');
+        if (inputEl) {
+            inputEl.value = classVal;
+        }
+        const labelEl = document.getElementById('selected-class-level-label');
+        if (labelEl) {
+            labelEl.textContent = label;
+        }
+        const optionBtns = document.querySelectorAll('.class-level-option-btn');
+        optionBtns.forEach(btn => {
+            if (btn.getAttribute('onclick').includes(`'${classVal}'`)) {
+                btn.classList.add('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.remove('text-slate-300');
+            } else {
+                btn.classList.remove('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.add('text-slate-300');
+            }
+        });
+        
+        // Hide menu
+        const menu = document.getElementById('class-level-dropdown-menu');
+        const arrow = document.getElementById('class-level-dropdown-arrow');
+        if (menu) menu.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-180');
+    }
+
+    // Boot
+    document.addEventListener('DOMContentLoaded', () => {
+        loadHistory();
+
+        // Custom Dropdown Menu Toggle Handler
+        const classBtn = document.getElementById('class-level-dropdown-btn');
+        const classMenu = document.getElementById('class-level-dropdown-menu');
+        const classArrow = document.getElementById('class-level-dropdown-arrow');
+        if (classBtn && classMenu) {
+            classBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                classMenu.classList.toggle('hidden');
+                if (classArrow) classArrow.classList.toggle('rotate-180');
+            });
+            document.addEventListener('click', () => {
+                classMenu.classList.add('hidden');
+                if (classArrow) classArrow.classList.remove('rotate-180');
+            });
+        }
+    });
+</script>
+{% endblock %}

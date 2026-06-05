@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>ChemLove | Authentication</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4cd7f6",
+                        "secondary": "#a1cedb",
+                        "tertiary": "#ffb0cd",
+                        "background": "#0e1416",
+                        "surface": "#0e1416",
+                        "primary-container": "#06b6d4",
+                        "tertiary-container": "#ff79b4",
+                        "surface-container": "#1b2122",
+                        "surface-container-low": "#171d1e",
+                        "surface-container-high": "#252b2d",
+                        "on-surface": "#dee3e6",
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0e1416;
+            overflow-x: hidden;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #4cd7f6, #ffb0cd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .floating-mol {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-20px) rotate(5deg);
+            }
+        }
+
+        .particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        .neon-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .neon-cyan:hover {
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.6);
+        }
+
+        .neon-pink {
+            box-shadow: 0 0 15px rgba(255, 121, 180, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .neon-pink:hover {
+            box-shadow: 0 0 25px rgba(255, 121, 180, 0.6);
+        }
+
+        /* sliding card transitions */
+        .auth-card-inner {
+            background: rgba(27, 33, 34, 0.6);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+            border-radius: 32px;
+            /* Rounded corners */
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Floating hover effect */
+        .auth-card-inner:hover {
+            transform: translateY(-5px) scale(1.005);
+        }
+
+        .auth-card-inner.state-signup {
+            border: 1px solid rgba(76, 215, 246, 0.15);
+            box-shadow: 0 0 40px rgba(76, 215, 246, 0.1);
+        }
+
+        .auth-card-inner.state-signup:hover {
+            border: 1px solid rgba(76, 215, 246, 0.3);
+            box-shadow: 0 12px 50px rgba(76, 215, 246, 0.18);
+        }
+
+        .auth-card-inner.state-login {
+            border: 1px solid rgba(255, 176, 205, 0.15);
+            box-shadow: 0 0 40px rgba(255, 176, 205, 0.1);
+        }
+
+        .auth-card-inner.state-login:hover {
+            border: 1px solid rgba(255, 176, 205, 0.3);
+            box-shadow: 0 12px 50px rgba(255, 176, 205, 0.18);
+        }
+
+        /* Global tabs Welcome Box style based on parent state */
+        .auth-card-inner.state-signup #tab-signup {
+            color: #4cd7f6;
+            background: rgba(76, 215, 246, 0.1);
+            border: 1px solid rgba(76, 215, 246, 0.2);
+        }
+
+        .auth-card-inner.state-signup #tab-login {
+            color: #94a3b8;
+            /* text-slate-400 */
+            background: transparent;
+            border: 1px solid transparent;
+        }
+
+        .auth-card-inner.state-signup #tab-login:hover {
+            color: #ffffff;
+        }
+
+        .auth-card-inner.state-login #tab-login {
+            color: #ffb0cd;
+            background: rgba(255, 176, 205, 0.1);
+            border: 1px solid rgba(255, 176, 205, 0.2);
+        }
+
+        .auth-card-inner.state-login #tab-signup {
+            color: #94a3b8;
+            /* text-slate-400 */
+            background: transparent;
+            border: 1px solid transparent;
+        }
+
+        .auth-card-inner.state-login #tab-signup:hover {
+            color: #ffffff;
+        }
+
+        .sliding-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 30;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.8s ease;
+            background: rgba(14, 20, 22, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+
+        .sliding-overlay-inner {
+            display: flex;
+            width: 200%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* State transforms and enhanced mask fade effects (completely blends the split edge) */
+        .auth-card-inner.state-signup .sliding-overlay {
+            transform: translateX(0);
+            box-shadow: 15px 0 30px -10px rgba(0, 0, 0, 0.7);
+            -webkit-mask-image: linear-gradient(to right, black 88%, transparent 100%);
+            mask-image: linear-gradient(to right, black 88%, transparent 100%);
+        }
+
+        .auth-card-inner.state-signup .sliding-overlay-inner {
+            transform: translateX(0);
+        }
+
+        .auth-card-inner.state-login .sliding-overlay {
+            transform: translateX(100%);
+            box-shadow: -15px 0 30px -10px rgba(0, 0, 0, 0.7);
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 12%);
+            mask-image: linear-gradient(to right, transparent 0%, black 12%);
+        }
+
+        .auth-card-inner.state-login .sliding-overlay-inner {
+            transform: translateX(-50%);
+        }
+
+        /* Forms transitions */
+        .form-side {
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        @media (min-width: 768px) {
+            .auth-card-inner.state-signup .login-form-side {
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+            }
+
+            .auth-card-inner.state-signup .signup-form-side {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+            }
+
+            .auth-card-inner.state-login .login-form-side {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+            }
+
+            .auth-card-inner.state-login .signup-form-side {
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .sliding-overlay {
+                display: none;
+            }
+
+            .auth-card-inner {
+                max-width: 440px;
+                height: auto;
+                border-radius: 24px;
+            }
+
+            .auth-card-inner.state-signup .login-form-side {
+                display: none !important;
+            }
+
+            .auth-card-inner.state-signup .signup-form-side {
+                display: flex !important;
+                width: 100%;
+            }
+
+            .auth-card-inner.state-login .login-form-side {
+                display: flex !important;
+                width: 100%;
+            }
+
+            .auth-card-inner.state-login .signup-form-side {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body
+    class="bg-surface text-on-surface font-body flex flex-col min-h-screen relative selection:bg-tertiary selection:text-on-tertiary">
+    <canvas class="particle-canvas" id="particles"></canvas>
+
+    <!-- Ambient background glows -->
+    <div class="absolute top-1/4 -right-20 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+    <div
+        class="absolute bottom-0 -left-20 w-[500px] h-[500px] bg-tertiary/5 rounded-full blur-[150px] pointer-events-none">
+    </div>
+
+    <!-- Return Hub link in corner -->
+    <div class="absolute top-6 left-6 z-50">
+        <a href="/"
+            class="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-all bg-slate-900/40 border border-white/5 px-4 py-2 rounded-xl backdrop-blur-md">
+            <span class="material-symbols-outlined text-sm">arrow_back</span>
+            Return Hub
+        </a>
+    </div>
+
+    <!-- Main Container -->
+    <main class="flex-grow flex items-center justify-center py-6 px-6 relative z-10 auth-container">
+        <div class="w-full max-w-4xl h-[580px] relative auth-card-inner overflow-hidden {% if active_form == 'login' %}state-login{% else %}state-signup{% endif %}"
+            id="authCard">
+
+            <!-- Global Header Tabs Centered at the top of the whole card container: Welcome Box design -->
+            <div
+                class="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-[#171d1e]/80 border border-white/5 rounded-full p-1 flex items-center">
+                <button id="tab-signup"
+                    class="px-5 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all duration-300 border border-transparent"
+                    onclick="navigateAuth(false, event)">SIGN UP</button>
+                <button id="tab-login"
+                    class="px-5 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all duration-300 border border-transparent"
+                    onclick="navigateAuth(true, event)">LOGIN</button>
+            </div>
+
+            <!-- Forms container (underneath overlay) -->
+            <div class="absolute inset-0 flex bg-[#1b2122]/10">
+                <!-- Left Side: Login Form -->
+                <div
+                    class="w-full md:w-1/2 h-full flex flex-col justify-center p-10 pt-20 form-side login-form-side overflow-y-auto">
+                    <div class="my-auto w-full">
+                        <!-- Login form post -->
+                        <form class="space-y-4 mt-6" method="POST" action="/login">
+                            <div class="space-y-1.5">
+                                <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Email
+                                    Address</label>
+                                <input name="email"
+                                    class="w-full bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-3 text-xs font-semibold text-white focus:outline-none focus:border-[#ffb0cd] focus:ring-1 focus:ring-[#ffb0cd] transition-all placeholder:text-slate-600"
+                                    placeholder="chemist@proton.me" type="email" required />
+                            </div>
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between items-center">
+                                    <label
+                                        class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Password</label>
+                                    <a class="text-[#ffb0cd] text-xs font-bold hover:underline cursor-pointer"
+                                        href="#">Forgot Password?</a>
+                                </div>
+                                <input name="password"
+                                    class="w-full bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-3 text-xs font-semibold text-white focus:outline-none focus:border-[#ffb0cd] focus:ring-1 focus:ring-[#ffb0cd] transition-all placeholder:text-slate-600"
+                                    placeholder="••••••••" type="password" required />
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input name="remember"
+                                    class="w-4 h-4 rounded bg-[#0e1416] border border-white/10 text-[#ffb0cd] focus:ring-[#ffb0cd] cursor-pointer"
+                                    type="checkbox" />
+                                <span class="text-xs text-slate-300 font-semibold">Remember Me</span>
+                            </div>
+                            <button
+                                class="w-full py-3 bg-gradient-to-r from-pink-500 to-[#ffb0cd] text-white font-bold text-xs uppercase rounded-xl neon-pink hover:scale-[0.98] transition-transform tracking-wider mt-3"
+                                type="submit">Login</button>
+                        </form>
+
+                        <!-- OR divider and google -->
+                        <div class="flex items-center gap-4 my-4">
+                            <div class="flex-grow h-px bg-white/5"></div>
+                            <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500">OR</span>
+                            <div class="flex-grow h-px bg-white/5"></div>
+                        </div>
+                        <button
+                            class="w-full py-3 glass-panel border-white/5 flex items-center justify-center gap-3 text-slate-200 hover:text-white rounded-xl hover:bg-slate-800/40 transition-all text-xs font-bold uppercase tracking-wider">
+                            <img alt="Google" class="w-4 h-4"
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJwBfSQp1BUfdyj2n08Qi8exGD5_7I5HFKpZ8GGo5PwykhODSP9ApjPvNGsbcgHTI_QZqPn9iB-UpJBXRiDQ8d96zH3FPSzUJzv9KAV-Yclh8apagLVk6NYjw5U-MGLHxFrZNZGMEfLrHvmh7x1SIfQnB2eB3GFp0r1lm3vMiWfaeTyShVpGdkk-6fS-FqCF6CYynE78HcW2PNI9mzO9dlBnEpkkqoO1d6gcG1ssAAjkHgEfcLul7C1qu8BTJZMdpRN3z-VQT3dgei" />
+                            Continue with Google
+                        </button>
+
+                        <!-- Login status flash notifications -->
+                        {% if active_form == 'login' %}
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                        {% for category, message in messages %}
+                        <div
+                            class="mt-3 bg-red-950/40 border border-red-500/20 text-red-200 p-3 rounded-xl text-xs flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm shrink-0">error</span>
+                            <span class="font-bold uppercase tracking-wider text-[10px]">{{ message }}</span>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                        {% endwith %}
+                        {% endif %}
+
+                        <div class="mt-4 text-center text-xs">
+                            <span class="text-slate-400 font-semibold">Don't have an account?</span>
+                            <button class="ml-1 text-[#ffb0cd] font-bold hover:underline"
+                                onclick="navigateAuth(false, event)">Sign Up</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Side: Signup Form -->
+                <div
+                    class="w-full md:w-1/2 h-full flex flex-col justify-center p-10 pt-20 form-side signup-form-side overflow-y-auto">
+                    <div class="my-auto w-full">
+                        <!-- Sign Up form post -->
+                        <form class="space-y-4" method="POST" action="/signup">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Full
+                                        Name</label>
+                                    <input name="name"
+                                        class="w-full bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-[#4cd7f6] focus:ring-1 focus:ring-[#4cd7f6] transition-all placeholder:text-slate-600"
+                                        placeholder="Linus Pauling" type="text" required />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Email
+                                        Address</label>
+                                    <input name="email"
+                                        class="w-full bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-[#4cd7f6] focus:ring-1 focus:ring-[#4cd7f6] transition-all placeholder:text-slate-600"
+                                        placeholder="linus@caltech.edu" type="email" required />
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label
+                                        class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Password</label>
+                                    <input name="password"
+                                        class="w-full bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-[#4cd7f6] focus:ring-1 focus:ring-[#4cd7f6] transition-all placeholder:text-slate-600"
+                                        placeholder="••••••••" type="password" required />
+                                </div>
+                                <div class="space-y-1">
+                                    <label
+                                        class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Academic
+                                        Institution</label>
+                                    <input name="institution"
+                                        class="w-full bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-[#4cd7f6] focus:ring-1 focus:ring-[#4cd7f6] transition-all placeholder:text-slate-600"
+                                        placeholder="Caltech University" type="text" required />
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1" id="signup-class-container">
+                                    <label
+                                        class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Academic
+                                        Class</label>
+                                    <input type="hidden" name="classLevel" id="signup-class-select" value="12">
+                                    <div class="relative inline-block text-left w-full" id="signup-class-dropdown-container">
+                                        <button id="signup-class-dropdown-btn" type="button" class="w-full flex items-center justify-between gap-2 bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-[#4cd7f6] focus:ring-1 focus:ring-[#4cd7f6] transition-all cursor-pointer">
+                                            <span id="selected-signup-class-label">Class 12</span>
+                                            <span id="signup-class-dropdown-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
+                                        </button>
+                                        <!-- Dropdown Menu -->
+                                        <div id="signup-class-dropdown-menu" class="hidden absolute left-0 right-0 mt-2.5 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
+                                            <div class="space-y-1">
+                                                <button type="button" onclick="selectSignupClass('9', 'Class 9')" class="signup-class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                                    <span class="material-symbols-outlined text-sm">filter_9</span> Class 9
+                                                </button>
+                                                <button type="button" onclick="selectSignupClass('10', 'Class 10')" class="signup-class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                                    <span class="material-symbols-outlined text-sm">filter_10</span> Class 10
+                                                </button>
+                                                <button type="button" onclick="selectSignupClass('11', 'Class 11')" class="signup-class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                                    <span class="material-symbols-outlined text-sm">looks_one</span> Class 11
+                                                </button>
+                                                <button type="button" onclick="selectSignupClass('12', 'Class 12')" class="signup-class-option-btn active w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-950/20 transition-all text-left">
+                                                    <span class="material-symbols-outlined text-sm">looks_two</span> Class 12
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="space-y-1" id="signup-role-container">
+                                    <label
+                                        class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Role</label>
+                                    <input type="hidden" name="role" id="signup-role-select" value="student">
+                                    <div class="relative inline-block text-left w-full" id="signup-role-dropdown-container">
+                                        <button id="signup-role-dropdown-btn" type="button" class="w-full flex items-center justify-between gap-2 bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-[#4cd7f6] focus:ring-1 focus:ring-[#4cd7f6] transition-all cursor-pointer">
+                                            <span id="selected-signup-role-label">Student</span>
+                                            <span id="signup-role-dropdown-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
+                                        </button>
+                                        <!-- Dropdown Menu -->
+                                        <div id="signup-role-dropdown-menu" class="hidden absolute left-0 right-0 mt-2.5 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
+                                            <div class="space-y-1">
+                                                <button type="button" onclick="selectSignupRole('student', 'Student')" class="signup-role-option-btn active w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-950/20 transition-all text-left">
+                                                    <span class="material-symbols-outlined text-sm">school</span> Student
+                                                </button>
+                                                <button type="button" onclick="selectSignupRole('teacher', 'Teacher')" class="signup-role-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                                    <span class="material-symbols-outlined text-sm">co_present</span> Teacher
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                class="w-full py-3 kinetic-gradient text-white font-bold text-xs uppercase rounded-xl neon-cyan hover:scale-[0.98] transition-transform tracking-wider mt-3"
+                                type="submit">Create Account</button>
+                        </form>
+
+                        <!-- OR divider and google -->
+                        <div class="flex items-center gap-4 my-4">
+                            <div class="flex-grow h-px bg-white/5"></div>
+                            <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500">OR</span>
+                            <div class="flex-grow h-px bg-white/5"></div>
+                        </div>
+                        <button
+                            class="w-full py-3 glass-panel border-white/5 flex items-center justify-center gap-3 text-slate-200 hover:text-white rounded-xl hover:bg-slate-800/40 transition-all text-xs font-bold uppercase tracking-wider">
+                            <img alt="Google" class="w-4 h-4"
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJwBfSQp1BUfdyj2n08Qi8exGD5_7I5HFKpZ8GGo5PwykhODSP9ApjPvNGsbcgHTI_QZqPn9iB-UpJBXRiDQ8d96zH3FPSzUJzv9KAV-Yclh8apagLVk6NYjw5U-MGLHxFrZNZGMEfLrHvmh7x1SIfQnB2eB3GFp0r1lm3vMiWfaeTyShVpGdkk-6fS-FqCF6CYynE78HcW2PNI9mzO9dlBnEpkkqoO1d6gcG1ssAAjkHgEfcLul7C1qu8BTJZMdpRN3z-VQT3dgei" />
+                            Continue with Google
+                        </button>
+
+                        <!-- Signup status flash notifications -->
+                        {% if active_form == 'signup' %}
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                        {% for category, message in messages %}
+                        <div
+                            class="mt-3 bg-red-950/40 border border-red-500/20 text-red-200 p-3 rounded-xl text-xs flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm shrink-0">error</span>
+                            <span class="font-bold uppercase tracking-wider text-[10px]">{{ message }}</span>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                        {% endwith %}
+                        {% endif %}
+
+                        <div class="mt-4 text-center text-xs">
+                            <span class="text-slate-400 font-semibold">Already have an account?</span>
+                            <button class="ml-1 text-[#4cd7f6] font-bold hover:underline"
+                                onclick="navigateAuth(true, event)">Login</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sliding overlay container (slides left <-> right) -->
+            <div class="sliding-overlay hidden md:block">
+                <div class="sliding-overlay-inner">
+                    <!-- Left panel inside overlay: Signup Info Panel (visible on left in state-signup) -->
+                    <div class="w-1/2 h-full flex flex-col justify-center p-10 relative overflow-hidden">
+                        <div class="relative z-10 space-y-6">
+                            <span
+                                class="text-[9px] font-bold uppercase tracking-widest text-[#4cd7f6] bg-[#4cd7f6]/10 px-2.5 py-1.5 rounded-full border border-[#4cd7f6]/20 inline-block">QUANTUM
+                                LEARNING</span>
+                            <h1 class="text-3xl font-black uppercase tracking-tight leading-none text-white">Join <span
+                                    class="gradient-text">ChemLove</span></h1>
+                            <p class="text-slate-300 text-xs leading-relaxed max-w-xs">Master chemistry through
+                                immersive interactive learning and real-time molecular simulations.</p>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="p-4 glass-panel border-white/5 rounded-2xl bg-[#1b2122]/40">
+                                    <div class="text-[9px] font-bold text-[#4cd7f6] mb-1 uppercase tracking-widest">
+                                        Reactions</div>
+                                    <div class="text-2xl font-black text-white">320+</div>
+                                </div>
+                                <div class="p-4 glass-panel border-white/5 rounded-2xl bg-[#1b2122]/40">
+                                    <div class="text-[9px] font-bold text-[#ffb0cd] mb-1 uppercase tracking-widest">
+                                        Levels</div>
+                                    <div class="text-2xl font-black text-white">4 Grades</div>
+                                </div>
+                            </div>
+
+                            <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
+                                <li class="flex items-center gap-2.5">
+                                    <span class="material-symbols-outlined text-[#4cd7f6] text-lg">check_circle</span>
+                                    Virtual Lab Environment
+                                </li>
+                                <li class="flex items-center gap-2.5">
+                                    <span class="material-symbols-outlined text-[#4cd7f6] text-lg">check_circle</span>
+                                    Smart Reaction Simulations
+                                </li>
+                                <li class="flex items-center gap-2.5">
+                                    <span class="material-symbols-outlined text-[#4cd7f6] text-lg">check_circle</span>
+                                    150+ Advanced Experiments
+                                </li>
+                            </ul>
+                        </div>
+                        <!-- Beaker image background graphic -->
+                        <img alt="Chem Illustration"
+                            class="absolute -bottom-10 -right-10 w-72 h-72 object-contain opacity-25 floating-mol select-none pointer-events-none"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGxUUkAKssJLwzX5LhMzfbYymCavrS5XbDvKdXQkE1nbd2yGC6mui_jFRa9EERRwGlR-htvDXymc666lHPNP_k53_EknWvp9ha_8cSeDSXD1vYmLNM5NKOGsmAyA5XqEgZgnCXFKPCABRJJrCcVlcQ8YNp0geHWghEeKzO6EtgVvKYMrhsMwCujeKyTrY-0mVZNxWllf8-0ENauJki9YsTnC6za4-DvouBaZitrI1KysZG9cuRLM2cTD5YASCeRS8000a80PJ1amS4" />
+                    </div>
+
+                    <!-- Right panel inside overlay: Login Info Panel (visible on right in state-login) -->
+                    <div class="w-1/2 h-full flex flex-col justify-center p-10 relative overflow-hidden">
+                        <div class="relative z-10 space-y-6">
+                            <span
+                                class="text-[9px] font-bold uppercase tracking-widest text-[#ffb0cd] bg-[#ffb0cd]/10 px-2.5 py-1.5 rounded-full border border-[#ffb0cd]/20 inline-block">WELCOME
+                                BACK</span>
+                            <h2 class="text-3xl font-black uppercase tracking-tight leading-none text-white">Continue
+                                Your <br /><span class="gradient-text">Journey</span></h2>
+
+                            <div class="space-y-3">
+                                <div
+                                    class="flex items-center gap-3.5 p-3.5 glass-panel border-white/5 rounded-xl bg-[#1b2122]/40">
+                                    <div class="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-[#4cd7f6] text-xl">biotech</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-white uppercase">Virtual Labs</div>
+                                        <div class="text-[10px] text-slate-400 mt-0.5">Resume last experiment</div>
+                                    </div>
+                                </div>
+                                <div
+                                    class="flex items-center gap-3.5 p-3.5 glass-panel border-white/5 rounded-xl bg-[#1b2122]/40">
+                                    <div class="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-[#ffb0cd] text-xl">database</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-white uppercase">Reactions Library</div>
+                                        <div class="text-[10px] text-slate-400 mt-0.5">42 new formulas added</div>
+                                    </div>
+                                </div>
+                                <div
+                                    class="flex items-center gap-3.5 p-3.5 glass-panel border-white/5 rounded-xl bg-[#1b2122]/40">
+                                    <div class="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-[#ffb0cd] text-xl">quiz</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-white uppercase">Quiz Arena</div>
+                                        <div class="text-[10px] text-slate-400 mt-0.5">Weekly challenge live</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Microscope image background graphic -->
+                        <img alt="Chem Lab"
+                            class="absolute -bottom-10 -right-10 w-80 h-80 object-contain opacity-25 floating-mol select-none pointer-events-none"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUKH9udu2V7oBiPsBf2uq4YNRi0UfADa7PYxJQn8xd95zjhgvollYo4D5ZtUcBbtKVoUG0CydW85QVm-QRfpaxL2ydAliGzwA_-70qiXjGV3SFReNUq245t6EBbPk4DMQxFTP6yfDhC2IwM5x9FSgeRihp29CFk5GxTeT051TcYXUdW39XN4q1zBknfMuD2NMu1005CNE-p0WJB2BfFxJA8Q__em-ch2dktrPeBvL6tD1yAq1Y65ndsAXbO9se37m2AkPrRuN676oc"
+                            style="animation-delay: -3s" />
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/particles.js') }}"></script>
+    <script>
+        // Navigation / Slider controller with dynamic URL update and history support
+        // Uses history.replaceState to prevent user from getting stuck in history loops
+        function navigateAuth(showLogin, e) {
+            if (e) e.preventDefault();
+            const cardInner = document.getElementById('authCard');
+            if (showLogin) {
+                cardInner.classList.remove('state-signup');
+                cardInner.classList.add('state-login');
+                history.replaceState({ form: 'login' }, '', '/login');
+                document.title = "ChemLove | Login";
+            } else {
+                cardInner.classList.remove('state-login');
+                cardInner.classList.add('state-signup');
+                history.replaceState({ form: 'signup' }, '', '/signup');
+                document.title = "ChemLove | Sign Up";
+            }
+        }
+
+        // Support browser back/forward buttons
+        window.addEventListener('popstate', (e) => {
+            const cardInner = document.getElementById('authCard');
+            const path = window.location.pathname;
+            if (path === '/login') {
+                cardInner.classList.remove('state-signup');
+                cardInner.classList.add('state-login');
+                document.title = "ChemLove | Login";
+            } else if (path === '/signup') {
+                cardInner.classList.remove('state-login');
+                cardInner.classList.add('state-signup');
+                document.title = "ChemLove | Sign Up";
+            }
+        });
+
+        function selectSignupClass(classVal, label) {
+            const inputEl = document.getElementById('signup-class-select');
+            if (inputEl) {
+                inputEl.value = classVal;
+                inputEl.dispatchEvent(new Event('change'));
+            }
+            const labelEl = document.getElementById('selected-signup-class-label');
+            if (labelEl) {
+                labelEl.textContent = label;
+            }
+            const optionBtns = document.querySelectorAll('.signup-class-option-btn');
+            optionBtns.forEach(btn => {
+                if (btn.getAttribute('onclick').includes(`'${classVal}'`)) {
+                    btn.classList.add('active', 'text-cyan-400', 'bg-cyan-950/20');
+                    btn.classList.remove('text-slate-300');
+                } else {
+                    btn.classList.remove('active', 'text-cyan-400', 'bg-cyan-950/20');
+                    btn.classList.add('text-slate-300');
+                }
+            });
+            // Hide menu
+            const menu = document.getElementById('signup-class-dropdown-menu');
+            const arrow = document.getElementById('signup-class-dropdown-arrow');
+            if (menu) menu.classList.add('hidden');
+            if (arrow) arrow.classList.remove('rotate-180');
+        }
+
+        function selectSignupRole(roleVal, label) {
+            const inputEl = document.getElementById('signup-role-select');
+            if (inputEl) {
+                inputEl.value = roleVal;
+                inputEl.dispatchEvent(new Event('change'));
+            }
+            const labelEl = document.getElementById('selected-signup-role-label');
+            if (labelEl) {
+                labelEl.textContent = label;
+            }
+            const optionBtns = document.querySelectorAll('.signup-role-option-btn');
+            optionBtns.forEach(btn => {
+                if (btn.getAttribute('onclick').includes(`'${roleVal}'`)) {
+                    btn.classList.add('active', 'text-cyan-400', 'bg-cyan-950/20');
+                    btn.classList.remove('text-slate-300');
+                } else {
+                    btn.classList.remove('active', 'text-cyan-400', 'bg-cyan-950/20');
+                    btn.classList.add('text-slate-300');
+                }
+            });
+            // Hide menu
+            const menu = document.getElementById('signup-role-dropdown-menu');
+            const arrow = document.getElementById('signup-role-dropdown-arrow');
+            if (menu) menu.classList.add('hidden');
+            if (arrow) arrow.classList.remove('rotate-180');
+        }
+
+        // Dynamic role/class toggle on signup form
+        document.addEventListener('DOMContentLoaded', () => {
+            const roleSelect = document.getElementById('signup-role-select');
+            const classContainer = document.getElementById('signup-class-container');
+            const roleContainer = document.getElementById('signup-role-container');
+
+            if (roleSelect && classContainer && roleContainer) {
+                function updateRoleLayout() {
+                    if (roleSelect.value === 'teacher') {
+                        classContainer.classList.add('hidden');
+                        roleContainer.classList.add('col-span-2');
+                    } else {
+                        classContainer.classList.remove('hidden');
+                        roleContainer.classList.remove('col-span-2');
+                    }
+                }
+
+                roleSelect.addEventListener('change', updateRoleLayout);
+                updateRoleLayout(); // initialize on load
+            }
+
+            // Custom Dropdowns Toggle Handlers for Signup
+            const classBtn = document.getElementById('signup-class-dropdown-btn');
+            const classMenu = document.getElementById('signup-class-dropdown-menu');
+            const classArrow = document.getElementById('signup-class-dropdown-arrow');
+            const roleBtn = document.getElementById('signup-role-dropdown-btn');
+            const roleMenu = document.getElementById('signup-role-dropdown-menu');
+            const roleArrow = document.getElementById('signup-role-dropdown-arrow');
+
+            if (classBtn && classMenu) {
+                classBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    classMenu.classList.toggle('hidden');
+                    if (roleMenu) roleMenu.classList.add('hidden');
+                    if (roleArrow) roleArrow.classList.remove('rotate-180');
+                    if (classArrow) classArrow.classList.toggle('rotate-180');
+                });
+            }
+
+            if (roleBtn && roleMenu) {
+                roleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    roleMenu.classList.toggle('hidden');
+                    if (classMenu) classMenu.classList.add('hidden');
+                    if (classArrow) classArrow.classList.remove('rotate-180');
+                    if (roleArrow) roleArrow.classList.toggle('rotate-180');
+                });
+            }
+
+            document.addEventListener('click', () => {
+                if (classMenu) classMenu.classList.add('hidden');
+                if (classArrow) classArrow.classList.remove('rotate-180');
+                if (roleMenu) roleMenu.classList.add('hidden');
+                if (roleArrow) roleArrow.classList.remove('rotate-180');
+            });
+        });
+    </script>
+</body>
+
+</html>

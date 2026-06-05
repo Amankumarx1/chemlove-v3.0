@@ -1,0 +1,85 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Practical Reports{% endblock %}
+
+{% block dashboard_content %}
+    <div>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Practical Record Book</h1>
+        <p class="text-slate-400 mt-2 text-sm">Review student assignment submissions, approve laboratory experiments, and award mastery grades.</p>
+    </div>
+
+    <!-- Submissions List -->
+    <div id="submissions-list" class="space-y-4 pb-24 mt-8">
+        <!-- Spinner -->
+        <div class="flex justify-center py-12" id="report-spinner">
+            <div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadSubmissions() {
+        const list = document.getElementById('submissions-list');
+        try {
+            const res = await fetch('/api/submissions');
+            const data = await res.json();
+            
+            const spinner = document.getElementById('report-spinner');
+            if (spinner) spinner.remove();
+            
+            list.innerHTML = '';
+            if (data.submissions.length === 0) {
+                list.innerHTML = '<div class="glass-morphism p-12 rounded-3xl text-center"><span class="material-symbols-outlined text-5xl text-slate-600 mb-4">summarize</span><h3 class="text-lg font-bold text-white uppercase mb-2">No Submissions Yet</h3><p class="text-xs text-slate-500 max-w-sm mx-auto">When students submit their experiment worksheets, they will appear here for grading.</p></div>';
+                return;
+            }
+
+            data.submissions.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-6 rounded-2xl flex justify-between items-center hover:border-cyan-500/20 transition-all';
+                card.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-[8px] font-bold tracking-widest uppercase border ${s.status === 'approved' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-amber-500/20 bg-amber-500/10 text-amber-300'}">${s.status}</span>
+                            <h4 class="text-base font-bold text-white uppercase">${s.assignment_title}</h4>
+                        </div>
+                        <p class="text-xs text-slate-400 font-medium">Submitted by: <span class="text-cyan-400">${s.student_name}</span> | Date: ${s.submitted_at.replace('T', ' ').substring(0, 19)}</p>
+                        <p class="text-xs text-slate-500 italic">" ${s.file_data || 'No attachments' } "</p>
+                        ${s.feedback ? `<p class="text-[10px] text-slate-400"><strong class="text-slate-500 uppercase font-black">Feedback: </strong>"${s.feedback}"</p>` : ''}
+                    </div>
+                    
+                    ${s.status === 'pending' ? `
+                    <div class="flex gap-2">
+                        <button onclick="gradeSubmission(${s.id}, 'approved')" class="bg-emerald-500 hover:bg-emerald-600 text-[#001f26] font-bold text-xs uppercase px-4 py-2 rounded-xl transition-all">Approve</button>
+                        <button onclick="gradeSubmission(${s.id}, 'rejected')" class="bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs uppercase px-4 py-2 rounded-xl transition-all">Reject</button>
+                    </div>
+                    ` : `
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Graded: <span class="text-cyan-400 font-black">${s.marks_obtained || 0} Marks</span></span>
+                    `}
+                `;
+                list.appendChild(card);
+            });
+        } catch (e) {
+            console.error(e);
+            list.innerHTML = '<div class="text-center text-red-400 text-xs font-bold uppercase">Failed to load submissions.</div>';
+        }
+    }
+
+    async function gradeSubmission(id, status) {
+        const marks = prompt("Enter Marks Awarded (0-100):", "85");
+        if(marks === null) return;
+        const feedback = prompt("Enter Feedback comments:", "Well executed.");
+        
+        try {
+            const res = await fetch('/api/submissions', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, marks_obtained: parseFloat(marks), feedback, status })
+            });
+            if(res.ok) loadSubmissions();
+        } catch (e) { console.error(e); }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadSubmissions);
+</script>
+{% endblock %}

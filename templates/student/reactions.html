@@ -1,0 +1,273 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Reaction Catalog{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Catalog Section -->
+    <div id="catalog-section">
+        <div class="mb-8">
+            <div class="inline-flex items-center gap-2 bg-primary-container/20 text-primary px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
+                <span class="w-2 h-2 rounded-full bg-primary live-pulse"></span>
+                Database 01-A
+            </div>
+            <h1 class="text-3xl md:text-4xl font-black tracking-tight leading-none uppercase">The Reaction Catalog</h1>
+            <p class="text-slate-400 mt-2 text-sm">A complete indexed repository of chemical transformations matching academic standard protocols.</p>
+        </div>
+
+        <!-- Search & Filter -->
+        <section class="mb-8 space-y-4">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1 relative">
+                    <input id="search-input"
+                        class="w-full bg-[#171d1e]/40 border border-white/5 focus:border-primary px-5 py-3.5 text-xs font-semibold rounded-xl placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-primary shadow-xl transition-all"
+                        placeholder="SEARCH REACTION CATALOG..." type="text" oninput="filterReactions()" />
+                    <div class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500">
+                        <span class="material-symbols-outlined text-xl">search</span>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <!-- Hidden input for class filter value compatibility with script.js -->
+                    <input type="hidden" id="class-filter" value="all">
+
+                    <!-- Custom Class Filter Dropdown -->
+                    <div class="relative inline-block text-left" id="class-dropdown-container">
+                        <button id="class-dropdown-btn" type="button" class="flex items-center justify-between gap-2 bg-[#171d1e]/40 text-on-surface border border-white/10 px-6 py-3.5 text-xs font-bold uppercase rounded-xl hover:bg-slate-800/40 hover:scale-105 transition-all duration-300 shadow-xl min-w-[150px]">
+                            <span id="selected-class-label">All Classes</span>
+                            <span id="class-dropdown-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
+                        </button>
+                        <!-- Dropdown Menu -->
+                        <div id="class-dropdown-menu" class="hidden absolute right-0 mt-2.5 w-44 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
+                            <div class="space-y-1">
+                                <button type="button" onclick="selectClassFilter('all', 'All Classes')" class="class-option-btn active w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-950/20 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">school</span> All Classes
+                                </button>
+                                <button type="button" onclick="selectClassFilter('9', 'Class 9')" class="class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">filter_9</span> Class 9
+                                </button>
+                                <button type="button" onclick="selectClassFilter('10', 'Class 10')" class="class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">filter_10</span> Class 10
+                                </button>
+                                <button type="button" onclick="selectClassFilter('11', 'Class 11')" class="class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">looks_one</span> Class 11
+                                </button>
+                                <button type="button" onclick="selectClassFilter('12', 'Class 12')" class="class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">looks_two</span> Class 12
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Type Filter Dropdown (Showdown Layer Button) -->
+                    <div class="relative inline-block text-left" id="type-dropdown-container">
+                        <button id="type-dropdown-btn" type="button" class="flex items-center justify-between gap-2 bg-[#171d1e]/40 text-on-surface border border-white/10 px-6 py-3.5 text-xs font-bold uppercase rounded-xl hover:bg-slate-800/40 hover:scale-105 transition-all duration-300 shadow-xl min-w-[180px]">
+                            <span id="selected-type-label">All Reactions</span>
+                            <span id="type-dropdown-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
+                        </button>
+                        <!-- Dropdown Menu -->
+                        <div id="type-dropdown-menu" class="hidden absolute right-0 mt-2.5 w-56 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
+                            <div class="space-y-1">
+                                <button type="button" onclick="selectTypeFilter('all', 'All Reactions')" class="type-option-btn active w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-950/20 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">science</span> All Reactions
+                                </button>
+                                <button type="button" onclick="selectTypeFilter('Organic_Named_Reactions', 'Organic Named')" class="type-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">label</span> Organic Named
+                                </button>
+                                <button type="button" onclick="selectTypeFilter('Substitution_Reactions', 'Substitution')" class="type-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">swap_horiz</span> Substitution
+                                </button>
+                                <button type="button" onclick="selectTypeFilter('Addition_Reactions', 'Addition')" class="type-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">add_box</span> Addition
+                                </button>
+                                <button type="button" onclick="selectTypeFilter('Elimination_Reactions', 'Elimination')" class="type-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">backspace</span> Elimination
+                                </button>
+                                <button type="button" onclick="selectTypeFilter('Rearrangement_Reactions', 'Rearrangement')" class="type-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">shuffle</span> Rearrangement
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div id="reactions-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 pb-24">
+            <!-- Reaction cards will be injected here -->
+        </div>
+    </div>
+
+    <!-- Detail Section -->
+    <div id="detail-section" class="hidden">
+        <button onclick="hideDetail()"
+            class="mb-8 flex items-center gap-2 font-bold uppercase text-primary hover:text-cyan-200 transition-colors">
+            <span class="material-symbols-outlined">arrow_back</span> Back to Reactions
+        </button>
+        <div id="detail-content" class="glass-morphism p-12 rounded-3xl shadow-2xl">
+            <!-- Detail content injected here -->
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script>
+    // Override the navigation behavior so that script.js calls work locally
+    window.navigate = function(page, data) {
+        if (page === 'reactions') {
+            hideDetail();
+        } else if (page === 'detail' && data) {
+            showDetail(data);
+        }
+    };
+    
+    function showDetail(data) {
+        document.getElementById('catalog-section').classList.add('hidden');
+        document.getElementById('detail-section').classList.remove('hidden');
+        if (typeof renderDetailPage === 'function') {
+            renderDetailPage(data);
+        }
+    }
+    
+    function hideDetail() {
+        document.getElementById('detail-section').classList.add('hidden');
+        document.getElementById('catalog-section').classList.remove('hidden');
+    }
+
+    function selectTypeFilter(type, label) {
+        // Update selection variable in script.js (currentFilterType)
+        if (typeof currentFilterType !== 'undefined') {
+            currentFilterType = type;
+        }
+        
+        // Update label
+        const labelEl = document.getElementById('selected-type-label');
+        if (labelEl) {
+            labelEl.textContent = label;
+        }
+        
+        // Update active class on option buttons
+        const optionBtns = document.querySelectorAll('.type-option-btn');
+        optionBtns.forEach(btn => {
+            if (btn.getAttribute('onclick').includes(`'${type}'`)) {
+                btn.classList.add('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.remove('text-slate-300');
+            } else {
+                btn.classList.remove('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.add('text-slate-300');
+            }
+        });
+        
+        // Trigger filter update
+        if (typeof filterReactions === 'function') {
+            filterReactions();
+        }
+        
+        // Hide dropdown
+        const typeMenu = document.getElementById('type-dropdown-menu');
+        const typeArrow = document.getElementById('type-dropdown-arrow');
+        if (typeMenu) {
+            typeMenu.classList.add('hidden');
+        }
+        if (typeArrow) {
+            typeArrow.classList.remove('rotate-180');
+        }
+    }
+
+    function selectClassFilter(classVal, label) {
+        // Update selection input element
+        const inputEl = document.getElementById('class-filter');
+        if (inputEl) {
+            inputEl.value = classVal;
+        }
+        
+        // Update label
+        const labelEl = document.getElementById('selected-class-label');
+        if (labelEl) {
+            labelEl.textContent = label;
+        }
+        
+        // Update active class on option buttons
+        const optionBtns = document.querySelectorAll('.class-option-btn');
+        optionBtns.forEach(btn => {
+            if (btn.getAttribute('onclick').includes(`'${classVal}'`)) {
+                btn.classList.add('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.remove('text-slate-300');
+            } else {
+                btn.classList.remove('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.add('text-slate-300');
+            }
+        });
+        
+        // Trigger filter update
+        if (typeof filterReactions === 'function') {
+            filterReactions();
+        }
+        
+        // Hide dropdown
+        const classMenu = document.getElementById('class-dropdown-menu');
+        const classArrow = document.getElementById('class-dropdown-arrow');
+        if (classMenu) {
+            classMenu.classList.add('hidden');
+        }
+        if (classArrow) {
+            classArrow.classList.remove('rotate-180');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof renderReactionsPage === 'function') {
+            renderReactionsPage();
+        }
+
+        // Custom Dropdown Menu Toggle Handler (Type filter)
+        const typeBtn = document.getElementById('type-dropdown-btn');
+        const typeMenu = document.getElementById('type-dropdown-menu');
+        const typeArrow = document.getElementById('type-dropdown-arrow');
+        
+        if (typeBtn && typeMenu) {
+            typeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                typeMenu.classList.toggle('hidden');
+                // Close the other dropdown if it is open
+                const classMenu = document.getElementById('class-dropdown-menu');
+                const classArrow = document.getElementById('class-dropdown-arrow');
+                if (classMenu) classMenu.classList.add('hidden');
+                if (classArrow) classArrow.classList.remove('rotate-180');
+
+                if (typeArrow) {
+                    typeArrow.classList.toggle('rotate-180');
+                }
+            });
+        }
+
+        // Custom Dropdown Menu Toggle Handler (Class filter)
+        const classBtn = document.getElementById('class-dropdown-btn');
+        const classMenu = document.getElementById('class-dropdown-menu');
+        const classArrow = document.getElementById('class-dropdown-arrow');
+        
+        if (classBtn && classMenu) {
+            classBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                classMenu.classList.toggle('hidden');
+                // Close the other dropdown if it is open
+                const typeMenu = document.getElementById('type-dropdown-menu');
+                const typeArrow = document.getElementById('type-dropdown-arrow');
+                if (typeMenu) typeMenu.classList.add('hidden');
+                if (typeArrow) typeArrow.classList.remove('rotate-180');
+
+                if (classArrow) {
+                    classArrow.classList.toggle('rotate-180');
+                }
+            });
+        }
+
+        // Global click to close both dropdowns
+        document.addEventListener('click', () => {
+            if (typeMenu) typeMenu.classList.add('hidden');
+            if (typeArrow) typeArrow.classList.remove('rotate-180');
+            if (classMenu) classMenu.classList.add('hidden');
+            if (classArrow) classArrow.classList.remove('rotate-180');
+        });
+    });
+</script>
+{% endblock %}

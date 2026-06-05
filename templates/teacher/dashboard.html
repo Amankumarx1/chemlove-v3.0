@@ -1,0 +1,123 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Teacher Dashboard{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Hero banner -->
+    <div class="mb-8">
+        <div class="inline-flex items-center gap-2 bg-primary-container/20 text-primary px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
+            <span class="w-2 h-2 rounded-full bg-primary live-pulse"></span>
+            Teacher Command Center
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Academic Overview</h1>
+    </div>
+
+    <!-- Dashboard Bento Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Card 1 -->
+        <div class="glass-morphism p-6 rounded-2xl flex flex-col justify-between min-h-32 relative overflow-hidden group">
+            <div class="absolute -right-8 -top-8 w-20 h-20 bg-primary/5 rounded-full blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+            <span class="material-symbols-outlined text-cyan-400 text-3xl">groups</span>
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Students</div>
+                <div id="stat-total-students" class="text-3xl font-black text-white mt-1">0</div>
+            </div>
+        </div>
+        <!-- Card 2 -->
+        <div class="glass-morphism p-6 rounded-2xl flex flex-col justify-between min-h-32 relative overflow-hidden group">
+            <span class="material-symbols-outlined text-tertiary text-3xl">assignment</span>
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Assignments</div>
+                <div id="stat-total-assignments" class="text-3xl font-black text-white mt-1">0</div>
+            </div>
+        </div>
+        <!-- Card 3 -->
+        <div class="glass-morphism p-6 rounded-2xl flex flex-col justify-between min-h-32 relative overflow-hidden group">
+            <span class="material-symbols-outlined text-cyan-400 text-3xl">pending_actions</span>
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Test Pools</div>
+                <div id="stat-total-tests" class="text-3xl font-black text-white mt-1">0</div>
+            </div>
+        </div>
+        <!-- Card 4 -->
+        <div class="glass-morphism p-6 rounded-2xl flex flex-col justify-between min-h-32 relative overflow-hidden group">
+            <span class="material-symbols-outlined text-tertiary text-3xl">average</span>
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Average Score</div>
+                <div class="text-3xl font-black text-white mt-1">78.4%</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick overview lists -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Announcements Board -->
+        <div class="glass-morphism p-8 rounded-3xl">
+            <h3 class="text-base font-bold uppercase tracking-widest text-slate-500 mb-6">Recent Notices</h3>
+            <div id="dashboard-notices" class="space-y-4 text-xs text-slate-400">
+                <div class="flex flex-col gap-2 p-4 bg-slate-800/20 border border-white/5 rounded-xl">
+                    <div class="font-bold text-white">Upcoming Practical Submissions</div>
+                    <p class="text-[11px] text-slate-400">Ensure all students submit their titration workbench files by June 10th.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick class shortcuts -->
+        <div class="glass-morphism p-8 rounded-3xl">
+            <h3 class="text-base font-bold uppercase tracking-widest text-slate-500 mb-6">Active Classrooms</h3>
+            <div id="dashboard-classes-list" class="space-y-4"></div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadStats() {
+        // Load Students count
+        try {
+            const resS = await fetch('/api/students');
+            const dataS = await resS.json();
+            document.getElementById('stat-total-students').textContent = dataS.students.length;
+        } catch (e) { console.error(e); }
+
+        // Load Assignments count
+        try {
+            const resA = await fetch('/api/assignments');
+            const dataA = await resA.json();
+            document.getElementById('stat-total-assignments').textContent = dataA.assignments.length;
+        } catch (e) { console.error(e); }
+
+        // Load Tests count
+        try {
+            const resT = await fetch('/api/tests');
+            const dataT = await resT.json();
+            document.getElementById('stat-total-tests').textContent = dataT.tests.length;
+        } catch (e) { console.error(e); }
+
+        // Load Classrooms for list
+        try {
+            const resC = await fetch('/api/classrooms');
+            const dataC = await resC.json();
+            const dashList = document.getElementById('dashboard-classes-list');
+            if (dashList) {
+                dashList.innerHTML = '';
+                if (dataC.classrooms.length === 0) {
+                    dashList.innerHTML = '<div class="text-slate-500 text-xs">// No active classrooms found.</div>';
+                    return;
+                }
+                dataC.classrooms.forEach(c => {
+                    const item = document.createElement('div');
+                    item.className = 'flex justify-between items-center border-b border-white/5 pb-2 text-xs';
+                    item.innerHTML = `
+                        <span class="font-bold text-slate-300">${c.name}</span>
+                        <span class="text-cyan-400 font-bold tracking-widest">${c.student_count} Students</span>
+                    `;
+                    dashList.appendChild(item);
+                });
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadStats);
+</script>
+{% endblock %}

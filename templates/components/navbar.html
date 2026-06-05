@@ -1,0 +1,24 @@
+<nav class="fixed top-0 w-full z-50 bg-[#0e1416]/80 backdrop-blur-xl border-b border-white/5 shadow-[0_0_30px_-10px_rgba(6,182,212,0.3)]">
+    <div class="flex justify-between items-center px-8 h-20 max-w-screen-2xl mx-auto">
+        <a href="/" class="text-2xl font-black tracking-tighter text-cyan-500 italic cursor-pointer">
+            ChemLove
+        </a>
+        <div class="hidden md:flex items-center gap-8">
+            <a href="/" class="font-bold tracking-[-0.02em] text-sm uppercase text-slate-400 font-medium hover:text-cyan-200 transition-colors">Home</a>
+            <a href="/features" class="font-bold tracking-[-0.02em] text-sm uppercase text-slate-400 font-medium hover:text-cyan-200 transition-colors">Features</a>
+            
+            <a href="/about" class="font-bold tracking-[-0.02em] text-sm uppercase text-slate-400 font-medium hover:text-cyan-200 transition-colors">About</a>
+            <a href="/contact" class="font-bold tracking-[-0.02em] text-sm uppercase text-slate-400 font-medium hover:text-cyan-200 transition-colors">Contact</a>
+        </div>
+        <div class="flex items-center gap-4">
+            {% if current_user %}
+                {% include 'components/avatar_dropdown.html' %}
+            {% else %}
+                <div class="flex items-center gap-4">
+                    <a href="/login" class="text-on-surface font-medium px-4 py-2 hover:bg-slate-800/40 hover:scale-105 transition-all duration-300 rounded-xl">Login</a>
+                    <a href="/signup" class="kinetic-gradient text-on-primary font-bold px-6 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all duration-300">Get Started</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</nav>

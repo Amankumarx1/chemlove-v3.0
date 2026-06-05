@@ -1,0 +1,118 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | User Registry{% endblock %}
+
+{% block dashboard_content %}
+    <div class="mb-8">
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">User Registry Console</h1>
+        <p class="text-slate-400 mt-2 text-sm">Manage user accounts, assign roles, and toggle status (suspension/activation).</p>
+    </div>
+
+    <div class="glass-morphism rounded-3xl overflow-hidden border border-white/5 bg-[#171d1e]/20 shadow-2xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-white/5 bg-slate-900/40 text-slate-400 uppercase font-black tracking-widest">
+                        <th class="p-5">Name</th>
+                        <th class="p-5">Email</th>
+                        <th class="p-5">Role</th>
+                        <th class="p-5">Institution</th>
+                        <th class="p-5">Status</th>
+                        <th class="p-5 text-right">Administrative Action</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-body" class="divide-y divide-white/5">
+                    <!-- Loading spinner -->
+                    <tr id="users-spinner">
+                        <td colspan="6" class="p-8 text-center">
+                            <div class="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin inline-block"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadUsers() {
+        const tbody = document.getElementById('users-table-body');
+        if(!tbody) return;
+        
+        try {
+            const res = await fetch('/api/admin/users');
+            const data = await res.json();
+            
+            const spinner = document.getElementById('users-spinner');
+            if (spinner) spinner.remove();
+            
+            tbody.innerHTML = '';
+            data.users.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-white/[0.01] transition-colors';
+                
+                let actionsHtml = '';
+                if (u.role === 'admin') {
+                    actionsHtml = `<span class="text-[9px] font-bold uppercase tracking-widest text-slate-500 bg-slate-900/40 border border-white/5 px-2.5 py-1.5 rounded-xl select-none">Immutable Admin</span>`;
+                } else {
+                    actionsHtml = `
+                        <button onclick="toggleUserStatus(${u.id}, '${u.status}', '${u.name}')" class="text-xs font-bold uppercase tracking-wider ${u.status === 'suspended' ? 'text-emerald-400 hover:text-emerald-300' : 'text-rose-400 hover:text-rose-300'}">${u.status === 'suspended' ? 'Unsuspend' : 'Suspend'}</button>
+                        <button onclick="promoteToTeacher(${u.id}, '${u.name}')" class="text-xs text-cyan-400 hover:text-cyan-200 font-bold uppercase tracking-wider">Promote</button>
+                    `;
+                }
+
+                tr.innerHTML = `
+                    <td class="p-5 font-bold text-white uppercase">${u.name}</td>
+                    <td class="p-5 text-slate-400 font-mono">${u.email}</td>
+                    <td class="p-5 font-bold uppercase text-slate-400">${u.role}</td>
+                    <td class="p-5 text-slate-400">${u.institution}</td>
+                    <td class="p-5">
+                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase border ${u.status === 'suspended' ? 'border-rose-500/20 bg-rose-500/10 text-rose-300' : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'}">${u.status}</span>
+                    </td>
+                    <td class="p-5 text-right space-x-2">
+                        ${actionsHtml}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-red-400 font-bold uppercase">Failed to load registry.</td></tr>';
+        }
+    }
+
+    async function toggleUserStatus(id, currentStatus, name) {
+        const nextStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+        if (confirm(`Change status of ${name} to ${nextStatus}?`)) {
+            try {
+                const res = await fetch('/api/admin/users', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, name, status: nextStatus })
+                });
+                if(res.ok) {
+                    loadUsers();
+                }
+            } catch (e) { console.error(e); }
+        }
+    }
+
+    async function promoteToTeacher(id, name) {
+        if(confirm(`Promote ${name} to Teacher?`)) {
+            try {
+                const res = await fetch('/api/admin/users', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, name, role: 'teacher', status: 'active' })
+                });
+                if(res.ok) {
+                    loadUsers();
+                }
+            } catch (e) { console.error(e); }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadUsers);
+</script>
+{% endblock %}

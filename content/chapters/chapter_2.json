@@ -1,0 +1,237 @@
+{
+  "id": 2,
+  "number": 2,
+  "class": 11,
+  "subject": "Chemistry",
+  "title": "Structure of Atom",
+  "description": "This chapter explores the evolution of atomic models, subatomic particles, electromagnetic radiation, quantum theory, atomic spectra, Bohr's model, quantum mechanical model, and electronic configuration.",
+
+  "learning_objectives": [
+    "Understand the discovery of subatomic particles.",
+    "Compare different atomic models.",
+    "Study electromagnetic radiation and atomic spectra.",
+    "Understand quantum theory and wave-particle duality.",
+    "Learn quantum numbers and their significance.",
+    "Write electronic configurations of atoms and ions."
+  ],
+
+  "key_points": [
+    "Atoms consist of electrons, protons and neutrons.",
+    "J.J. Thomson proposed the Plum Pudding Model.",
+    "Rutherford discovered the atomic nucleus through alpha scattering experiments.",
+    "Bohr explained the hydrogen spectrum using quantized energy levels.",
+    "Matter exhibits both particle and wave nature.",
+    "Heisenberg's Uncertainty Principle limits simultaneous measurement of position and momentum.",
+    "Quantum numbers describe the location and behavior of electrons.",
+    "Electronic configuration follows Aufbau Principle, Pauli Exclusion Principle and Hund's Rule."
+  ],
+
+  "important_discoveries": [
+    {
+      "scientist": "J.J. Thomson",
+      "contribution": "Discovery of Electron"
+    },
+    {
+      "scientist": "E. Goldstein",
+      "contribution": "Discovery of Canal Rays"
+    },
+    {
+      "scientist": "Ernest Rutherford",
+      "contribution": "Discovery of Nucleus"
+    },
+    {
+      "scientist": "James Chadwick",
+      "contribution": "Discovery of Neutron"
+    },
+    {
+      "scientist": "Niels Bohr",
+      "contribution": "Bohr's Atomic Model"
+    }
+  ],
+
+  "important_laws": [
+    {
+      "name": "Planck's Quantum Theory",
+      "statement": "Energy is emitted or absorbed in discrete packets called quanta."
+    },
+    {
+      "name": "de Broglie Hypothesis",
+      "statement": "Matter exhibits wave-like properties."
+    },
+    {
+      "name": "Heisenberg's Uncertainty Principle",
+      "statement": "Position and momentum of a particle cannot both be measured accurately at the same time."
+    },
+    {
+      "name": "Pauli Exclusion Principle",
+      "statement": "No two electrons in an atom can have the same set of four quantum numbers."
+    },
+    {
+      "name": "Hund's Rule",
+      "statement": "Electrons occupy degenerate orbitals singly before pairing."
+    }
+  ],
+
+  "formulas": [
+    {
+      "name": "Planck's Equation",
+      "formula": "E = hν"
+    },
+    {
+      "name": "de Broglie Equation",
+      "formula": "λ = h / p"
+    },
+    {
+      "name": "Uncertainty Principle",
+      "formula": "Δx × Δp ≥ h / 4π"
+    },
+    {
+      "name": "Frequency",
+      "formula": "ν = c / λ"
+    },
+    {
+      "name": "Bohr Radius",
+      "formula": "r = n²h² / 4π²mke²"
+    },
+    {
+      "name": "Bohr Energy",
+      "formula": "En = -13.6 / n² eV"
+    }
+  ],
+
+  "constants": [
+    {
+      "name": "Planck Constant",
+      "value": "6.626 × 10^-34 Js"
+    },
+    {
+      "name": "Speed of Light",
+      "value": "3 × 10^8 m/s"
+    },
+    {
+      "name": "Avogadro Number",
+      "value": "6.022 × 10^23 mol^-1"
+    },
+    {
+      "name": "Electron Charge",
+      "value": "1.602 × 10^-19 C"
+    }
+  ],
+
+  "quantum_numbers": [
+    {
+      "name": "Principal Quantum Number",
+      "symbol": "n",
+      "description": "Represents shell and energy level."
+    },
+    {
+      "name": "Azimuthal Quantum Number",
+      "symbol": "l",
+      "description": "Represents subshell shape."
+    },
+    {
+      "name": "Magnetic Quantum Number",
+      "symbol": "m",
+      "description": "Represents orbital orientation."
+    },
+    {
+      "name": "Spin Quantum Number",
+      "symbol": "s",
+      "description": "Represents electron spin."
+    }
+  ],
+
+  "electronic_configuration_rules": [
+    "Aufbau Principle",
+    "Pauli Exclusion Principle",
+    "Hund's Rule of Maximum Multiplicity"
+  ],
+
+  "notes": [
+    "Atoms are composed of subatomic particles.",
+    "Bohr's model successfully explained hydrogen spectrum.",
+    "Quantum mechanics replaced classical atomic models.",
+    "Electrons occupy atomic orbitals instead of fixed paths.",
+    "Electronic configuration determines chemical properties."
+  ],
+
+  "real_life_applications": [
+    "Lasers and spectroscopy.",
+    "Medical imaging technologies.",
+    "Electron microscopes.",
+    "Semiconductor devices.",
+    "Solar cell technology."
+  ],
+
+  "virtual_labs": [
+    {
+      "id": 201,
+      "title": "Rutherford Scattering Simulator",
+      "description": "Visualize alpha-particle scattering around atomic nuclei."
+    },
+    {
+      "id": 202,
+      "title": "Bohr Model Simulator",
+      "description": "Observe electron transitions and hydrogen spectra."
+    },
+    {
+      "id": 203,
+      "title": "Quantum Number Explorer",
+      "description": "Visualize orbitals and electron distributions."
+    },
+    {
+      "id": 204,
+      "title": "Electronic Configuration Builder",
+      "description": "Build electronic configurations interactively."
+    }
+  ],
+
+  "practice_questions": [
+    {
+      "id": 1,
+      "question": "State Heisenberg's Uncertainty Principle.",
+      "hint": "Relate uncertainties in position and momentum."
+    },
+    {
+      "id": 2,
+      "question": "Calculate the frequency of light having wavelength 400 nm.",
+      "hint": "Use ν = c / λ"
+    },
+    {
+      "id": 3,
+      "question": "Write the electronic configuration of Iron (Fe)."
+    },
+    {
+      "id": 4,
+      "question": "Calculate the energy of a photon having frequency 5 × 10^14 Hz."
+    },
+    {
+      "id": 5,
+      "question": "State the limitations of Bohr's atomic model."
+    }
+  ],
+
+  "common_mistakes": [
+    "Confusing orbit and orbital.",
+    "Incorrect application of Hund's Rule.",
+    "Mixing principal and azimuthal quantum numbers.",
+    "Ignoring units while using Planck's equation."
+  ],
+
+  "quiz_id": 2,
+
+  "difficulty": "Intermediate",
+
+  "estimated_study_time": "5 Hours",
+
+  "chapter_weightage": {
+    "boards": "High",
+    "jee": "Very High",
+    "neet": "Very High"
+  },
+
+  "next_chapter": {
+    "id": 3,
+    "title": "Classification of Elements and Periodicity in Properties"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "id": 2,
+  "title": "Acid-Base Titration Workbench",
+  "aim": "Determine the concentration of an unknown hydrochloric acid solution by titration against standard sodium hydroxide solution using phenolphthalein indicator.",
+  "apparatus": [
+    "Burette (50 mL)",
+    "Conical Flask (250 mL)",
+    "Burette Stand",
+    "Pipette (10 mL)",
+    "Phenolphthalein indicator",
+    "Analyte flask"
+  ],
+  "theory": "Neutralization titration involves reactively mixing an acid and base to reach stoichiometry (equivalence). HCl + NaOH -> NaCl + H2O. Phenolphthalein turns pink at the alkaline endpoint (pH ~8.3).",
+  "procedure": [
+    "Fill the burette with 0.1M sodium hydroxide titrant.",
+    "Pipette 10 mL of unknown HCl analyte into conical flask.",
+    "Add 2-3 drops of phenolphthalein indicator.",
+    "Run titrant drop-wise while swirling until faint pink color persists.",
+    "Record the burette volume equivalence mark."
+  ],
+  "observations": [
+    "Acid analyte remains clear initially.",
+    "Local pink color appears and disappears upon swirling.",
+    "Faint persistent pink coloration marks the equivalence titration volume endpoint."
+  ],
+  "result": "Stoichiometry pH equivalence successfully reached and titration volume recorded.",
+  "viva_questions": [
+    {
+      "question": "What is the equivalent point in a titration?",
+      "answer": "The point at which the added titrant is stoichiometrically equal to the analyte."
+    },
+    {
+      "question": "Why does phenolphthalein turn pink in basic solutions?",
+      "answer": "Deprotonation of phenolphthalein shifts its chemical structure, widening the conjugation and absorbing green light to reflect pink."
+    }
+  ]
+}

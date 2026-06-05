@@ -1,0 +1,31 @@
+{
+  "chapter_id": 1,
+  "chapter": "Some Basic Concepts of Chemistry",
+  "title": "Basic Concepts Quiz",
+  "time_limit_minutes": 10,
+  "total_marks": 10,
+  "questions": [
+    {
+      "id": 1,
+      "question": "What is the Avogadro number?",
+      "options": [
+        "6.022 x 10^23",
+        "6.022 x 10^22",
+        "1.602 x 10^-19",
+        "9.109 x 10^-31"
+      ],
+      "answer": "6.022 x 10^23"
+    },
+    {
+      "id": 2,
+      "question": "Which of the following has the highest number of atoms?",
+      "options": [
+        "1g of Au",
+        "1g of Na",
+        "1g of Li",
+        "1g of Cl2"
+      ],
+      "answer": "1g of Li"
+    }
+  ]
+}

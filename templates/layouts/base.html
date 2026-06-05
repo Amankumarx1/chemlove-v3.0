@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>{% block title %}ChemLove | Remove Fear from Chemistry{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#4cd7f6",
+                        "secondary": "#a1cedb",
+                        "tertiary": "#ffb0cd",
+                        "background": "#0e1416",
+                        "surface": "#0e1416",
+                        "primary-container": "#06b6d4",
+                        "tertiary-container": "#ff79b4",
+                        "surface-container": "#1b2122",
+                        "surface-container-low": "#171d1e",
+                        "surface-container-high": "#252b2d",
+                        "on-surface": "#dee3e6",
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-tertiary selection:text-on-tertiary flex flex-col min-h-screen">
+    {% include 'components/navbar.html' %}
+    
+    <main class="flex-grow">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% include 'components/footer.html' %}
+
+    <!-- Flash message alerts -->
+    <div id="flash-container" class="fixed bottom-6 right-6 z-50 space-y-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flex items-center gap-3 p-4 rounded-xl border {% if category == 'error' %}bg-red-950/40 border-red-500/30 text-red-200{% else %}bg-emerald-950/40 border-emerald-500/30 text-emerald-200{% endif %} shadow-lg backdrop-blur-md animate-[slideIn_0.3s_ease-out]">
+                        <span class="material-symbols-outlined text-lg">
+                            {% if category == 'error' %}error{% else %}check_circle{% endif %}
+                        </span>
+                        <span class="text-xs font-bold uppercase tracking-wider">{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Sync Session with LocalStorage -->
+    <script>
+        {% if current_user %}
+        localStorage.setItem('chemLove_session', JSON.stringify({
+            id: {{ current_user.id }},
+            name: "{{ current_user.name }}",
+            email: "{{ current_user.email }}",
+            institution: "{{ current_user.institution }}",
+            role: "{{ current_user.role }}",
+            classLevel: "{{ current_user.classLevel or '' }}"
+        }));
+        {% else %}
+        localStorage.removeItem('chemLove_session');
+        {% endif %}
+    </script>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

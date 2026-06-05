@@ -1,0 +1,116 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Admin Dashboard{% endblock %}
+
+{% block dashboard_content %}
+    <div class="mb-8">
+        <div class="inline-flex items-center gap-2 bg-primary-container/20 text-primary px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
+            <span class="w-2 h-2 rounded-full bg-primary live-pulse"></span>
+            Ecosystem Command Center
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Ecosystem Telemetry</h1>
+    </div>
+
+    <!-- Stats Bento Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="glass-morphism p-6 rounded-2xl flex flex-col justify-between min-h-32">
+            <span class="material-symbols-outlined text-cyan-400 text-3xl">groups</span>
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Student Profiles</div>
+                <div id="stat-students" class="text-3xl font-black text-white mt-1">0</div>
+            </div>
+        </div>
+        <div class="glass-morphism p-6 rounded-2xl flex flex-col justify-between min-h-32">
+            <span class="material-symbols-outlined text-tertiary text-3xl">co_present</span>
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Faculty Profiles</div>
+                <div id="stat-teachers" class="text-3xl font-black text-white mt-1">0</div>
+            </div>
+        </div>
+        <div class="glass-morphism p-6 rounded-2xl flex flex-col justify-between min-h-32">
+            <span class="material-symbols-outlined text-cyan-400 text-3xl">school</span>
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Classrooms</div>
+                <div id="stat-classes" class="text-3xl font-black text-white mt-1">0</div>
+            </div>
+        </div>
+        <div class="glass-morphism p-6 rounded-2xl flex flex-col justify-between min-h-32">
+            <span class="material-symbols-outlined text-tertiary text-3xl">hourglass_empty</span>
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Sessions</div>
+                <div id="stat-logins" class="text-3xl font-black text-white mt-1">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard distribution and live usage -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="glass-morphism p-8 rounded-3xl">
+            <h3 class="text-base font-bold uppercase tracking-widest text-slate-500 mb-6">Top Student Leaderboard</h3>
+            <div id="dashboard-leaderboard" class="space-y-4"></div>
+        </div>
+
+        <div class="glass-morphism p-8 rounded-3xl">
+            <h3 class="text-base font-bold uppercase tracking-widest text-slate-500 mb-6">Lab Simulation Telemetry</h3>
+            <div id="dashboard-lab-stats" class="space-y-4 text-xs text-slate-400">// Loading simulations telemetry logs...</div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadAnalytics() {
+        try {
+            const res = await fetch('/api/admin/analytics');
+            const data = await res.json();
+            
+            document.getElementById('stat-students').textContent = data.stats.total_students;
+            document.getElementById('stat-teachers').textContent = data.stats.total_teachers;
+            document.getElementById('stat-classes').textContent = data.stats.total_classes;
+            document.getElementById('stat-logins').textContent = data.stats.daily_logins;
+            
+            // Render leaderboard
+            const lead = document.getElementById('dashboard-leaderboard');
+            if(lead) {
+                lead.innerHTML = '';
+                if (data.leaderboard.length === 0) {
+                    lead.innerHTML = '<div class="text-slate-500 text-xs">// No XP totals logged in this week context.</div>';
+                } else {
+                    data.leaderboard.forEach((item, idx) => {
+                        const row = document.createElement('div');
+                        row.className = 'flex justify-between items-center text-xs border-b border-white/5 pb-2';
+                        row.innerHTML = `
+                            <span class="font-bold text-slate-300">${idx+1}. ${item.name}</span>
+                            <span class="text-cyan-400 font-bold font-mono">${item.current_xp} XP</span>
+                        `;
+                        lead.appendChild(row);
+                    });
+                }
+            }
+
+            // Render lab usage
+            const usage = document.getElementById('dashboard-lab-stats');
+            if(usage) {
+                usage.innerHTML = '';
+                if(data.lab_usage.length === 0) {
+                    usage.innerHTML = '<div class="text-slate-500 text-xs">// No simulations executed in the current session.</div>';
+                } else {
+                    data.lab_usage.forEach(item => {
+                        const row = document.createElement('div');
+                        row.className = 'flex justify-between items-center text-xs border-b border-white/5 pb-2';
+                        row.innerHTML = `
+                            <span class="font-bold text-slate-400">${item.event_type.replace('_', ' ').toUpperCase()}</span>
+                            <span class="text-tertiary font-bold font-mono">${item.count} Counts</span>
+                        `;
+                        usage.appendChild(row);
+                    });
+                }
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAnalytics);
+</script>
+{% endblock %}

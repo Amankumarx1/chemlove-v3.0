@@ -1,0 +1,147 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Test Management{% endblock %}
+
+{% block dashboard_content %}
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Test Management</h1>
+            <p class="text-slate-400 mt-2 text-sm">Design custom test modules, proctor examinations, and compile scoring analytics.</p>
+        </div>
+        <button onclick="openTestModal()" class="bg-primary text-on-primary font-bold text-xs uppercase px-5 py-3 rounded-xl hover:scale-102 transition-all active:scale-98 flex items-center gap-1.5 shadow-lg shadow-cyan-500/10">
+            <span class="material-symbols-outlined text-sm">add_circle</span> Create Test
+        </button>
+    </div>
+
+    <!-- Proctor monitor panel -->
+    <div class="glass-morphism p-6 rounded-2xl border border-rose-500/20 bg-rose-950/10 mb-8">
+        <h3 class="text-xs font-black uppercase tracking-widest text-rose-400 flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-sm">warning</span> Live Test Monitor Alerts
+        </h3>
+        <p class="text-xs text-rose-300/80">No suspicious activity or browser tab changes detected from students.</p>
+    </div>
+
+    <!-- Test List -->
+    <div id="test-list" class="space-y-4 pb-24">
+        <!-- Spinner -->
+        <div class="flex justify-center py-12" id="test-spinner">
+            <div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    </div>
+
+    <!-- Modal: Create Test -->
+    <div id="modal-test" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+        <div class="glass-morphism max-w-md w-full p-8 rounded-3xl space-y-6">
+            <h3 class="text-xl font-bold uppercase text-white">Create Test Pool</h3>
+            <form onsubmit="submitCreateTest(event)" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Test Title</label>
+                    <input type="text" id="test-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="Class 10 Evaluation Test" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Target Classroom</label>
+                    <select id="test-classroom-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Duration (Mins)</label>
+                        <input type="number" id="test-duration-input" value="30" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Total Marks</label>
+                        <input type="number" id="test-marks-input" value="100" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Create Test</button>
+                    <button type="button" onclick="closeTestModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function closeTestModal() { document.getElementById('modal-test').classList.add('hidden'); }
+
+    async function loadTests() {
+        const list = document.getElementById('test-list');
+        try {
+            const res = await fetch('/api/tests');
+            const data = await res.json();
+            
+            const spinner = document.getElementById('test-spinner');
+            if (spinner) spinner.remove();
+            
+            list.innerHTML = '';
+            if (data.tests.length === 0) {
+                list.innerHTML = '<div class="glass-morphism p-12 rounded-3xl text-center"><span class="material-symbols-outlined text-5xl text-slate-600 mb-4">quiz</span><h3 class="text-lg font-bold text-white uppercase mb-2">No custom tests created</h3><p class="text-xs text-slate-500 max-w-sm mx-auto">Click "Create Test" to configure standard examinations for class divisions.</p></div>';
+                return;
+            }
+
+            data.tests.forEach(t => {
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-6 rounded-2xl flex justify-between items-center hover:border-cyan-500/20 transition-all';
+                card.innerHTML = `
+                    <div class="space-y-1">
+                        <h4 class="text-lg font-black text-white uppercase">${t.title}</h4>
+                        <div class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest">Class: ${t.classroom_name} | Duration: ${t.duration_minutes}m | Max Marks: ${t.total_marks}</div>
+                    </div>
+                    <button onclick="deleteTest(${t.id})" class="text-xs text-rose-400 hover:text-rose-300 font-bold uppercase tracking-wider px-3 py-2">Cancel</button>
+                `;
+                list.appendChild(card);
+            });
+        } catch (e) {
+            console.error(e);
+            list.innerHTML = '<div class="text-center text-red-400 text-xs font-bold uppercase">Failed to load tests.</div>';
+        }
+    }
+
+    async function openTestModal() {
+        const resCl = await fetch('/api/classrooms');
+        const dataCl = await resCl.json();
+        const select = document.getElementById('test-classroom-select');
+        select.innerHTML = '<option value="" disabled selected>Select Classroom</option>';
+        dataCl.classrooms.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.name} (Grade ${c.grade})`;
+            select.appendChild(opt);
+        });
+
+        document.getElementById('modal-test').classList.remove('hidden');
+    }
+
+    async function submitCreateTest(e) {
+        e.preventDefault();
+        const title = document.getElementById('test-title-input').value;
+        const classroom_id = parseInt(document.getElementById('test-classroom-select').value);
+        const duration = parseInt(document.getElementById('test-duration-input').value);
+        const total_marks = parseInt(document.getElementById('test-marks-input').value);
+        
+        try {
+            const res = await fetch('/api/tests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, classroom_id, duration, total_marks })
+            });
+            if(res.ok) {
+                closeTestModal();
+                loadTests();
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function deleteTest(id) {
+        if(confirm('Are you sure you want to cancel this scheduled test?')) {
+            try {
+                const res = await fetch(`/api/tests?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadTests();
+            } catch (e) { console.error(e); }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadTests);
+</script>
+{% endblock %}

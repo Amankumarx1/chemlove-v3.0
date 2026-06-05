@@ -1,0 +1,22 @@
+{
+  "name": "Esterification",
+  "type": "organic",
+  "description": "The reaction of organic carboxylic acids with alcohols in the presence of an acid catalyst to produce sweet-smelling esters.",
+  "reactants": [
+    "Carboxylic Acid",
+    "Alcohol"
+  ],
+  "products": [
+    "Ester",
+    "Water"
+  ],
+  "conditions": "Concentrated H2SO4, heat",
+  "equation": "R-COOH + R'-OH --[H+]--> R-COOR' + H2O",
+  "mechanism": [
+    "Protonation of the carbonyl oxygen by the acid catalyst.",
+    "Nucleophilic attack of the alcohol oxygen on the protonated carbonyl carbon.",
+    "Proton transfer from the alcohol group to one of the OH groups.",
+    "Elimination of water (leaving group) to form protonated ester.",
+    "Deprotonation of the ester by solvent to reform acid catalyst."
+  ]
+}

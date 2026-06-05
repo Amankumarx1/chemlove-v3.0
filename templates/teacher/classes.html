@@ -1,0 +1,124 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Classrooms{% endblock %}
+
+{% block dashboard_content %}
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Classroom Manager</h1>
+            <p class="text-slate-400 mt-2 text-sm">Deploy student classrooms, manage grades, and track academic enrollments.</p>
+        </div>
+        <button onclick="openClassModal()" class="bg-primary text-on-primary font-bold text-xs uppercase px-5 py-3 rounded-xl hover:scale-102 transition-all active:scale-98 flex items-center gap-1.5 shadow-lg shadow-cyan-500/10">
+            <span class="material-symbols-outlined text-sm">add</span> Create Class
+        </button>
+    </div>
+
+    <!-- Classroom Grid -->
+    <div id="classroom-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-24">
+        <!-- Spinner -->
+        <div class="col-span-full flex justify-center py-12" id="grid-spinner">
+            <div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    </div>
+
+    <!-- Modal: Create Classroom -->
+    <div id="modal-class" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+        <div class="glass-morphism max-w-md w-full p-8 rounded-3xl space-y-6">
+            <h3 class="text-xl font-bold uppercase text-white">Create Classroom</h3>
+            <form onsubmit="submitCreateClass(event)" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Classroom Name</label>
+                    <input type="text" id="class-name-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="Class 10-A" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Grade Level</label>
+                    <input type="text" id="class-grade-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="10" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Section</label>
+                    <input type="text" id="class-section-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="A">
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Save Classroom</button>
+                    <button type="button" onclick="closeClassModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openClassModal() { document.getElementById('modal-class').classList.remove('hidden'); }
+    function closeClassModal() { document.getElementById('modal-class').classList.add('hidden'); }
+    
+    async function loadClassrooms() {
+        const grid = document.getElementById('classroom-grid');
+        try {
+            const res = await fetch('/api/classrooms');
+            const data = await res.json();
+            
+            const spinner = document.getElementById('grid-spinner');
+            if (spinner) spinner.remove();
+            
+            grid.innerHTML = '';
+            if (data.classrooms.length === 0) {
+                grid.innerHTML = '<div class="col-span-full glass-morphism p-12 rounded-3xl text-center"><span class="material-symbols-outlined text-5xl text-slate-600 mb-4">school</span><h3 class="text-lg font-bold text-white uppercase mb-2">No Classrooms Found</h3><p class="text-xs text-slate-500 max-w-sm mx-auto">Create a class using the button above to begin student enrollment.</p></div>';
+                return;
+            }
+
+            data.classrooms.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-8 rounded-3xl flex flex-col justify-between hover:border-cyan-500/20 hover:scale-[1.01] transition-all duration-300';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-2xl font-black text-white uppercase">${c.name}</h3>
+                            <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500">Grade ${c.grade}</span>
+                        </div>
+                        <div class="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Section: ${c.section || 'A'}</div>
+                    </div>
+                    <div class="mt-8 flex justify-between items-center border-t border-white/5 pt-4">
+                        <span class="text-xs text-cyan-400 font-bold">${c.student_count} Enrolled Students</span>
+                        <button onclick="deleteClassroom(${c.id})" class="text-xs text-rose-400 hover:text-rose-300 font-bold uppercase tracking-wider">Archive</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        } catch (e) {
+            console.error(e);
+            grid.innerHTML = '<div class="col-span-full text-center text-red-400 text-xs font-bold uppercase">Failed to load classrooms.</div>';
+        }
+    }
+
+    async function submitCreateClass(e) {
+        e.preventDefault();
+        const name = document.getElementById('class-name-input').value;
+        const grade = document.getElementById('class-grade-input').value;
+        const section = document.getElementById('class-section-input').value;
+        
+        try {
+            const res = await fetch('/api/classrooms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, grade, section })
+            });
+            if(res.ok) {
+                closeClassModal();
+                loadClassrooms();
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function deleteClassroom(id) {
+        if(confirm('Are you sure you want to archive this classroom context?')) {
+            try {
+                const res = await fetch(`/api/classrooms?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadClassrooms();
+            } catch (e) { console.error(e); }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadClassrooms);
+</script>
+{% endblock %}

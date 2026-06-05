@@ -1,0 +1,614 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Virtual Lab{% endblock %}
+
+{% block dashboard_content %}
+<div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Interactive Lab</h1>
+        <p class="text-slate-400 mt-2 text-sm">Simulate academic chemistry experiments in a secure, real-time environment.</p>
+    </div>
+    
+    <!-- Tab Controls -->
+    <div class="flex bg-surface-container-high p-1.5 rounded-2xl border border-white/5 shadow-xl shrink-0">
+        <button id="tab-btn-lab" onclick="switchLabTab('lab')" class="px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all bg-primary text-on-primary shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+            Sandbox Simulator
+        </button>
+        <button id="tab-btn-titration" onclick="switchLabTab('titration')" class="px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface">
+            Titration Workbench
+        </button>
+    </div>
+</div>
+
+<!-- ============================================================
+     VIRTUAL SANDBOX SIMULATOR
+     ============================================================ -->
+<div id="page-lab" class="bg-surface border border-white/10 rounded-3xl h-[650px] flex flex-col overflow-hidden relative shadow-2xl">
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Left Panel: Chemical Shelf -->
+        <aside class="w-72 border-r border-white/10 p-6 bg-surface flex flex-col gap-6 overflow-y-auto shrink-0">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2 shrink-0">
+                <h3 class="font-bold text-lg uppercase italic text-cyan-400">Chemical Shelf</h3>
+                <span class="material-symbols-outlined text-slate-500">inventory_2</span>
+            </div>
+            
+            <div class="relative shrink-0">
+                <input id="shelf-search" oninput="filterChemicalShelf()" type="text" placeholder="Search shelf..."
+                    class="w-full bg-surface-container border border-white/10 p-3 rounded-xl placeholder:text-slate-500 focus:outline-none focus:border-primary text-xs" />
+            </div>
+
+            <div class="flex flex-col gap-3" id="elements-grid">
+                <!-- Elements injected here -->
+            </div>
+        </aside>
+
+        <!-- Center Area: Sandbox -->
+        <section class="flex-1 flex flex-col border-r border-white/10 bg-surface overflow-hidden">
+            <!-- Sandbox Area with Grid -->
+            <div class="flex-grow grid-bg relative p-8 flex flex-col items-center justify-start overflow-hidden border-b border-white/10 min-h-[300px]">
+                <div id="lab-status"
+                    class="mt-4 mb-4 border border-cyan-500/30 bg-[#1e4d58] text-[#acedff] px-8 py-3 font-bold text-lg uppercase text-center rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.2)] z-20 shrink-0">
+                    READY FOR EXPERIMENT
+                </div>
+
+                <!-- Beaker Interaction Area -->
+                <div class="relative w-full flex-grow min-h-0 flex items-center justify-center flex-col z-10"
+                    id="drop-zone" ondragover="handleDragOver(event)" ondrop="handleDrop(event)"
+                    ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)">
+                    
+                    <!-- SVG Flask -->
+                    <svg class="h-full max-h-[220px] w-auto aspect-square relative z-10 shrink-0" viewBox="0 0 200 200"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M 85 40 L 85 90 L 40 170 L 160 170 L 115 90 L 115 40 Z"
+                            fill="rgba(37, 43, 45, 0.4)" stroke="rgba(255, 255, 255, 0.15)" stroke-width="3"
+                            stroke-linejoin="round"></path>
+                        <rect x="75" y="36" width="50" height="4" fill="rgba(255, 255, 255, 0.25)"></rect>
+                        <path id="flask-liquid-0"
+                            d="M 62 130 L 70 125 L 80 130 L 90 125 L 100 130 L 110 125 L 120 130 L 130 125 L 138 130 L 160 170 L 40 170 Z"
+                            fill="#06b6d4" fill-opacity="0.3" stroke="rgba(255, 255, 255, 0.15)" stroke-width="3" stroke-linejoin="round"
+                            class="transition-all duration-1000 opacity-0"></path>
+                        <line x1="70" y1="115" x2="82" y2="115" stroke="rgba(255, 255, 255, 0.25)" stroke-width="2"
+                            stroke-linecap="round"></line>
+                        <line x1="60" y1="135" x2="72" y2="135" stroke="rgba(255, 255, 255, 0.25)" stroke-width="2"
+                            stroke-linecap="round"></line>
+                        <line x1="50" y1="155" x2="62" y2="155" stroke="rgba(255, 255, 255, 0.25)" stroke-width="2"
+                            stroke-linecap="round"></line>
+                        <radialGradient id="reaction-glow-grad">
+                            <stop offset="0%" stop-color="#4cd7f6" stop-opacity="0.6" />
+                            <stop offset="100%" stop-color="#4cd7f6" stop-opacity="0" />
+                        </radialGradient>
+                        <circle id="reaction-glow-0" cx="100" cy="140" r="45" fill="url(#reaction-glow-grad)"
+                            class="opacity-0 transition-opacity duration-500"></circle>
+                        <g id="bubbles-container-0" class="pointer-events-none"></g>
+                    </svg>
+
+                    <!-- Dropped Elements Count -->
+                    <div id="el-count"
+                        class="mt-3 font-bold text-[10px] uppercase text-slate-300 bg-surface-container-high px-4 py-1.5 border border-white/10 rounded-full whitespace-nowrap z-20 shrink-0 shadow-lg">
+                        0 CHEMICALS ADDED
+                    </div>
+                </div>
+
+                <div class="w-full mt-auto pt-2 flex justify-center z-20 shrink-0">
+                    <div id="dropped-elements" class="flex gap-2 flex-wrap justify-center">
+                        <!-- Chips for dropped elements -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sandbox Controls -->
+            <div class="bg-surface-container border-t border-white/5 p-4 flex justify-center items-center gap-4 h-24 shrink-0">
+                <button
+                    class="w-1/3 h-[50px] bg-[#640039] text-[#ffd9e4] font-bold text-sm border border-[#ff79b4]/20 hover:bg-[#8c0053] transition-all rounded-xl uppercase flex items-center justify-center text-center leading-tight shadow-md active:scale-95"
+                    onclick="resetLab()">Flush System</button>
+                <button
+                    class="w-2/3 h-[50px] kinetic-gradient text-on-primary font-bold text-sm border border-cyan-400/20 hover:scale-[1.01] transition-all rounded-xl uppercase flex items-center justify-center shadow-lg active:scale-95"
+                    onclick="runReactionCheck()">Analyze Telemetry</button>
+            </div>
+        </section>
+
+        <!-- Right Panel: Data Readout -->
+        <aside class="w-80 border-l border-white/10 bg-surface p-6 flex flex-col gap-4 overflow-y-auto shrink-0">
+            <div class="border-b border-white/10 pb-2 flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-lg uppercase italic text-cyan-400">Telemetry</h3>
+                <div class="w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping"></div>
+            </div>
+
+            <!-- Result Area for Successful Reactions -->
+            <div id="result-area" class="hidden shrink-0">
+                <!-- Results injected here -->
+            </div>
+
+            <!-- Temperature Gauge -->
+            <div class="border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0">
+                <label class="font-bold text-[9px] uppercase text-slate-500 mb-1 tracking-widest">Temperature</label>
+                <div class="flex items-baseline justify-between">
+                    <span id="temp-val" class="text-3xl font-black tracking-tight">24.5</span>
+                    <span class="text-base font-bold text-slate-500">°C</span>
+                </div>
+                <div class="w-full bg-[#0e1416] h-2.5 mt-2 border border-white/5 rounded-full overflow-hidden">
+                    <div id="temp-bar" class="bg-gradient-to-r from-cyan-500 to-red-500 h-full transition-all duration-500"
+                        style="width: 24.5%"></div>
+                </div>
+            </div>
+
+            <!-- pH Level Gauge -->
+            <div class="border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0">
+                <label class="font-bold text-[9px] uppercase text-slate-500 mb-1 tracking-widest">pH Level</label>
+                <div class="flex items-baseline justify-between">
+                    <span id="ph-val" class="text-3xl font-black tracking-tight">7.02</span>
+                    <span class="text-base font-bold text-slate-500">PH</span>
+                </div>
+                <div class="flex justify-between mt-2 font-bold text-[7px] uppercase text-slate-500">
+                    <span class="text-red-400">Acidic</span>
+                    <span>Neutral</span>
+                    <span class="text-cyan-400">Alkaline</span>
+                </div>
+                <div class="w-full bg-[#0e1416] h-2 mt-1 border border-white/5 rounded-full relative">
+                    <div id="ph-marker" class="absolute h-3 w-1 bg-cyan-400 -top-0.5 transition-all duration-500"
+                        style="left: 50%"></div>
+                </div>
+            </div>
+
+            <!-- Stability Gauge -->
+            <div class="border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0">
+                <label class="font-bold text-[9px] uppercase text-slate-500 mb-1 tracking-widest">Stability Index</label>
+                <div class="flex items-center gap-3 mt-1">
+                    <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-xl font-black text-cyan-400">security</span>
+                    </div>
+                    <span id="stability-val" class="text-2xl font-black tracking-tight">98.2%</span>
+                </div>
+            </div>
+
+            <!-- Log Entries -->
+            <div class="mt-auto pt-4 border-t border-white/10 bg-slate-900/40 -mx-6 -mb-6 p-6 shrink-0">
+                <h4 class="font-bold text-[10px] mb-2 uppercase text-slate-500 tracking-widest">System Log</h4>
+                <div id="lab-log"
+                    class="flex flex-col gap-1.5 font-mono text-[9px] leading-tight max-h-32 overflow-y-auto text-white">
+                    <div class="flex gap-2 text-slate-600">
+                        <span class="font-black">[SYSTEM]</span>
+                        <span>IDLE: WAITING_FOR_INPUT</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Status Bar -->
+    <footer class="bg-surface-container border-t border-white/5 text-slate-400 p-2.5 px-6 flex justify-between items-center text-[9px] font-bold uppercase tracking-widest shrink-0">
+        <div class="flex gap-4">
+            <span>MODE: SANDBOX_SIMULATOR</span>
+            <span id="user-display">USER: {{ current_user.name.upper() }}</span>
+        </div>
+        <div class="flex gap-2 items-center">
+            <span class="w-1.5 h-1.5 bg-cyan-400 animate-pulse rounded-full"></span>
+            <span class="text-cyan-400">SYSTEM_LIVE</span>
+        </div>
+    </footer>
+</div>
+
+<!-- ============================================================
+     TITRATION WORKBENCH
+     ============================================================ -->
+<div id="page-titration" class="bg-surface border border-white/10 rounded-3xl h-[650px] flex-col overflow-hidden relative hidden shadow-2xl">
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Left Panel: Controls -->
+        <aside class="w-72 shrink-0 border-r border-white/10 bg-surface flex flex-col overflow-y-auto">
+            <div class="p-6 flex flex-col gap-6">
+                <!-- Titrant Selection -->
+                <div>
+                    <h3 class="font-bold text-xs uppercase mb-3 flex items-center gap-2 text-cyan-400">
+                        <span class="material-symbols-outlined text-sm">colorize</span> Titrant
+                    </h3>
+                    <div class="bg-surface-container-high border border-white/10 p-4 rounded-xl space-y-3 shadow-lg">
+                        <div>
+                            <label class="block font-bold uppercase text-[8px] text-slate-500 mb-1 tracking-wider">Select Reagent</label>
+                            <input type="hidden" id="titrant-select" value="NaOH">
+                            <div class="relative inline-block text-left w-full" id="titrant-dropdown-container">
+                                <button id="titrant-dropdown-btn" type="button" class="w-full flex items-center justify-between gap-2 bg-[#0e1416] border border-white/10 rounded-lg p-2 font-bold text-[10px] uppercase outline-none focus:border-primary transition-colors text-on-surface text-left">
+                                    <span id="selected-titrant-label">Sodium Hydroxide (NaOH)</span>
+                                    <span id="titrant-dropdown-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
+                                </button>
+                                <!-- Dropdown Menu -->
+                                <div id="titrant-dropdown-menu" class="hidden absolute left-0 right-0 mt-1 w-full glass-morphism rounded-xl border border-white/5 shadow-2xl p-1.5 z-50 animate-[fadeIn_0.15s_ease-out]">
+                                    <div class="space-y-0.5">
+                                        <button type="button" onclick="selectTitrant('NaOH', 'Sodium Hydroxide (NaOH)')" class="titrant-option-btn active w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-cyan-400 bg-cyan-950/20 transition-all text-left">
+                                            <span class="material-symbols-outlined text-xs">colorize</span> Sodium Hydroxide (NaOH)
+                                        </button>
+                                        <button type="button" onclick="selectTitrant('KOH', 'Potassium Hydroxide (KOH)')" class="titrant-option-btn w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                            <span class="material-symbols-outlined text-xs">colorize</span> Potassium Hydroxide (KOH)
+                                        </button>
+                                        <button type="button" onclick="selectTitrant('HCl', 'Hydrochloric Acid (HCl)')" class="titrant-option-btn w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                            <span class="material-symbols-outlined text-xs">colorize</span> Hydrochloric Acid (HCl)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <label class="block font-bold uppercase text-[8px] text-slate-500 tracking-wider">Conc. (N)</label>
+                                <div id="titrant-conc-val" class="font-mono font-black text-[10px] text-primary">0.10 N</div>
+                            </div>
+                            <input type="range" id="titrant-conc" class="w-full accent-cyan-400" min="0.01" max="1" step="0.01" value="0.1" oninput="updateTitration()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analyte Selection -->
+                <div>
+                    <h3 class="font-bold text-xs uppercase mb-3 flex items-center gap-2 text-cyan-400">
+                        <span class="material-symbols-outlined text-sm">science</span> Analyte
+                    </h3>
+                    <div class="bg-surface-container-high border border-white/10 p-4 rounded-xl space-y-3 shadow-lg">
+                        <div>
+                            <label class="block font-bold uppercase text-[8px] text-slate-500 mb-1 tracking-wider">Select Sample</label>
+                            <input type="hidden" id="analyte-select" value="HCl">
+                            <div class="relative inline-block text-left w-full" id="analyte-dropdown-container">
+                                <button id="analyte-dropdown-btn" type="button" class="w-full flex items-center justify-between gap-2 bg-[#0e1416] border border-white/10 rounded-lg p-2 font-bold text-[10px] uppercase outline-none focus:border-primary transition-colors text-on-surface text-left">
+                                    <span id="selected-analyte-label">Hydrochloric Acid (HCl)</span>
+                                    <span id="analyte-dropdown-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
+                                </button>
+                                <!-- Dropdown Menu -->
+                                <div id="analyte-dropdown-menu" class="hidden absolute left-0 right-0 mt-1 w-full glass-morphism rounded-xl border border-white/5 shadow-2xl p-1.5 z-50 animate-[fadeIn_0.15s_ease-out]">
+                                    <div class="space-y-0.5">
+                                        <button type="button" onclick="selectAnalyte('HCl', 'Hydrochloric Acid (HCl)')" class="analyte-option-btn active w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-cyan-400 bg-cyan-950/20 transition-all text-left">
+                                            <span class="material-symbols-outlined text-xs">science</span> Hydrochloric Acid (HCl)
+                                        </button>
+                                        <button type="button" onclick="selectAnalyte('CH3COOH', 'Acetic Acid (CH3COOH)')" class="analyte-option-btn w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                            <span class="material-symbols-outlined text-xs">science</span> Acetic Acid (CH3COOH)
+                                        </button>
+                                        <button type="button" onclick="selectAnalyte('NaOH', 'Sodium Hydroxide (NaOH)')" class="analyte-option-btn w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                            <span class="material-symbols-outlined text-xs">science</span> Sodium Hydroxide (NaOH)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <div class="flex justify-between items-end mb-1">
+                                    <label class="block font-bold uppercase text-[8px] text-slate-500 tracking-wider">Vol</label>
+                                    <div id="analyte-vol-val" class="font-mono font-bold text-[9px] text-slate-400">20 mL</div>
+                                </div>
+                                <input type="range" id="analyte-vol" class="w-full accent-cyan-400" min="5" max="50" step="1" value="20" oninput="updateTitration()">
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-end mb-1">
+                                    <label class="block font-bold uppercase text-[8px] text-slate-500 tracking-wider">Conc.</label>
+                                    <div id="analyte-conc-val" class="font-mono font-bold text-[9px] text-slate-400">0.10 N</div>
+                                </div>
+                                <input type="range" id="analyte-conc" class="w-full accent-cyan-400" min="0.01" max="1" step="0.01" value="0.1" oninput="updateTitration()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicator -->
+                <div>
+                    <h3 class="font-bold text-xs uppercase mb-3 flex items-center gap-2 text-cyan-400">
+                        <span class="material-symbols-outlined text-sm">palette</span> Indicator
+                    </h3>
+                    <input type="hidden" id="indicator-select" value="phenolphthalein">
+                    <div class="relative inline-block text-left w-full" id="indicator-dropdown-container">
+                        <button id="indicator-dropdown-btn" type="button" class="w-full flex items-center justify-between gap-2 bg-[#0e1416] border border-white/10 rounded-xl p-3 font-bold uppercase text-[10px] outline-none hover:bg-surface-container-high transition-colors cursor-pointer text-on-surface focus:border-primary text-left">
+                            <span id="selected-indicator-label">Phenolphthalein (8.3-10.0)</span>
+                            <span id="indicator-dropdown-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
+                        </button>
+                        <!-- Dropdown Menu -->
+                        <div id="indicator-dropdown-menu" class="hidden absolute left-0 right-0 mt-1 w-full glass-morphism rounded-xl border border-white/5 shadow-2xl p-1.5 z-50 animate-[fadeIn_0.15s_ease-out]">
+                            <div class="space-y-0.5">
+                                <button type="button" onclick="selectIndicator('phenolphthalein', 'Phenolphthalein (8.3-10.0)')" class="indicator-option-btn active w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-cyan-400 bg-cyan-950/20 transition-all text-left">
+                                    <span class="material-symbols-outlined text-xs">palette</span> Phenolphthalein (8.3-10.0)
+                                </button>
+                                <button type="button" onclick="selectIndicator('methylorange', 'Methyl Orange (3.1-4.4)')" class="indicator-option-btn w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                    <span class="material-symbols-outlined text-xs">palette</span> Methyl Orange (3.1-4.4)
+                                </button>
+                                <button type="button" onclick="selectIndicator('litmus', 'Litmus (4.5-8.3)')" class="indicator-option-btn w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                    <span class="material-symbols-outlined text-xs">palette</span> Litmus (4.5-8.3)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Area: Visual Apparatus -->
+        <section class="flex-1 flex flex-col bg-surface relative">
+            <div class="absolute top-4 left-4 right-4 flex justify-between z-20">
+                <div class="font-bold text-[9px] uppercase bg-surface-container-high border border-white/10 px-3 py-1.5 rounded-full shadow-lg text-slate-300">pH Equivalence Apparatus</div>
+                <button onclick="resetTitration()" class="bg-surface-container-high border border-white/10 px-4 py-1.5 rounded-full font-bold uppercase text-[10px] shadow-lg hover:bg-slate-800 transition-all active:scale-95">Reset Setup</button>
+            </div>
+
+            <div class="flex-grow grid-bg relative p-4 flex flex-col items-center justify-center overflow-hidden min-h-[300px]">
+                <div class="burette-apparatus mt-6 scale-90">
+                    <div class="burette-tube bg-surface-container-high">
+                        <div id="burette-liquid" class="burette-liquid transition-all duration-300"></div>
+                        <div id="burette-graduations" class="burette-graduations"></div>
+                    </div>
+                    <div class="burette-stopcock" onclick="addTitrantDrop()" title="Click to add drop"></div>
+                    <div class="burette-tip"></div>
+                    <div id="drop-falling" class="drop-falling"></div>
+                </div>
+
+                <div class="conical-flask-titration mt-2 scale-90">
+                    <div class="flask-conical-neck"></div>
+                    <div class="flask-conical-body">
+                        <div id="flask-liquid" class="flask-conical-liquid transition-colors duration-500"></div>
+                    </div>
+                    <div id="flask-label" class="absolute -bottom-8 left-1/2 -translate-x-1/2 w-max text-center font-bold uppercase text-[8px] bg-[#1e4d58] text-[#acedff] border border-cyan-500/20 px-3 py-1 rounded-full shadow-md">
+                        20 mL Analyte
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom Control Panel -->
+            <div class="bg-surface-container border-t border-white/5 p-4 shrink-0 z-20 flex justify-between items-center gap-6">
+                <div class="flex-grow">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="font-bold uppercase text-[8px] text-slate-500 tracking-wider">Titrant Added</span>
+                        <span id="titrant-added-val" class="font-mono font-black text-lg text-cyan-400 bg-[#0e1416] px-3 py-1 border border-white/10 rounded-xl">0.00 mL</span>
+                    </div>
+                    <input type="range" id="titrant-added" class="w-full h-3 accent-cyan-400" min="0" max="50" step="0.1" value="0" oninput="updateTitrationFromSlider()">
+                </div>
+                <div class="grid grid-cols-4 gap-1 shrink-0">
+                    <button onclick="adjustTitrant(-1)" class="bg-[#1e4d58] text-[#acedff] border border-cyan-500/10 font-bold text-[10px] px-2.5 py-2 rounded-lg hover:bg-slate-800 transition-colors">-1.0</button>
+                    <button onclick="adjustTitrant(-0.1)" class="bg-[#1e4d58] text-[#acedff] border border-cyan-500/10 font-bold text-[10px] px-2.5 py-2 rounded-lg hover:bg-slate-800 transition-colors">-0.1</button>
+                    <button onclick="adjustTitrant(0.1)" class="bg-primary text-[#001f26] font-bold text-[10px] px-2.5 py-2 rounded-lg hover:bg-cyan-300 transition-colors">+0.1</button>
+                    <button onclick="adjustTitrant(1)" class="bg-primary text-[#001f26] font-bold text-[10px] px-2.5 py-2 rounded-lg hover:bg-cyan-300 transition-colors">+1.0</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Analysis & Graph -->
+        <aside class="w-80 shrink-0 border-l border-white/10 bg-surface flex flex-col overflow-y-auto">
+            <div class="p-6 border-b border-white/10 bg-surface flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-lg uppercase italic text-cyan-400">Analysis</h3>
+                <div class="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 px-2.5 py-0.5 rounded-full">
+                    <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                    <span class="font-bold text-[8px] text-green-400 uppercase tracking-widest">Live</span>
+                </div>
+            </div>
+
+            <div class="p-6 flex flex-col gap-4">
+                <!-- pH Readout -->
+                <div class="bg-surface-container-high border border-white/10 p-6 rounded-xl text-center relative overflow-hidden shadow-xl">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 via-magenta-400 to-tertiary"></div>
+                    <span class="font-bold uppercase text-[8px] text-slate-500 tracking-widest mb-1 block">pH Level</span>
+                    <div id="ph-display" class="font-mono text-5xl font-black leading-none tracking-tighter text-[#acedff] drop-shadow-[0_0_10px_rgba(6,182,212,0.3)]">7.00</div>
+                    <div class="w-full bg-[#0e1416] h-2 mt-4 border border-white/5 rounded-full overflow-hidden">
+                        <div id="ph-bar" class="h-full bg-gradient-to-r from-red-500 via-cyan-400 to-blue-500 transition-all duration-300" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <!-- Analysis Card -->
+                <div id="titration-result" class="hidden bg-[#004e5c] border border-cyan-500/30 p-4 rounded-xl shadow-xl">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="material-symbols-outlined font-black text-cyan-200 text-xl">check_circle</span>
+                        <h3 class="font-bold text-xs uppercase text-cyan-100 leading-tight">Endpoint Detected</h3>
+                    </div>
+                    <div id="titration-result-text" class="font-bold text-[9px] uppercase leading-relaxed text-cyan-200 bg-[#0e1416]/50 p-2.5 border border-cyan-500/10 rounded-lg"></div>
+                </div>
+
+                <!-- Graph -->
+                <div class="bg-surface-container-high border border-white/10 p-4 rounded-xl shadow-xl flex-grow min-h-[200px] flex flex-col">
+                    <h3 class="font-bold text-xs uppercase mb-3 flex items-center gap-2 text-cyan-400">
+                        <span class="material-symbols-outlined text-sm">show_chart</span> Titration Curve
+                    </h3>
+                    <div class="ph-graph-container mt-0 flex-grow border border-white/10 bg-[#0e1416] relative min-h-[140px]">
+                        <svg id="ph-graph" class="w-full h-full absolute inset-0" viewBox="0 0 400 180" preserveAspectRatio="none">
+                            <line class="graph-grid" x1="40" y1="20" x2="380" y2="20" />
+                            <line class="graph-grid" x1="40" y1="60" x2="380" y2="60" />
+                            <line class="graph-grid" x1="40" y1="100" x2="380" y2="100" />
+                            <line class="graph-grid" x1="40" y1="140" x2="380" y2="140" />
+                            <path id="graph-curve" class="graph-curve" d="M 40 90 L 380 90" />
+                            <circle id="graph-point" class="graph-point" cx="40" cy="90" r="6" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Status Bar -->
+    <footer class="bg-surface-container border-t border-white/5 text-slate-400 p-2.5 px-6 flex justify-between items-center text-[9px] font-bold uppercase tracking-widest shrink-0">
+        <div class="flex gap-4">
+            <span>MODE: TITRATION_WORKBENCH</span>
+            <span>USER: {{ current_user.name.upper() }}</span>
+        </div>
+        <div class="flex gap-2 items-center">
+            <span class="w-1.5 h-1.5 bg-cyan-400 animate-pulse rounded-full"></span>
+            <span class="text-cyan-400">SYS: ONLINE</span>
+        </div>
+    </footer>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script>
+    // Tab switching logic
+    function switchLabTab(mode) {
+        const tabBtnLab = document.getElementById('tab-btn-lab');
+        const tabBtnTitration = document.getElementById('tab-btn-titration');
+        const pageLab = document.getElementById('page-lab');
+        const pageTitration = document.getElementById('page-titration');
+
+        if (mode === 'lab') {
+            // Activate Sandbox tab
+            tabBtnLab.className = "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all bg-primary text-on-primary shadow-[0_0_15px_rgba(6,182,212,0.3)]";
+            tabBtnTitration.className = "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface";
+            pageLab.classList.remove('hidden');
+            pageLab.classList.add('flex');
+            pageTitration.classList.remove('flex');
+            pageTitration.classList.add('hidden');
+            if (typeof resetLab === 'function') resetLab();
+            if (typeof renderLabPage === 'function') renderLabPage();
+        } else {
+            // Activate Titration tab
+            tabBtnTitration.className = "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all bg-primary text-on-primary shadow-[0_0_15px_rgba(6,182,212,0.3)]";
+            tabBtnLab.className = "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface";
+            pageTitration.classList.remove('hidden');
+            pageTitration.classList.add('flex');
+            pageLab.classList.remove('flex');
+            pageLab.classList.add('hidden');
+            if (typeof resetTitration === 'function') resetTitration();
+            if (typeof initTitrationPage === 'function') initTitrationPage();
+        }
+    }
+
+    // Override the navigation behavior so that script.js calls work locally
+    window.navigate = function(page, data) {
+        if (page === 'lab') {
+            switchLabTab('lab');
+        } else if (page === 'titration') {
+            switchLabTab('titration');
+        }
+    };
+
+    function selectTitrant(val, label) {
+        const inputEl = document.getElementById('titrant-select');
+        if (inputEl) {
+            inputEl.value = val;
+        }
+        const labelEl = document.getElementById('selected-titrant-label');
+        if (labelEl) labelEl.textContent = label;
+
+        const optionBtns = document.querySelectorAll('.titrant-option-btn');
+        optionBtns.forEach(btn => {
+            if (btn.getAttribute('onclick').includes(`'${val}'`)) {
+                btn.classList.add('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.remove('text-slate-300');
+            } else {
+                btn.classList.remove('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.add('text-slate-300');
+            }
+        });
+
+        // Hide menu
+        const menu = document.getElementById('titrant-dropdown-menu');
+        const arrow = document.getElementById('titrant-dropdown-arrow');
+        if (menu) menu.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-180');
+
+        if (typeof updateTitration === 'function') updateTitration();
+    }
+
+    function selectAnalyte(val, label) {
+        const inputEl = document.getElementById('analyte-select');
+        if (inputEl) {
+            inputEl.value = val;
+        }
+        const labelEl = document.getElementById('selected-analyte-label');
+        if (labelEl) labelEl.textContent = label;
+
+        const optionBtns = document.querySelectorAll('.analyte-option-btn');
+        optionBtns.forEach(btn => {
+            if (btn.getAttribute('onclick').includes(`'${val}'`)) {
+                btn.classList.add('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.remove('text-slate-300');
+            } else {
+                btn.classList.remove('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.add('text-slate-300');
+            }
+        });
+
+        // Hide menu
+        const menu = document.getElementById('analyte-dropdown-menu');
+        const arrow = document.getElementById('analyte-dropdown-arrow');
+        if (menu) menu.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-180');
+
+        if (typeof updateTitration === 'function') updateTitration();
+    }
+
+    function selectIndicator(val, label) {
+        const inputEl = document.getElementById('indicator-select');
+        if (inputEl) {
+            inputEl.value = val;
+        }
+        const labelEl = document.getElementById('selected-indicator-label');
+        if (labelEl) labelEl.textContent = label;
+
+        const optionBtns = document.querySelectorAll('.indicator-option-btn');
+        optionBtns.forEach(btn => {
+            if (btn.getAttribute('onclick').includes(`'${val}'`)) {
+                btn.classList.add('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.remove('text-slate-300');
+            } else {
+                btn.classList.remove('active', 'text-cyan-400', 'bg-cyan-950/20');
+                btn.classList.add('text-slate-300');
+            }
+        });
+
+        // Hide menu
+        const menu = document.getElementById('indicator-dropdown-menu');
+        const arrow = document.getElementById('indicator-dropdown-arrow');
+        if (menu) menu.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-180');
+
+        if (typeof updateTitration === 'function') updateTitration();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Default to Sandbox tab on load
+        switchLabTab('lab');
+
+        // Custom Dropdowns Toggle Handlers for Titration
+        const tBtn = document.getElementById('titrant-dropdown-btn');
+        const tMenu = document.getElementById('titrant-dropdown-menu');
+        const tArrow = document.getElementById('titrant-dropdown-arrow');
+        const aBtn = document.getElementById('analyte-dropdown-btn');
+        const aMenu = document.getElementById('analyte-dropdown-menu');
+        const aArrow = document.getElementById('analyte-dropdown-arrow');
+        const iBtn = document.getElementById('indicator-dropdown-btn');
+        const iMenu = document.getElementById('indicator-dropdown-menu');
+        const iArrow = document.getElementById('indicator-dropdown-arrow');
+
+        if (tBtn && tMenu) {
+            tBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                tMenu.classList.toggle('hidden');
+                if (aMenu) aMenu.classList.add('hidden');
+                if (aArrow) aArrow.classList.remove('rotate-180');
+                if (iMenu) iMenu.classList.add('hidden');
+                if (iArrow) iArrow.classList.remove('rotate-180');
+                if (tArrow) tArrow.classList.toggle('rotate-180');
+            });
+        }
+        if (aBtn && aMenu) {
+            aBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                aMenu.classList.toggle('hidden');
+                if (tMenu) tMenu.classList.add('hidden');
+                if (tArrow) tArrow.classList.remove('rotate-180');
+                if (iMenu) iMenu.classList.add('hidden');
+                if (iArrow) iArrow.classList.remove('rotate-180');
+                if (aArrow) aArrow.classList.toggle('rotate-180');
+            });
+        }
+        if (iBtn && iMenu) {
+            iBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                iMenu.classList.toggle('hidden');
+                if (tMenu) tMenu.classList.add('hidden');
+                if (tArrow) tArrow.classList.remove('rotate-180');
+                if (aMenu) aMenu.classList.add('hidden');
+                if (aArrow) aArrow.classList.remove('rotate-180');
+                if (iArrow) iArrow.classList.toggle('rotate-180');
+            });
+        }
+
+        document.addEventListener('click', () => {
+            if (tMenu) tMenu.classList.add('hidden');
+            if (tArrow) tArrow.classList.remove('rotate-180');
+            if (aMenu) aMenu.classList.add('hidden');
+            if (aArrow) aArrow.classList.remove('rotate-180');
+            if (iMenu) iMenu.classList.add('hidden');
+            if (iArrow) iArrow.classList.remove('rotate-180');
+        });
+    });
+</script>
+{% endblock %}

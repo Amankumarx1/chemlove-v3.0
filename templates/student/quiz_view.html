@@ -1,0 +1,161 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | {{ quiz.title }}{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Welcome Header -->
+    <div class="mb-12 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+        <div>
+            <div class="inline-flex items-center gap-2 bg-primary-container/20 text-primary px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
+                <span class="w-2 h-2 rounded-full bg-primary live-pulse"></span>
+                Active Evaluation
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">{{ quiz.title }}</h1>
+            <p class="text-slate-400 mt-2 text-sm">Chapter: {{ quiz.chapter }}</p>
+        </div>
+        <a href="/student/quizzes" class="flex items-center gap-1 bg-slate-800 border border-white/5 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-700/60 transition-all">
+            <span class="material-symbols-outlined text-sm">arrow_back</span> Exit Quiz
+        </a>
+    </div>
+
+    <!-- Quiz Panel -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left: Questions -->
+        <div class="lg:col-span-2 space-y-6">
+            <form id="quiz-form" onsubmit="submitQuiz(event)">
+                {% for q in quiz.questions %}
+                    <div class="glass-morphism p-8 rounded-3xl border border-white/5 bg-[#171d1e]/40 mb-6 space-y-4">
+                        <div class="flex justify-between items-start gap-4">
+                            <span class="text-xs font-black tracking-wider uppercase text-cyan-400 bg-cyan-950/40 px-3 py-1 rounded-lg">Question {{ loop.index }}</span>
+                        </div>
+                        <h3 class="text-base font-bold text-white leading-relaxed">{{ q.question }}</h3>
+                        
+                        <div class="grid grid-cols-1 gap-3 pt-2">
+                            {% for option in q.options %}
+                                <label class="flex items-center gap-3 p-4 rounded-xl border border-white/5 bg-black/10 hover:bg-slate-800/40 hover:border-cyan-500/20 cursor-pointer transition-all">
+                                    <input type="radio" name="q-{{ q.id }}" value="{{ option }}" required class="accent-cyan-400">
+                                    <span class="text-xs font-bold uppercase text-slate-300">{{ option }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Feedback Area for after submission -->
+                        <div id="feedback-q-{{ q.id }}" class="hidden text-xs font-bold uppercase p-3 rounded-lg border"></div>
+                    </div>
+                {% endfor %}
+                
+                <button type="submit" id="submit-btn" class="w-full kinetic-gradient text-on-primary font-bold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:scale-[1.01] active:scale-98 transition-all">
+                    Submit Evaluation
+                </button>
+            </form>
+        </div>
+
+        <!-- Right: Timer & Scorecard -->
+        <div class="space-y-6">
+            <!-- Timer Card -->
+            <div class="glass-morphism p-6 rounded-3xl border border-white/5 bg-[#171d1e]/40 text-center space-y-4">
+                <span class="material-symbols-outlined text-4xl text-cyan-400">alarm</span>
+                <div>
+                    <h4 class="font-bold text-slate-500 uppercase text-[10px] tracking-widest mb-1">Time Remaining</h4>
+                    <div id="timer" class="font-mono text-3xl font-black text-white">10:00</div>
+                </div>
+            </div>
+
+            <!-- Scorecard / Result (Hidden by default) -->
+            <div id="scorecard" class="hidden glass-morphism p-8 rounded-3xl border border-emerald-500/20 bg-[#171d1e]/40 text-center space-y-6">
+                <span class="material-symbols-outlined text-5xl text-emerald-400">emoji_events</span>
+                <div>
+                    <h4 class="font-bold text-slate-400 uppercase text-xs tracking-widest mb-1">Final Score</h4>
+                    <div id="final-score" class="text-5xl font-black text-emerald-400">0 / 0</div>
+                </div>
+                
+                <div class="bg-black/20 border border-white/5 p-4 rounded-xl space-y-2">
+                    <div class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Evaluation Result</div>
+                    <div id="evaluation-text" class="text-xs font-black uppercase text-white">Mastery Level: 0%</div>
+                </div>
+
+                <a href="/student/quizzes" class="glass-morphism border-none bg-surface-container-high hover:bg-slate-800 text-on-surface text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-xl block transition-all">
+                    Return to Quizzes
+                </a>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Quiz JSON data for validation
+    const quizData = {{ quiz|tojson }};
+    
+    // Simple Timer Logic
+    let timeLimitSeconds = quizData.time_limit_minutes * 60;
+    const timerDisplay = document.getElementById('timer');
+    
+    const interval = setInterval(() => {
+        if (timeLimitSeconds <= 0) {
+            clearInterval(interval);
+            timerDisplay.textContent = "00:00";
+            alert("Time limit reached! Submitting quiz.");
+            document.getElementById('quiz-form').dispatchEvent(new Event('submit'));
+            return;
+        }
+        
+        timeLimitSeconds--;
+        const minutes = Math.floor(timeLimitSeconds / 60);
+        const seconds = timeLimitSeconds % 60;
+        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }, 1000);
+    
+    function submitQuiz(event) {
+        event.preventDefault();
+        clearInterval(interval);
+        
+        const form = document.getElementById('quiz-form');
+        const formData = new FormData(form);
+        let correctCount = 0;
+        
+        quizData.questions.forEach(q => {
+            const selected = formData.get(`q-${q.id}`);
+            const feedback = document.getElementById(`feedback-q-${q.id}`);
+            
+            feedback.classList.remove('hidden');
+            if (selected === q.answer) {
+                correctCount++;
+                feedback.textContent = `Correct! Answer is ${q.answer}`;
+                feedback.className = "text-xs font-bold uppercase p-3 rounded-lg border bg-emerald-950/40 border-emerald-500/30 text-emerald-300 mt-3";
+            } else {
+                feedback.textContent = `Incorrect. Correct answer: ${q.answer}`;
+                feedback.className = "text-xs font-bold uppercase p-3 rounded-lg border bg-red-950/40 border-red-500/30 text-red-300 mt-3";
+            }
+        });
+        
+        // Disable form inputs
+        form.querySelectorAll('input').forEach(input => input.disabled = true);
+        document.getElementById('submit-btn').disabled = true;
+        document.getElementById('submit-btn').classList.add('opacity-50', 'pointer-events-none');
+        
+        // Show Scorecard
+        const scorecard = document.getElementById('scorecard');
+        scorecard.classList.remove('hidden');
+        
+        const totalQs = quizData.questions.length;
+        document.getElementById('final-score').textContent = `${correctCount} / ${totalQs}`;
+        
+        const percentage = Math.round((correctCount / totalQs) * 100);
+        document.getElementById('evaluation-text').textContent = `Mastery Level: ${percentage}%`;
+        
+        // Award XP via event logging if score is good
+        if (percentage >= 50) {
+            fetch('/api/log_event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    event_type: 'quiz_passed',
+                    event_data: `chapter_id=${quizData.chapter_id},score=${correctCount}`
+                })
+            }).catch(err => console.error('Failed to log quiz pass', err));
+        }
+    }
+</script>
+{% endblock %}

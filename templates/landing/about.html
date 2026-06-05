@@ -1,0 +1,195 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}ChemLove | About Us{% endblock %}
+
+{% block content %}
+<!-- ABOUT PAGE CONTENT -->
+<div id="page-about" class="landing-page pt-28 pb-20 px-8">
+    
+    <!-- Hero Section -->
+    <section class="relative max-w-7xl mx-auto text-center py-20 overflow-hidden">
+        <div class="relative z-10 space-y-6">
+            <div class="inline-flex items-center gap-2 bg-cyan-500/10 text-cyan-400 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase border border-cyan-500/20">
+                🧬 Mission & Story
+            </div>
+            <h1 class="text-4xl md:text-6xl lg:text-7xl font-black uppercase tracking-tight text-white leading-none">
+                About <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">ChemLove</span>
+            </h1>
+            <p class="text-slate-300 text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
+                Making chemistry visual, practical and enjoyable for every learner.
+            </p>
+        </div>
+        <!-- Background glows -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-[100px]"></div>
+    </section>
+
+    <!-- Mission & Vision Section -->
+    <section class="max-w-7xl mx-auto py-12 grid lg:grid-cols-2 gap-12">
+        <!-- Mission -->
+        <div class="glass-morphism p-10 rounded-3xl border border-white/5 space-y-6 relative overflow-hidden group">
+            <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-cyan-500/5 rounded-full blur-2xl"></div>
+            <h2 class="text-3xl font-black uppercase tracking-tight text-white">Our Mission</h2>
+            <p class="text-slate-300 text-sm leading-relaxed">
+                ChemLove was created to remove the fear students experience while learning chemistry.
+            </p>
+            <p class="text-slate-400 text-sm leading-relaxed">
+                Traditional chemistry education often relies heavily on memorization and theoretical explanations. ChemLove transforms chemistry into an interactive learning experience using virtual laboratories, reaction simulations, practical demonstrations, quizzes, and AI-assisted learning.
+            </p>
+        </div>
+
+        <!-- Vision -->
+        <div class="glass-morphism p-10 rounded-3xl border border-white/5 space-y-6 relative overflow-hidden group flex flex-col justify-between">
+            <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-pink-500/5 rounded-full blur-2xl"></div>
+            <div>
+                <h2 class="text-3xl font-black uppercase tracking-tight text-white mb-6">Our Vision</h2>
+                <p class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400 leading-relaxed">
+                    To become the world's most interactive chemistry education ecosystem.
+                </p>
+            </div>
+            <div class="border-t border-white/5 pt-6 text-xs text-slate-500 uppercase tracking-widest font-black">
+                Empowering the next generation of scientists
+            </div>
+        </div>
+    </section>
+
+    <!-- Why We Built ChemLove Section -->
+    <section class="max-w-7xl mx-auto py-16">
+        <div class="glass-morphism p-10 rounded-3xl border border-white/5 space-y-8">
+            <h2 class="text-3xl font-black uppercase tracking-tight text-white text-center">Why We Built ChemLove</h2>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="p-6 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
+                    <span class="material-symbols-outlined text-pink-400 text-3xl">blur_on</span>
+                    <h4 class="font-bold text-white uppercase text-sm">Abstract Concepts</h4>
+                    <p class="text-slate-400 text-xs leading-relaxed">Chemistry formulas feel theoretical and hard to visualize in standard formats.</p>
+                </div>
+                <div class="p-6 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
+                    <span class="material-symbols-outlined text-cyan-400 text-3xl">science</span>
+                    <h4 class="font-bold text-white uppercase text-sm">Limited Practical Access</h4>
+                    <p class="text-slate-400 text-xs leading-relaxed">Students rarely get the opportunity to perform individual laboratory titration tasks.</p>
+                </div>
+                <div class="p-6 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
+                    <span class="material-symbols-outlined text-pink-400 text-3xl">payments</span>
+                    <h4 class="font-bold text-white uppercase text-sm">Expensive Setup</h4>
+                    <p class="text-slate-400 text-xs leading-relaxed">Chemical reagents and glassware equipment setup cost substantial capital.</p>
+                </div>
+                <div class="p-6 bg-slate-900/40 rounded-2xl border border-white/5 space-y-3">
+                    <span class="material-symbols-outlined text-cyan-400 text-3xl">menu_book</span>
+                    <h4 class="font-bold text-white uppercase text-sm">Scattered Resources</h4>
+                    <p class="text-slate-400 text-xs leading-relaxed">Revision sheets, experiment records, and assessment tools are not integrated.</p>
+                </div>
+            </div>
+            
+            <p class="text-center text-slate-300 text-sm max-w-xl mx-auto leading-relaxed border-t border-white/5 pt-8 font-semibold">
+                ChemLove solves these challenges through a unified platform, offering visual safety, dynamic reaction checks, and interactive curriculum modules.
+            </p>
+        </div>
+    </section>
+
+    <!-- What Makes Us Different Section -->
+    <section class="max-w-7xl mx-auto py-16 space-y-12">
+        <h2 class="text-3xl font-black uppercase tracking-tight text-white text-center">What Makes Us Different</h2>
+        
+        <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <!-- Diff 1 -->
+            <div class="glass-morphism p-6 rounded-2xl border border-white/5 hover:border-cyan-500/20 transition-all text-center space-y-4">
+                <span class="text-2xl">🛡️</span>
+                <h4 class="font-bold text-white uppercase text-xs">Virtual First</h4>
+                <p class="text-[10px] text-slate-400 leading-relaxed">Practice safely virtually before entering a physical laboratory.</p>
+            </div>
+            <!-- Diff 2 -->
+            <div class="glass-morphism p-6 rounded-2xl border border-white/5 hover:border-pink-500/20 transition-all text-center space-y-4">
+                <span class="text-2xl">🛠️</span>
+                <h4 class="font-bold text-white uppercase text-xs">Practical Focus</h4>
+                <p class="text-[10px] text-slate-400 leading-relaxed">Learn core principles through hands-on simulated activities.</p>
+            </div>
+            <!-- Diff 3 -->
+            <div class="glass-morphism p-6 rounded-2xl border border-white/5 hover:border-cyan-500/20 transition-all text-center space-y-4">
+                <span class="text-2xl">🤖</span>
+                <h4 class="font-bold text-white uppercase text-xs">AI-Guided</h4>
+                <p class="text-[10px] text-slate-400 leading-relaxed">Get dynamic explanations and chemical corrections instantly.</p>
+            </div>
+            <!-- Diff 4 -->
+            <div class="glass-morphism p-6 rounded-2xl border border-white/5 hover:border-pink-500/20 transition-all text-center space-y-4">
+                <span class="text-2xl">🏫</span>
+                <h4 class="font-bold text-white uppercase text-xs">Teacher Portal</h4>
+                <p class="text-[10px] text-slate-400 leading-relaxed">Complete educational portal mapping homework, quizzes, and grades.</p>
+            </div>
+            <!-- Diff 5 -->
+            <div class="glass-morphism p-6 rounded-2xl border border-white/5 hover:border-cyan-500/20 transition-all text-center space-y-4">
+                <span class="text-2xl">📊</span>
+                <h4 class="font-bold text-white uppercase text-xs">Analytics</h4>
+                <p class="text-[10px] text-slate-400 leading-relaxed">Trace learning telemetry mapping accuracy, weakness, and strengths.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Who Can Use ChemLove Section -->
+    <section class="max-w-7xl mx-auto py-16 space-y-12">
+        <h2 class="text-3xl font-black uppercase tracking-tight text-white text-center">Who Can Use ChemLove</h2>
+        
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Student card -->
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 flex flex-col justify-between">
+                <div>
+                    <h3 class="text-xl font-bold uppercase text-cyan-400 mb-2">Students</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Class 9–12 students preparing for boards, JEE, or NEET assessments seeking visual concepts.</p>
+                </div>
+            </div>
+            <!-- Teacher card -->
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 flex flex-col justify-between">
+                <div>
+                    <h3 class="text-xl font-bold uppercase text-pink-400 mb-2">Teachers</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">School chemistry educators and private tutors needing assignments, quizzes, and telemetry trackers.</p>
+                </div>
+            </div>
+            <!-- Institution card -->
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 flex flex-col justify-between">
+                <div>
+                    <h3 class="text-xl font-bold uppercase text-cyan-300 mb-2">Institutions</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Schools and coaching academies seeking institutional control panels and automated practical records.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Future Roadmap Section -->
+    <section class="max-w-4xl mx-auto py-16 space-y-12">
+        <h2 class="text-3xl font-black uppercase tracking-tight text-white text-center">Future Roadmap</h2>
+        
+        <div class="relative border-l border-white/10 pl-8 ml-4 space-y-12">
+            <!-- Item 1 -->
+            <div class="relative">
+                <span class="absolute -left-12 top-1.5 w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500 flex items-center justify-center text-cyan-400 text-xs font-bold">1</span>
+                <h4 class="font-bold text-white uppercase text-sm">AI Chemistry Tutor</h4>
+                <p class="text-slate-400 text-xs mt-1">Chat interactive agent interpreting structural inputs and chemical formulas dynamically.</p>
+            </div>
+            <!-- Item 2 -->
+            <div class="relative">
+                <span class="absolute -left-12 top-1.5 w-8 h-8 rounded-full bg-pink-500/10 border border-pink-500 flex items-center justify-center text-pink-400 text-xs font-bold">2</span>
+                <h4 class="font-bold text-white uppercase text-sm">3D Molecular Visualizer</h4>
+                <p class="text-slate-400 text-xs mt-1">Interact with molecular lattices, molecular geometry, covalent chains in responsive webgl frames.</p>
+            </div>
+            <!-- Item 3 -->
+            <div class="relative">
+                <span class="absolute -left-12 top-1.5 w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500 flex items-center justify-center text-cyan-400 text-xs font-bold">3</span>
+                <h4 class="font-bold text-white uppercase text-sm">AR Chemistry Labs</h4>
+                <p class="text-slate-400 text-xs mt-1">Augmented reality workspace mapping compound reactions to mobile viewport projections.</p>
+            </div>
+            <!-- Item 4 -->
+            <div class="relative">
+                <span class="absolute -left-12 top-1.5 w-8 h-8 rounded-full bg-pink-500/10 border border-pink-500 flex items-center justify-center text-pink-400 text-xs font-bold">4</span>
+                <h4 class="font-bold text-white uppercase text-sm">National Olympiad Practice</h4>
+                <p class="text-slate-400 text-xs mt-1">Advanced mock tests aligned to national olympiad syllabus standards.</p>
+            </div>
+            <!-- Item 5 -->
+            <div class="relative">
+                <span class="absolute -left-12 top-1.5 w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500 flex items-center justify-center text-cyan-400 text-xs font-bold">5</span>
+                <h4 class="font-bold text-white uppercase text-sm">Competitive Exam Modules</h4>
+                <p class="text-slate-400 text-xs mt-1">Custom modules and quiz sets focused on cracking JEE and NEET chemistry papers.</p>
+            </div>
+        </div>
+    </section>
+
+</div>
+{% endblock %}

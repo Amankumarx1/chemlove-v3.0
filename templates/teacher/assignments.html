@@ -1,0 +1,188 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Assignments Management{% endblock %}
+
+{% block dashboard_content %}
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Assignment Center</h1>
+            <p class="text-slate-400 mt-2 text-sm">Author, schedule, and grade worksheets linked to standard syllabus chapters.</p>
+        </div>
+        <button onclick="openAssignmentModal()" class="bg-primary text-on-primary font-bold text-xs uppercase px-5 py-3 rounded-xl hover:scale-102 transition-all active:scale-98 flex items-center gap-1.5 shadow-lg shadow-cyan-500/10">
+            <span class="material-symbols-outlined text-sm">add</span> Create Assignment
+        </button>
+    </div>
+
+    <!-- Assignment List -->
+    <div id="assignment-list" class="space-y-4 pb-24">
+        <!-- Spinner -->
+        <div class="flex justify-center py-12" id="assign-spinner">
+            <div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    </div>
+
+    <!-- Modal: Create Assignment -->
+    <div id="modal-assignment" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+        <div class="glass-morphism max-w-lg w-full p-8 rounded-3xl space-y-6 max-h-[90vh] overflow-y-auto scrollbar-thin">
+            <h3 class="text-xl font-bold uppercase text-white">Create Assignment</h3>
+            <form onsubmit="submitCreateAssignment(event)" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Assignment Title</label>
+                    <input type="text" id="assign-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="Esterification Practical Report" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Target Classroom</label>
+                    <select id="assign-classroom-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Description / Aim</label>
+                    <textarea id="assign-desc-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none h-20" placeholder="Write instructions..."></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Chapter Link</label>
+                        <select id="assign-chapter-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary"></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Lab Link</label>
+                        <select id="assign-lab-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary"></select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Total Marks</label>
+                        <input type="number" id="assign-marks-input" value="100" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Due Date</label>
+                        <input type="date" id="assign-due-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                    </div>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Publish Assignment</button>
+                    <button type="button" onclick="closeAssignmentModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function closeAssignmentModal() { document.getElementById('modal-assignment').classList.add('hidden'); }
+
+    async function loadAssignments() {
+        const list = document.getElementById('assignment-list');
+        try {
+            const res = await fetch('/api/assignments');
+            const data = await res.json();
+            
+            const spinner = document.getElementById('assign-spinner');
+            if (spinner) spinner.remove();
+            
+            list.innerHTML = '';
+            if (data.assignments.length === 0) {
+                list.innerHTML = '<div class="glass-morphism p-12 rounded-3xl text-center"><span class="material-symbols-outlined text-5xl text-slate-600 mb-4">assignment</span><h3 class="text-lg font-bold text-white uppercase mb-2">No Assignments authored</h3><p class="text-xs text-slate-500 max-w-sm mx-auto">Publish assignments to class lists to evaluate student practical files.</p></div>';
+                return;
+            }
+
+            data.assignments.forEach(a => {
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-6 rounded-2xl flex justify-between items-center hover:border-cyan-500/20 transition-all';
+                card.innerHTML = `
+                    <div class="space-y-1.5">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-[8px] font-bold tracking-widest uppercase border border-cyan-500/20 bg-cyan-500/10 text-cyan-400">${a.status}</span>
+                            <h4 class="text-lg font-black text-white uppercase">${a.title}</h4>
+                        </div>
+                        <p class="text-xs text-slate-400">${a.description || 'No description provided.'}</p>
+                        <div class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest pt-2">Classroom: ${a.classroom_name} | Max Marks: ${a.marks}</div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="deleteAssignment(${a.id})" class="text-xs text-rose-400 hover:text-rose-300 font-bold uppercase tracking-wider px-3 py-2">Delete</button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        } catch (e) {
+            console.error(e);
+            list.innerHTML = '<div class="text-center text-red-400 text-xs font-bold uppercase">Failed to load assignments.</div>';
+        }
+    }
+
+    async function openAssignmentModal() {
+        // Load classrooms list
+        const resCl = await fetch('/api/classrooms');
+        const dataCl = await resCl.json();
+        const select = document.getElementById('assign-classroom-select');
+        select.innerHTML = '<option value="" disabled selected>Select Classroom</option>';
+        dataCl.classrooms.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.name} (Grade ${c.grade})`;
+            select.appendChild(opt);
+        });
+        
+        // Load chapters & labs lists
+        const resCh = await fetch('/api/chapters');
+        const dataCh = await resCh.json();
+        const chSelect = document.getElementById('assign-chapter-select');
+        chSelect.innerHTML = '<option value="">None</option>';
+        dataCh.chapters.forEach(ch => {
+            const opt = document.createElement('option');
+            opt.value = ch.id;
+            opt.textContent = `${ch.number}. ${ch.title}`;
+            chSelect.appendChild(opt);
+        });
+
+        const resLb = await fetch('/api/labs_list');
+        const dataLb = await resLb.json();
+        const lbSelect = document.getElementById('assign-lab-select');
+        lbSelect.innerHTML = '<option value="">None</option>';
+        dataLb.labs.forEach(lb => {
+            const opt = document.createElement('option');
+            opt.value = lb.id;
+            opt.textContent = lb.name;
+            lbSelect.appendChild(opt);
+        });
+
+        document.getElementById('modal-assignment').classList.remove('hidden');
+    }
+
+    async function submitCreateAssignment(e) {
+        e.preventDefault();
+        const title = document.getElementById('assign-title-input').value;
+        const classroom_id = parseInt(document.getElementById('assign-classroom-select').value);
+        const description = document.getElementById('assign-desc-input').value;
+        const chapter_val = document.getElementById('assign-chapter-select').value;
+        const chapter_id = chapter_val ? parseInt(chapter_val) : null;
+        const lab_val = document.getElementById('assign-lab-select').value;
+        const lab_id = lab_val ? parseInt(lab_val) : null;
+        const marks = parseInt(document.getElementById('assign-marks-input').value);
+        const due_date = document.getElementById('assign-due-input').value;
+        
+        try {
+            const res = await fetch('/api/assignments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, classroom_id, description, chapter_id, lab_id, marks, due_date, status: 'published' })
+            });
+            if(res.ok) {
+                closeAssignmentModal();
+                loadAssignments();
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function deleteAssignment(id) {
+        if(confirm('Delete assignment?')) {
+            try {
+                const res = await fetch(`/api/assignments?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadAssignments();
+            } catch (e) { console.error(e); }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAssignments);
+</script>
+{% endblock %}

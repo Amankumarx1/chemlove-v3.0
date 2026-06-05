@@ -1,0 +1,244 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}ChemLove | Platform Features{% endblock %}
+
+{% block content %}
+<!-- FEATURES PAGE CONTENT -->
+<div id="page-features" class="landing-page pt-28 pb-20 px-8">
+    
+    <!-- Hero Section -->
+    <section class="relative max-w-7xl mx-auto text-center py-20 overflow-hidden">
+        <div class="relative z-10 space-y-6">
+            <div class="inline-flex items-center gap-2 bg-pink-500/10 text-pink-400 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase border border-pink-500/20">
+                🚀 Dynamic Features
+            </div>
+            <h1 class="text-4xl md:text-6xl lg:text-7xl font-black uppercase tracking-tight text-white leading-none">
+                Everything You Need <br />To <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">Master Chemistry</span>
+            </h1>
+            <p class="text-slate-300 text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
+                Learn, experiment, practice, analyze and excel from one platform.
+            </p>
+        </div>
+        <!-- Background glows -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-[100px]"></div>
+    </section>
+
+    <!-- Feature Categories Grid -->
+    <section class="max-w-7xl mx-auto py-12">
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            
+            <!-- Category 1: Chapter Learning System -->
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:border-cyan-500/20 transition-all flex flex-col justify-between group">
+                <div>
+                    <div class="w-12 h-12 bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:rotate-6 transition-transform">
+                        <span class="material-symbols-outlined text-2xl text-cyan-400">menu_book</span>
+                    </div>
+                    <h3 class="text-xl font-bold uppercase text-white mb-4">Chapter Learning</h3>
+                    <ul class="space-y-3 text-slate-400 text-xs font-semibold">
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Chapter-wise notes
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Quick revision
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Concept maps
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Formula sheets
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Board exam preparation
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Category 2: Virtual Laboratory -->
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:border-pink-500/20 transition-all flex flex-col justify-between group">
+                <div>
+                    <div class="w-12 h-12 bg-pink-500/10 border border-pink-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:-rotate-6 transition-transform">
+                        <span class="material-symbols-outlined text-2xl text-pink-400">science</span>
+                    </div>
+                    <h3 class="text-xl font-bold uppercase text-white mb-4">Virtual Laboratory</h3>
+                    <ul class="space-y-3 text-slate-400 text-xs font-semibold">
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Perform experiments virtually
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Real-time observation
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Automatic result generation
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Safe learning environment
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Practical record generation
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Category 3: Reaction Simulator -->
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:border-cyan-500/20 transition-all flex flex-col justify-between group">
+                <div>
+                    <div class="w-12 h-12 bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:scale-105 transition-transform">
+                        <span class="material-symbols-outlined text-2xl text-cyan-400">share</span>
+                    </div>
+                    <h3 class="text-xl font-bold uppercase text-white mb-4">Reaction Simulator</h3>
+                    <ul class="space-y-3 text-slate-400 text-xs font-semibold">
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Organic reactions
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Inorganic reactions
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Industrial reactions
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Step-by-step mechanisms
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Product prediction
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Category 4: Quiz Engine -->
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:border-pink-500/20 transition-all flex flex-col justify-between group">
+                <div>
+                    <div class="w-12 h-12 bg-pink-500/10 border border-pink-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:rotate-6 transition-transform">
+                        <span class="material-symbols-outlined text-2xl text-pink-400">quiz</span>
+                    </div>
+                    <h3 class="text-xl font-bold uppercase text-white mb-4">Quiz Engine</h3>
+                    <ul class="space-y-3 text-slate-400 text-xs font-semibold">
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> MCQ Tests
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Assertion Reasoning
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Case Studies
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Chapter Tests
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Mock Exams
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Category 5: Performance Analytics -->
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:border-cyan-500/20 transition-all flex flex-col justify-between group">
+                <div>
+                    <div class="w-12 h-12 bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:-rotate-6 transition-transform">
+                        <span class="material-symbols-outlined text-2xl text-cyan-400">insights</span>
+                    </div>
+                    <h3 class="text-xl font-bold uppercase text-white mb-4">Performance Analytics</h3>
+                    <ul class="space-y-3 text-slate-400 text-xs font-semibold">
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Completion Tracking
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Quiz Accuracy
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Time Analysis
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Strength Analysis
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Weak Area Detection
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Category 6: Gamification -->
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:border-pink-500/20 transition-all flex flex-col justify-between group">
+                <div>
+                    <div class="w-12 h-12 bg-pink-500/10 border border-pink-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:scale-105 transition-transform">
+                        <span class="material-symbols-outlined text-2xl text-pink-400">emoji_events</span>
+                    </div>
+                    <h3 class="text-xl font-bold uppercase text-white mb-4">Gamification</h3>
+                    <ul class="space-y-3 text-slate-400 text-xs font-semibold">
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> XP System
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Badges
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Streaks
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Leaderboards
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Achievements
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Category 7: AI Tutor -->
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:border-cyan-500/20 transition-all flex flex-col justify-between group">
+                <div>
+                    <div class="w-12 h-12 bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:rotate-6 transition-transform">
+                        <span class="material-symbols-outlined text-2xl text-cyan-400">psychology</span>
+                    </div>
+                    <h3 class="text-xl font-bold uppercase text-white mb-4">AI Tutor</h3>
+                    <ul class="space-y-3 text-slate-400 text-xs font-semibold">
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Instant Doubt Solving
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Personalized Learning
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Smart Recommendations
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Concept Explanations
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Category 8: Teacher Tools -->
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 hover:border-pink-500/20 transition-all flex flex-col justify-between group">
+                <div>
+                    <div class="w-12 h-12 bg-pink-500/10 border border-pink-500/20 flex items-center justify-center rounded-2xl mb-6 group-hover:-rotate-6 transition-transform">
+                        <span class="material-symbols-outlined text-2xl text-pink-400">assignment_ind</span>
+                    </div>
+                    <h3 class="text-xl font-bold uppercase text-white mb-4">Teacher Tools</h3>
+                    <ul class="space-y-3 text-slate-400 text-xs font-semibold">
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Assignment Creation
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Test Scheduling
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Progress Monitoring
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span> Student Reports
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+</div>
+{% endblock %}
