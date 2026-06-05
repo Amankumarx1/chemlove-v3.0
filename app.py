@@ -167,87 +167,184 @@ init_db()
 
 
 # ── Static content helpers ─────────────────────────────────────────────────
-_CONTENT_DIR = os.path.join(os.path.dirname(__file__), 'content')
-
-
-def load_json(path):
-    """Load a JSON file relative to the content directory."""
-    full_path = os.path.join(_CONTENT_DIR, path)
-    if not os.path.exists(full_path):
+def safe_json_loads(val):
+    if val is None:
         return None
-    with open(full_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    if isinstance(val, (dict, list)):
+        return val
+    try:
+        return json.loads(val)
+    except Exception:
+        return val
+
+
+def parse_chapter_json_fields(ch):
+    if not ch:
+        return None
+    ch = dict(ch)
+    json_fields = [
+        'learning_objectives', 'key_points', 'important_laws', 'formulas',
+        'constants', 'important_reactions', 'notes', 'real_life_applications',
+        'virtual_labs', 'practice_questions', 'common_mistakes',
+        'chapter_weightage', 'next_chapter'
+    ]
+    for field in json_fields:
+        if field in ch:
+            ch[field] = safe_json_loads(ch[field])
+    return ch
+
+
+def parse_experiment_json_fields(exp):
+    if not exp:
+        return None
+    exp = dict(exp)
+    json_fields = ['apparatus', 'procedure', 'observations', 'viva_questions']
+    for field in json_fields:
+        if field in exp:
+            exp[field] = safe_json_loads(exp[field])
+    return exp
+
+
+def parse_reaction_json_fields(rxn):
+    if not rxn:
+        return None
+    rxn = dict(rxn)
+    json_fields = ['reactants', 'products', 'mechanism']
+    for field in json_fields:
+        if field in rxn:
+            rxn[field] = safe_json_loads(rxn[field])
+    return rxn
 
 
 def all_chapters():
-    """Return a list of all chapter metadata dicts, sorted by number."""
-    chapters = []
-    pattern = os.path.join(_CONTENT_DIR, 'chapters', 'chapter_*.json')
-    for filepath in sorted(glob.glob(pattern)):
-        filename = os.path.basename(filepath)
-        m = re.match(r'chapter_(\d+)\.json', filename)
-        if m:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                try:
-                    chapters.append(json.load(f))
-                except Exception:
-                    pass
-    return chapters
+    try:
+        with get_db() as conn:
+            rows = conn.execute("SELECT * FROM chapters ORDER BY chapter_number ASC").fetchall()
+        return [parse_chapter_json_fields(row) for row in rows]
+    except Exception as e:
+        print(f"Error fetching chapters: {e}")
+        return []
 
 
 def get_chapter(chapter_id):
-    return load_json(f'chapters/chapter_{chapter_id}.json')
+    try:
+        with get_db() as conn:
+            row = conn.execute("SELECT * FROM chapters WHERE id = %s", (chapter_id,)).fetchone()
+        return parse_chapter_json_fields(row) if row else None
+    except Exception as e:
+        print(f"Error fetching chapter {chapter_id}: {e}")
+        return None
 
 
 def all_labs():
-    return load_json('labs.json') or []
+    try:
+        with get_db() as conn:
+            rows = conn.execute("SELECT * FROM labs ORDER BY id ASC").fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f"Error fetching labs: {e}")
+        return []
 
 
 def all_badges():
-    return load_json('badges.json') or []
+    try:
+        with get_db() as conn:
+            rows = conn.execute("SELECT * FROM badges ORDER BY id ASC").fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f"Error fetching badges: {e}")
+        return []
 
 
 def get_badge(badge_id):
-    for b in all_badges():
-        if b['id'] == badge_id:
-            return b
-    return None
+    try:
+        with get_db() as conn:
+            row = conn.execute("SELECT * FROM badges WHERE id = %s", (badge_id,)).fetchone()
+        return dict(row) if row else None
+    except Exception as e:
+        print(f"Error fetching badge {badge_id}: {e}")
+        return None
 
 
 def all_experiments():
-    experiments = []
-    exp_dir = os.path.join(_CONTENT_DIR, 'experiments')
-    if os.path.exists(exp_dir):
-        for filename in sorted(os.listdir(exp_dir)):
-            if filename.endswith('.json'):
-                with open(os.path.join(exp_dir, filename), 'r', encoding='utf-8') as f:
-                    try:
-                        experiments.append(json.load(f))
-                    except Exception:
-                        pass
-    return experiments
+    try:
+        with get_db() as conn:
+            rows = conn.execute("SELECT * FROM experiments ORDER BY id ASC").fetchall()
+        return [parse_experiment_json_fields(row) for row in rows]
+    except Exception as e:
+        print(f"Error fetching experiments: {e}")
+        return []
 
 
 def get_experiment(experiment_id):
-    return load_json(f'experiments/{experiment_id}.json')
+    try:
+        with get_db() as conn:
+            row = conn.execute("SELECT * FROM experiments WHERE id = %s", (experiment_id,)).fetchone()
+        return parse_experiment_json_fields(row) if row else None
+    except Exception as e:
+        print(f"Error fetching experiment {experiment_id}: {e}")
+        return None
 
 
 def all_quizzes():
-    quizzes = []
-    quiz_dir = os.path.join(_CONTENT_DIR, 'quizzes')
-    if os.path.exists(quiz_dir):
-        for filename in sorted(os.listdir(quiz_dir)):
-            if filename.endswith('.json'):
-                with open(os.path.join(quiz_dir, filename), 'r', encoding='utf-8') as f:
-                    try:
-                        quizzes.append(json.load(f))
-                    except Exception:
-                        pass
-    return quizzes
+    try:
+        with get_db() as conn:
+            quiz_rows = conn.execute("SELECT * FROM quizzes ORDER BY id ASC").fetchall()
+        quizzes = []
+        for q_row in quiz_rows:
+            q_dict = dict(q_row)
+            with get_db() as conn:
+                questions = conn.execute("SELECT * FROM quiz_questions WHERE quiz_id = %s ORDER BY id ASC", (q_dict['id'],)).fetchall()
+            enriched_questions = []
+            for ques in questions:
+                q_info = dict(ques)
+                opts = [q_info['option_a'], q_info['option_b'], q_info['option_c'], q_info['option_d']]
+                q_info['options'] = [o for o in opts if o]
+                letter_idx = ord(q_info['correct_answer'].upper()) - 65
+                if 0 <= letter_idx < len(q_info['options']):
+                    q_info['answer'] = q_info['options'][letter_idx]
+                else:
+                    q_info['answer'] = q_info['option_a']
+                enriched_questions.append(q_info)
+            q_dict['questions'] = enriched_questions
+            quizzes.append(q_dict)
+        return quizzes
+    except Exception as e:
+        print(f"Error fetching quizzes: {e}")
+        return []
 
 
 def get_quiz(chapter_id):
-    return load_json(f'quizzes/{chapter_id}.json')
+    try:
+        with get_db() as conn:
+            quiz_row = conn.execute("SELECT * FROM quizzes WHERE chapter_id = %s", (chapter_id,)).fetchone()
+        if not quiz_row:
+            return None
+        q_dict = dict(quiz_row)
+        with get_db() as conn:
+            questions = conn.execute("SELECT * FROM quiz_questions WHERE quiz_id = %s ORDER BY id ASC", (q_dict['id'],)).fetchall()
+        
+        enriched_questions = []
+        for ques in questions:
+            q_info = dict(ques)
+            opts = [q_info['option_a'], q_info['option_b'], q_info['option_c'], q_info['option_d']]
+            q_info['options'] = [o for o in opts if o]
+            letter_idx = ord(q_info['correct_answer'].upper()) - 65
+            if 0 <= letter_idx < len(q_info['options']):
+                q_info['answer'] = q_info['options'][letter_idx]
+            else:
+                q_info['answer'] = q_info['option_a']
+            enriched_questions.append(q_info)
+        
+        with get_db() as conn:
+            ch_row = conn.execute("SELECT title FROM chapters WHERE id = %s", (chapter_id,)).fetchone()
+        q_dict['chapter'] = ch_row['title'] if ch_row else "Chemistry"
+        q_dict['questions'] = enriched_questions
+        return q_dict
+    except Exception as e:
+        print(f"Error fetching quiz for chapter {chapter_id}: {e}")
+        return None
+
 
 
 # ── User helpers ───────────────────────────────────────────────────────────
@@ -297,6 +394,7 @@ def add_history(user_id, event_type, event_data=None):
         'assignment_submission', 'test_submitted',
         'badge_unlocked', 'contact_message_sent',
         'profile_updated',
+        'quiz_passed', 'titration_complete', 'reaction_success',
     }
     if event_type not in TRACKED_EVENTS:
         return
@@ -701,6 +799,12 @@ def teacher_quizzes():
 @teacher_required
 def teacher_reports():
     return render_template('teacher/reports.html', current_user=get_current_user(), active_tab='reports')
+
+
+@app.route('/teacher/content')
+@teacher_required
+def teacher_content():
+    return render_template('admin/content.html', current_user=get_current_user(), active_tab='content')
 
 
 # ============================================================
@@ -1305,6 +1409,446 @@ def api_badges():
 @app.route('/api/quizzes')
 def api_quizzes():
     return jsonify({"quizzes": all_quizzes()})
+
+
+@app.route('/api/reactions')
+def api_reactions():
+    try:
+        with get_db() as conn:
+            rows = conn.execute("SELECT * FROM reactions ORDER BY id ASC").fetchall()
+        reactions = []
+        for r in rows:
+            parsed = parse_reaction_json_fields(r)
+            reactants_list = parsed.get('reactants', []) or []
+            products_list = parsed.get('products', []) or []
+            parsed['reactants'] = ','.join(reactants_list)
+            parsed['products'] = ','.join(products_list)
+            reactions.append(parsed)
+        return jsonify({"reactions": reactions})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/log_event', methods=['POST'])
+def api_log_event():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    payload = request.get_json(silent=True) or {}
+    event_type = payload.get("event_type")
+    event_data = payload.get("event_data")
+    
+    if not event_type:
+        return jsonify({"error": "Missing event_type"}), 400
+        
+    add_history(user["id"], event_type, event_data)
+    
+    xp_to_add = 0
+    if event_type == 'quiz_passed':
+        xp_to_add = 30
+    elif event_type == 'titration_complete':
+        xp_to_add = 25
+    elif event_type == 'reaction_success':
+        xp_to_add = 15
+        
+    if xp_to_add > 0:
+        try:
+            with get_db() as conn:
+                conn.execute(
+                    "UPDATE student_profiles SET current_xp = current_xp + %s WHERE user_id = %s",
+                    (xp_to_add, user["id"])
+                )
+        except Exception as e:
+            print(f"Error updating XP: {e}")
+            
+    return jsonify({"ok": True})
+
+
+# ============================================================
+# API — CONTENT MANAGEMENT (Admin/Teacher)
+# ============================================================
+
+@app.route('/api/admin/chapters', methods=['POST', 'PUT', 'DELETE'])
+def api_admin_chapters():
+    user = get_current_user()
+    if not user or user['role'] not in ('admin', 'teacher'):
+        return jsonify({"error": "Forbidden"}), 403
+        
+    if request.method == 'POST':
+        payload = request.get_json(silent=True) or {}
+        class_level = payload.get("class_level")
+        chapter_number = payload.get("chapter_number")
+        title = payload.get("title")
+        description = payload.get("description")
+        
+        if not title:
+            return jsonify({"error": "Missing title"}), 400
+            
+        with get_db() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO chapters (
+                    class_level, chapter_number, title, description,
+                    learning_objectives, key_points, important_laws, formulas,
+                    constants, important_reactions, notes, real_life_applications,
+                    virtual_labs, practice_questions, common_mistakes, difficulty,
+                    estimated_study_time, chapter_weightage, next_chapter
+                ) VALUES (%s, %s, %s, %s, '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', 'Beginner', '4 Hours', '{}', '{}')
+                """,
+                (class_level, chapter_number, title, description)
+            )
+            chapter_id = cursor.lastrowid
+        return jsonify({"ok": True, "id": chapter_id})
+        
+    elif request.method == 'PUT':
+        payload = request.get_json(silent=True) or {}
+        ch_id = payload.get("id")
+        if not ch_id:
+            return jsonify({"error": "Missing chapter id"}), 400
+            
+        title = payload.get("title")
+        description = payload.get("description")
+        class_level = payload.get("class_level")
+        chapter_number = payload.get("chapter_number")
+        
+        learning_objectives = json.dumps(payload.get("learning_objectives", [])) if "learning_objectives" in payload else None
+        key_points = json.dumps(payload.get("key_points", [])) if "key_points" in payload else None
+        formulas = json.dumps(payload.get("formulas", [])) if "formulas" in payload else None
+        notes = json.dumps(payload.get("notes", [])) if "notes" in payload else None
+        
+        update_fields = []
+        params = []
+        
+        if title is not None:
+            update_fields.append("title = %s")
+            params.append(title)
+        if description is not None:
+            update_fields.append("description = %s")
+            params.append(description)
+        if class_level is not None:
+            update_fields.append("class_level = %s")
+            params.append(class_level)
+        if chapter_number is not None:
+            update_fields.append("chapter_number = %s")
+            params.append(chapter_number)
+        if learning_objectives is not None:
+            update_fields.append("learning_objectives = %s")
+            params.append(learning_objectives)
+        if key_points is not None:
+            update_fields.append("key_points = %s")
+            params.append(key_points)
+        if formulas is not None:
+            update_fields.append("formulas = %s")
+            params.append(formulas)
+        if notes is not None:
+            update_fields.append("notes = %s")
+            params.append(notes)
+            
+        if not update_fields:
+            return jsonify({"error": "No fields to update"}), 400
+            
+        params.append(ch_id)
+        query = f"UPDATE chapters SET {', '.join(update_fields)} WHERE id = %s"
+        with get_db() as conn:
+            conn.execute(query, tuple(params))
+        return jsonify({"ok": True})
+        
+    elif request.method == 'DELETE':
+        ch_id = request.args.get("id")
+        if not ch_id:
+            return jsonify({"error": "Missing chapter id"}), 400
+        with get_db() as conn:
+            conn.execute("DELETE FROM chapters WHERE id = %s", (ch_id,))
+        return jsonify({"ok": True})
+
+
+@app.route('/api/admin/reactions', methods=['POST', 'PUT', 'DELETE'])
+def api_admin_reactions():
+    user = get_current_user()
+    if not user or user['role'] not in ('admin', 'teacher'):
+        return jsonify({"error": "Forbidden"}), 403
+        
+    if request.method == 'POST':
+        payload = request.get_json(silent=True) or {}
+        rxn_id = payload.get("id")
+        name = payload.get("name")
+        equation = payload.get("equation")
+        reaction_type = payload.get("reaction_type") or "organic"
+        class_level = payload.get("class_level")
+        reactants = payload.get("reactants", "")
+        products = payload.get("products", "")
+        conditions = payload.get("conditions")
+        explanation = payload.get("explanation")
+        
+        if not rxn_id or not name:
+            return jsonify({"error": "Missing id or name"}), 400
+            
+        if isinstance(reactants, str):
+            reactants = [r.strip() for r in reactants.split(',') if r.strip()]
+        if isinstance(products, str):
+            products = [p.strip() for p in products.split(',') if p.strip()]
+            
+        with get_db() as conn:
+            conn.execute(
+                """
+                INSERT INTO reactions (
+                    id, name, equation, reaction_type, class_level,
+                    reactants, products, conditions, explanation, mechanism
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, '[]')
+                """,
+                (rxn_id, name, equation, reaction_type, class_level,
+                 json.dumps(reactants), json.dumps(products), conditions, explanation)
+            )
+        return jsonify({"ok": True})
+        
+    elif request.method == 'PUT':
+        payload = request.get_json(silent=True) or {}
+        rxn_id = payload.get("id")
+        if not rxn_id:
+            return jsonify({"error": "Missing reaction id"}), 400
+            
+        name = payload.get("name")
+        equation = payload.get("equation")
+        reaction_type = payload.get("reaction_type")
+        class_level = payload.get("class_level")
+        reactants = payload.get("reactants")
+        products = payload.get("products")
+        conditions = payload.get("conditions")
+        explanation = payload.get("explanation")
+        
+        update_fields = []
+        params = []
+        
+        if name is not None:
+            update_fields.append("name = %s")
+            params.append(name)
+        if equation is not None:
+            update_fields.append("equation = %s")
+            params.append(equation)
+        if reaction_type is not None:
+            update_fields.append("reaction_type = %s")
+            params.append(reaction_type)
+        if class_level is not None:
+            update_fields.append("class_level = %s")
+            params.append(class_level)
+        if reactants is not None:
+            if isinstance(reactants, str):
+                reactants = [r.strip() for r in reactants.split(',') if r.strip()]
+            update_fields.append("reactants = %s")
+            params.append(json.dumps(reactants))
+        if products is not None:
+            if isinstance(products, str):
+                products = [p.strip() for p in products.split(',') if p.strip()]
+            update_fields.append("products = %s")
+            params.append(json.dumps(products))
+        if conditions is not None:
+            update_fields.append("conditions = %s")
+            params.append(conditions)
+        if explanation is not None:
+            update_fields.append("explanation = %s")
+            params.append(explanation)
+            
+        if not update_fields:
+            return jsonify({"error": "No fields to update"}), 400
+            
+        params.append(rxn_id)
+        query = f"UPDATE reactions SET {', '.join(update_fields)} WHERE id = %s"
+        with get_db() as conn:
+            conn.execute(query, tuple(params))
+        return jsonify({"ok": True})
+        
+    elif request.method == 'DELETE':
+        rxn_id = request.args.get("id")
+        if not rxn_id:
+            return jsonify({"error": "Missing reaction id"}), 400
+        with get_db() as conn:
+            conn.execute("DELETE FROM reactions WHERE id = %s", (rxn_id,))
+        return jsonify({"ok": True})
+
+
+@app.route('/api/admin/quizzes', methods=['POST', 'PUT', 'DELETE'])
+def api_admin_quizzes():
+    user = get_current_user()
+    if not user or user['role'] not in ('admin', 'teacher'):
+        return jsonify({"error": "Forbidden"}), 403
+        
+    if request.method == 'POST':
+        payload = request.get_json(silent=True) or {}
+        chapter_id = payload.get("chapter_id")
+        title = payload.get("title")
+        duration_minutes = payload.get("duration_minutes") or 10
+        total_marks = payload.get("total_marks") or 10
+        
+        if not chapter_id or not title:
+            return jsonify({"error": "Missing chapter_id or title"}), 400
+            
+        with get_db() as conn:
+            cursor = conn.execute(
+                "INSERT INTO quizzes (chapter_id, title, duration_minutes, total_marks) VALUES (%s, %s, %s, %s)",
+                (chapter_id, title, duration_minutes, total_marks)
+            )
+            quiz_id = cursor.lastrowid
+            
+            questions = payload.get("questions", [])
+            for q in questions:
+                conn.execute(
+                    """
+                    INSERT INTO quiz_questions (
+                        quiz_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (quiz_id, q.get("question"), q.get("option_a"), q.get("option_b"),
+                     q.get("option_c"), q.get("option_d"), q.get("correct_answer", "A"), q.get("explanation", ""))
+                )
+        return jsonify({"ok": True, "id": quiz_id})
+        
+    elif request.method == 'PUT':
+        payload = request.get_json(silent=True) or {}
+        quiz_id = payload.get("id")
+        if not quiz_id:
+            return jsonify({"error": "Missing quiz id"}), 400
+            
+        title = payload.get("title")
+        duration_minutes = payload.get("duration_minutes")
+        total_marks = payload.get("total_marks")
+        
+        update_fields = []
+        params = []
+        
+        if title is not None:
+            update_fields.append("title = %s")
+            params.append(title)
+        if duration_minutes is not None:
+            update_fields.append("duration_minutes = %s")
+            params.append(duration_minutes)
+        if total_marks is not None:
+            update_fields.append("total_marks = %s")
+            params.append(total_marks)
+            
+        if update_fields:
+            params.append(quiz_id)
+            query = f"UPDATE quizzes SET {', '.join(update_fields)} WHERE id = %s"
+            with get_db() as conn:
+                conn.execute(query, tuple(params))
+                
+        if "questions" in payload:
+            questions = payload.get("questions", [])
+            with get_db() as conn:
+                conn.execute("DELETE FROM quiz_questions WHERE quiz_id = %s", (quiz_id,))
+                for q in questions:
+                    conn.execute(
+                        """
+                        INSERT INTO quiz_questions (
+                            quiz_id, question, option_a, option_b, option_c, option_d, correct_answer, explanation
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (quiz_id, q.get("question"), q.get("option_a"), q.get("option_b"),
+                         q.get("option_c"), q.get("option_d"), q.get("correct_answer"), q.get("explanation", ""))
+                    )
+        return jsonify({"ok": True})
+        
+    elif request.method == 'DELETE':
+        quiz_id = request.args.get("id")
+        if not quiz_id:
+            return jsonify({"error": "Missing quiz id"}), 400
+        with get_db() as conn:
+            conn.execute("DELETE FROM quizzes WHERE id = %s", (quiz_id,))
+        return jsonify({"ok": True})
+
+
+@app.route('/api/admin/experiments', methods=['POST', 'PUT', 'DELETE'])
+def api_admin_experiments():
+    user = get_current_user()
+    if not user or user['role'] not in ('admin', 'teacher'):
+        return jsonify({"error": "Forbidden"}), 403
+        
+    if request.method == 'POST':
+        payload = request.get_json(silent=True) or {}
+        chapter_id = payload.get("chapter_id")
+        title = payload.get("title")
+        aim = payload.get("aim")
+        theory = payload.get("theory")
+        procedure = payload.get("procedure", [])
+        observations = payload.get("observations", [])
+        result = payload.get("result")
+        
+        if not title:
+            return jsonify({"error": "Missing title"}), 400
+            
+        with get_db() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO experiments (
+                    chapter_id, title, aim, apparatus, theory, `procedure`, observations, result, viva_questions, simulation_url
+                ) VALUES (%s, %s, %s, '[]', %s, %s, %s, %s, '[]', %s)
+                """,
+                (chapter_id, title, aim, theory, json.dumps(procedure),
+                 json.dumps(observations), result, payload.get("simulation_url"))
+            )
+            exp_id = cursor.lastrowid
+        return jsonify({"ok": True, "id": exp_id})
+        
+    elif request.method == 'PUT':
+        payload = request.get_json(silent=True) or {}
+        exp_id = payload.get("id")
+        if not exp_id:
+            return jsonify({"error": "Missing experiment id"}), 400
+            
+        title = payload.get("title")
+        chapter_id = payload.get("chapter_id")
+        aim = payload.get("aim")
+        theory = payload.get("theory")
+        procedure = payload.get("procedure")
+        observations = payload.get("observations")
+        result = payload.get("result")
+        simulation_url = payload.get("simulation_url")
+        
+        update_fields = []
+        params = []
+        
+        if title is not None:
+            update_fields.append("title = %s")
+            params.append(title)
+        if chapter_id is not None:
+            update_fields.append("chapter_id = %s")
+            params.append(chapter_id)
+        if aim is not None:
+            update_fields.append("aim = %s")
+            params.append(aim)
+        if theory is not None:
+            update_fields.append("theory = %s")
+            params.append(theory)
+        if procedure is not None:
+            update_fields.append("`procedure` = %s")
+            params.append(json.dumps(procedure))
+        if observations is not None:
+            update_fields.append("observations = %s")
+            params.append(json.dumps(observations))
+        if result is not None:
+            update_fields.append("result = %s")
+            params.append(result)
+        if simulation_url is not None:
+            update_fields.append("simulation_url = %s")
+            params.append(simulation_url)
+            
+        if not update_fields:
+            return jsonify({"error": "No fields to update"}), 400
+            
+        params.append(exp_id)
+        query = f"UPDATE experiments SET {', '.join(update_fields)} WHERE id = %s"
+        with get_db() as conn:
+            conn.execute(query, tuple(params))
+        return jsonify({"ok": True})
+        
+    elif request.method == 'DELETE':
+        exp_id = request.args.get("id")
+        if not exp_id:
+            return jsonify({"error": "Missing experiment id"}), 400
+        with get_db() as conn:
+            conn.execute("DELETE FROM experiments WHERE id = %s", (exp_id,))
+        return jsonify({"ok": True})
+
 
 
 # ============================================================

@@ -1,97 +1,718 @@
 {% extends 'layouts/dashboard_base.html' %}
 
-{% block title %}ChemLove | Content Modules{% endblock %}
+{% block title %}ChemLove | Curriculum Hub{% endblock %}
 
 {% block dashboard_content %}
-    <div class="mb-8">
-        <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Chapters & Lab Modules</h1>
-        <p class="text-slate-400 mt-2 text-sm">Review published curriculum chapters and active interactive laboratory sandbox templates.</p>
-    </div>
-    
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-24">
-        <!-- Chapters -->
-        <div class="glass-morphism p-8 rounded-3xl space-y-6">
-            <h3 class="text-base font-bold uppercase tracking-widest text-slate-500">Syllabus Chapters</h3>
-            <div id="chapters-list" class="space-y-3">
-                <div class="flex justify-center py-6" id="chapters-spinner">
-                    <div class="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
-                </div>
+    <!-- Welcoming Header -->
+    <div class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+            <div class="inline-flex items-center gap-2 bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 px-3.5 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-3.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 live-pulse"></span>
+                Curriculum Core
             </div>
+            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase text-white">Curriculum Manager</h1>
+            <p class="text-slate-400 mt-2 text-sm max-w-xl">Dynamically update the syllabus chapters, laboratory applets, quiz evaluations, and reactions catalog stored in MySQL.</p>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex gap-2.5 overflow-x-auto pb-4 border-b border-white/5 mb-8">
+        <button onclick="switchAdminTab('chapters')" id="tab-btn-chapters" class="admin-tab-btn active px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950/20 border border-cyan-500/10 transition-all flex items-center gap-2">
+            <span class="material-symbols-outlined text-base">auto_stories</span> Chapters
+        </button>
+        <button onclick="switchAdminTab('experiments')" id="tab-btn-experiments" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2">
+            <span class="material-symbols-outlined text-base">science</span> Experiments
+        </button>
+        <button onclick="switchAdminTab('reactions')" id="tab-btn-reactions" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2">
+            <span class="material-symbols-outlined text-base">chemistry</span> Reactions
+        </button>
+        <button onclick="switchAdminTab('quizzes')" id="tab-btn-quizzes" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2">
+            <span class="material-symbols-outlined text-base">quiz</span> Quizzes
+        </button>
+    </div>
+
+    <!-- MAIN VIEWS -->
+    <div class="pb-24">
+        
+        <!-- SECTION: CHAPTERS -->
+        <div id="admin-sec-chapters" class="admin-section space-y-6">
+            <div class="flex justify-between items-center bg-black/10 p-5 rounded-2xl border border-white/5">
+                <div>
+                    <h3 class="text-base font-bold text-white uppercase">Syllabus Chapters</h3>
+                    <p class="text-xs text-slate-500 mt-1">Manage core textbook units, formulas, and key points.</p>
+                </div>
+                <button onclick="openChapterModal()" class="bg-primary hover:scale-[1.02] active:scale-98 text-on-primary text-xs font-bold uppercase px-4.5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/10">
+                    <span class="material-symbols-outlined text-sm">add_circle</span> Add Chapter
+                </button>
+            </div>
+            <div id="admin-chapters-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
         </div>
 
-        <!-- Labs -->
-        <div class="glass-morphism p-8 rounded-3xl space-y-6">
-            <h3 class="text-base font-bold uppercase tracking-widest text-slate-500">Virtual Lab Applets</h3>
-            <div id="labs-list" class="space-y-3">
-                <div class="flex justify-center py-6" id="labs-spinner">
-                    <div class="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+        <!-- SECTION: EXPERIMENTS -->
+        <div id="admin-sec-experiments" class="admin-section hidden space-y-6">
+            <div class="flex justify-between items-center bg-black/10 p-5 rounded-2xl border border-white/5">
+                <div>
+                    <h3 class="text-base font-bold text-white uppercase">Lab Experiments</h3>
+                    <p class="text-xs text-slate-500 mt-1">Configure laboratory simulations, aim descriptions, and procedures.</p>
                 </div>
+                <button onclick="openExperimentModal()" class="bg-primary hover:scale-[1.02] active:scale-98 text-on-primary text-xs font-bold uppercase px-4.5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/10">
+                    <span class="material-symbols-outlined text-sm">add_circle</span> Add Experiment
+                </button>
             </div>
+            <div id="admin-experiments-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+        </div>
+
+        <!-- SECTION: REACTIONS -->
+        <div id="admin-sec-reactions" class="admin-section hidden space-y-6">
+            <div class="flex justify-between items-center bg-black/10 p-5 rounded-2xl border border-white/5">
+                <div>
+                    <h3 class="text-base font-bold text-white uppercase">Reactions Catalog</h3>
+                    <p class="text-xs text-slate-500 mt-1">Manage active chemical equations and explanations in the simulator.</p>
+                </div>
+                <button onclick="openReactionModal()" class="bg-primary hover:scale-[1.02] active:scale-98 text-on-primary text-xs font-bold uppercase px-4.5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/10">
+                    <span class="material-symbols-outlined text-sm">add_circle</span> Add Reaction
+                </button>
+            </div>
+            <div id="admin-reactions-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+        </div>
+
+        <!-- SECTION: QUIZZES -->
+        <div id="admin-sec-quizzes" class="admin-section hidden space-y-6">
+            <div class="flex justify-between items-center bg-black/10 p-5 rounded-2xl border border-white/5">
+                <div>
+                    <h3 class="text-base font-bold text-white uppercase">Quiz Evaluations</h3>
+                    <p class="text-xs text-slate-500 mt-1">Add Chapter quizzes, configure questions, options, and correct answers.</p>
+                </div>
+                <button onclick="openQuizModal()" class="bg-primary hover:scale-[1.02] active:scale-98 text-on-primary text-xs font-bold uppercase px-4.5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/10">
+                    <span class="material-symbols-outlined text-sm">add_circle</span> Add Quiz
+                </button>
+            </div>
+            <div id="admin-quizzes-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+        </div>
+
+    </div>
+
+    <!-- MODAL: CHAPTER EDIT -->
+    <div id="modal-chapter" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+        <div class="glass-morphism max-w-lg w-full p-8 rounded-3xl space-y-6 max-h-[85vh] overflow-y-auto">
+            <h3 id="chapter-modal-title" class="text-xl font-bold uppercase text-white">Add Chapter</h3>
+            <form id="chapter-form" onsubmit="submitChapter(event)" class="space-y-4">
+                <input type="hidden" id="ch-edit-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Class level</label>
+                        <select id="ch-class-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                            <option value="9">Class 9</option>
+                            <option value="10">Class 10</option>
+                            <option value="11">Class 11</option>
+                            <option value="12">Class 12</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Chapter Number</label>
+                        <input type="number" id="ch-number-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Title</label>
+                    <input type="text" id="ch-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="Structure of Atom" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Description</label>
+                    <textarea id="ch-description-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary min-h-[80px]" required></textarea>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Save Chapter</button>
+                    <button type="button" onclick="closeChapterModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
+
+    <!-- MODAL: EXPERIMENT EDIT -->
+    <div id="modal-experiment" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+        <div class="glass-morphism max-w-lg w-full p-8 rounded-3xl space-y-6 max-h-[85vh] overflow-y-auto">
+            <h3 id="experiment-modal-title" class="text-xl font-bold uppercase text-white">Add Experiment</h3>
+            <form id="experiment-form" onsubmit="submitExperiment(event)" class="space-y-4">
+                <input type="hidden" id="exp-edit-id">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Associated Chapter</label>
+                    <select id="exp-chapter-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Title</label>
+                    <input type="text" id="exp-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Aim</label>
+                    <textarea id="exp-aim-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary min-h-[60px]" required></textarea>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Theory</label>
+                    <textarea id="exp-theory-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary min-h-[60px]" required></textarea>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Simulation URL</label>
+                    <input type="text" id="exp-simurl-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary">
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Save Experiment</button>
+                    <button type="button" onclick="closeExperimentModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REACTION EDIT -->
+    <div id="modal-reaction" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+        <div class="glass-morphism max-w-lg w-full p-8 rounded-3xl space-y-6 max-h-[85vh] overflow-y-auto">
+            <h3 id="reaction-modal-title" class="text-xl font-bold uppercase text-white">Add Reaction</h3>
+            <form id="reaction-form" onsubmit="submitReaction(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Reaction Code ID</label>
+                        <input type="text" id="rxn-id-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="r323" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Class level</label>
+                        <select id="rxn-class-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                            <option value="9">Class 9</option>
+                            <option value="10">Class 10</option>
+                            <option value="11">Class 11</option>
+                            <option value="12">Class 12</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Reaction Name</label>
+                    <input type="text" id="rxn-name-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="Esterification" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Balanced Equation</label>
+                    <input type="text" id="rxn-equation-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="A + B -> C" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Reactants (comma separated)</label>
+                        <input type="text" id="rxn-reactants-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="HCl, NaOH" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Products (comma separated)</label>
+                        <input type="text" id="rxn-products-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="NaCl, H2O" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Reaction Conditions</label>
+                    <input type="text" id="rxn-conditions-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="Dry ether, heat">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Explanation</label>
+                    <textarea id="rxn-explanation-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary min-h-[80px]" required></textarea>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Save Reaction</button>
+                    <button type="button" onclick="closeReactionModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: QUIZ EDIT -->
+    <div id="modal-quiz" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+        <div class="glass-morphism max-w-lg w-full p-8 rounded-3xl space-y-6 max-h-[85vh] overflow-y-auto">
+            <h3 id="quiz-modal-title" class="text-xl font-bold uppercase text-white">Add Quiz</h3>
+            <form id="quiz-form" onsubmit="submitQuiz(event)" class="space-y-4">
+                <input type="hidden" id="quiz-edit-id">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Associated Chapter</label>
+                    <select id="quiz-chapter-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Quiz Title</label>
+                    <input type="text" id="quiz-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="General Evaluation" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Duration (Mins)</label>
+                        <input type="number" id="quiz-duration-input" value="10" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Total Marks</label>
+                        <input type="number" id="quiz-marks-input" value="10" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                    </div>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Save Quiz</button>
+                    <button type="button" onclick="closeQuizModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-    async function loadContent() {
-        // Chapters
-        try {
-            const resCh = await fetch('/api/chapters');
-            const dataCh = await resCh.json();
-            const chList = document.getElementById('chapters-list');
-            
-            const spinnerCh = document.getElementById('chapters-spinner');
-            if (spinnerCh) spinnerCh.remove();
-            
-            if(chList) {
-                chList.innerHTML = '';
-                if(dataCh.chapters.length === 0) {
-                    chList.innerHTML = '<div class="text-slate-500 text-xs">// No chapters found in database.</div>';
-                } else {
-                    dataCh.chapters.forEach(ch => {
-                        const item = document.createElement('div');
-                        item.className = 'border border-white/5 bg-[#171d1e]/40 p-4 rounded-xl text-xs hover:border-cyan-500/10 transition-all';
-                        item.innerHTML = `
-                            <div class="font-bold text-white mb-1 uppercase">${ch.number}. ${ch.title}</div>
-                            <div class="text-slate-400 leading-normal">${ch.description}</div>
-                        `;
-                        chList.appendChild(item);
-                    });
-                }
-            }
-        } catch (e) { console.error(e); }
+    let activeAdminTab = 'chapters';
+    let loadedChapters = [];
 
-        // Labs
+    // Switching views
+    function switchAdminTab(tab) {
+        activeAdminTab = tab;
+        document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+            btn.classList.remove('active', 'text-cyan-400', 'bg-cyan-950/20', 'border', 'border-cyan-500/10');
+            btn.classList.add('text-slate-400');
+        });
+        document.getElementById(`tab-btn-${tab}`).classList.add('active', 'text-cyan-400', 'bg-cyan-950/20', 'border', 'border-cyan-500/10');
+        document.getElementById(`tab-btn-${tab}`).classList.remove('text-slate-400');
+
+        document.querySelectorAll('.admin-section').forEach(sec => sec.classList.add('hidden'));
+        document.getElementById(`admin-sec-${tab}`).classList.remove('hidden');
+        
+        loadTabContent(tab);
+    }
+
+    async function loadTabContent(tab) {
+        if (tab === 'chapters') await loadChapters();
+        else if (tab === 'experiments') await loadExperiments();
+        else if (tab === 'reactions') await loadReactions();
+        else if (tab === 'quizzes') await loadQuizzes();
+    }
+
+    // CHAPTERS HANDLERS
+    async function loadChapters() {
+        const grid = document.getElementById('admin-chapters-grid');
+        grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
         try {
-            const resLb = await fetch('/api/labs_list');
-            const dataLb = await resLb.json();
-            const lbList = document.getElementById('labs-list');
+            const res = await fetch('/api/chapters');
+            const data = await res.json();
+            loadedChapters = data.chapters || [];
+            grid.innerHTML = '';
             
-            const spinnerLb = document.getElementById('labs-spinner');
-            if (spinnerLb) spinnerLb.remove();
-            
-            if(lbList) {
-                lbList.innerHTML = '';
-                if(dataLb.labs.length === 0) {
-                    lbList.innerHTML = '<div class="text-slate-500 text-xs">// No lab applets found in database.</div>';
-                } else {
-                    dataLb.labs.forEach(lb => {
-                        const item = document.createElement('div');
-                        item.className = 'border border-white/5 bg-[#171d1e]/40 p-4 rounded-xl text-xs flex justify-between items-center hover:border-cyan-500/10 transition-all';
-                        item.innerHTML = `
-                            <div>
-                                <div class="font-bold text-white uppercase">${lb.name}</div>
-                                <div class="text-slate-500 mt-0.5 uppercase font-bold text-[9px] tracking-wider">Status: ${lb.status}</div>
-                            </div>
-                            <span class="px-2.5 py-1 rounded bg-[#1b2122] text-[9px] font-bold text-cyan-400 uppercase tracking-widest border border-cyan-500/10">Active</span>
-                        `;
-                        lbList.appendChild(item);
-                    });
-                }
+            if (loadedChapters.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 border border-dashed border-white/5 rounded-2xl text-slate-500 text-xs">// No chapters in database</div>';
+                return;
             }
+            
+            loadedChapters.forEach(ch => {
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 hover:border-cyan-500/10 transition-all';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">CLASS ${ch.class_level} • CH-${ch.chapter_number}</span>
+                        </div>
+                        <h4 class="text-base font-bold text-white uppercase mb-2">${ch.title}</h4>
+                        <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed">${ch.description}</p>
+                    </div>
+                    <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
+                        <button onclick="editChapter(${ch.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
+                        <button onclick="deleteChapter(${ch.id})" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
         } catch (e) { console.error(e); }
     }
 
-    document.addEventListener('DOMContentLoaded', loadContent);
+    function openChapterModal(ch = null) {
+        if(ch) {
+            document.getElementById('chapter-modal-title').textContent = "Edit Chapter";
+            document.getElementById('ch-edit-id').value = ch.id;
+            document.getElementById('ch-class-select').value = ch.class_level;
+            document.getElementById('ch-number-input').value = ch.chapter_number;
+            document.getElementById('ch-title-input').value = ch.title;
+            document.getElementById('ch-description-input').value = ch.description;
+        } else {
+            document.getElementById('chapter-modal-title').textContent = "Add Chapter";
+            document.getElementById('chapter-form').reset();
+            document.getElementById('ch-edit-id').value = '';
+        }
+        document.getElementById('modal-chapter').classList.remove('hidden');
+    }
+
+    function closeChapterModal() { document.getElementById('modal-chapter').classList.add('hidden'); }
+
+    function editChapter(id) {
+        const ch = loadedChapters.find(c => c.id === id);
+        if(ch) openChapterModal(ch);
+    }
+
+    async function submitChapter(e) {
+        e.preventDefault();
+        const chId = document.getElementById('ch-edit-id').value;
+        const payload = {
+            class_level: document.getElementById('ch-class-select').value,
+            chapter_number: parseInt(document.getElementById('ch-number-input').value),
+            title: document.getElementById('ch-title-input').value,
+            description: document.getElementById('ch-description-input').value
+        };
+
+        let method = 'POST';
+        let url = '/api/admin/chapters';
+        if(chId) {
+            method = 'PUT';
+            payload.id = parseInt(chId);
+        }
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) {
+                closeChapterModal();
+                loadChapters();
+            }
+        } catch(err) { console.error(err); }
+    }
+
+    async function deleteChapter(id) {
+        if(confirm('Are you sure you want to delete this chapter? This will cascade delete quizzes and set related experiments to null.')) {
+            try {
+                const res = await fetch(`/api/admin/chapters?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadChapters();
+            } catch(e) { console.error(e); }
+        }
+    }
+
+    // EXPERIMENTS HANDLERS
+    async function loadExperiments() {
+        const grid = document.getElementById('admin-experiments-grid');
+        grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
+        try {
+            const res = await fetch('/api/experiments');
+            const exps = await res.json();
+            grid.innerHTML = '';
+            
+            if (exps.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 border border-dashed border-white/5 rounded-2xl text-slate-500 text-xs">// No experiments in database</div>';
+                return;
+            }
+            
+            exps.forEach(exp => {
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 hover:border-cyan-500/10 transition-all';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">EXPERIMENT MODULE</span>
+                        </div>
+                        <h4 class="text-base font-bold text-white uppercase mb-2">${exp.title}</h4>
+                        <div class="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wide">Aim:</div>
+                        <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed mb-4">${exp.aim}</p>
+                        ${exp.simulation_url ? `<div class="text-[10px] font-semibold text-slate-600 truncate">Simulation: ${exp.simulation_url}</div>` : ''}
+                    </div>
+                    <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
+                        <button onclick="editExperiment(${exp.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
+                        <button onclick="deleteExperiment(${exp.id})" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    async function populateChapterSelect(selectId, selectedVal = null) {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '<option value="" disabled selected>Select Chapter</option>';
+        if (loadedChapters.length === 0) {
+            const res = await fetch('/api/chapters');
+            const data = await res.json();
+            loadedChapters = data.chapters || [];
+        }
+        loadedChapters.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `CH ${c.chapter_number}: ${c.title} (Class ${c.class_level})`;
+            if(selectedVal && String(c.id) === String(selectedVal)) {
+                opt.selected = true;
+            }
+            select.appendChild(opt);
+        });
+    }
+
+    async function openExperimentModal(exp = null) {
+        await populateChapterSelect('exp-chapter-select', exp ? exp.chapter_id : null);
+        if(exp) {
+            document.getElementById('experiment-modal-title').textContent = "Edit Experiment";
+            document.getElementById('exp-edit-id').value = exp.id;
+            document.getElementById('exp-title-input').value = exp.title;
+            document.getElementById('exp-aim-input').value = exp.aim;
+            document.getElementById('exp-theory-input').value = exp.theory;
+            document.getElementById('exp-simurl-input').value = exp.simulation_url || '';
+        } else {
+            document.getElementById('experiment-modal-title').textContent = "Add Experiment";
+            document.getElementById('experiment-form').reset();
+            document.getElementById('exp-edit-id').value = '';
+        }
+        document.getElementById('modal-experiment').classList.remove('hidden');
+    }
+
+    function closeExperimentModal() { document.getElementById('modal-experiment').classList.add('hidden'); }
+
+    async function editExperiment(id) {
+        try {
+            const res = await fetch('/api/experiments');
+            const exps = await res.json();
+            const exp = exps.find(e => e.id === id);
+            if(exp) openExperimentModal(exp);
+        } catch(e) { console.error(e); }
+    }
+
+    async function submitExperiment(e) {
+        e.preventDefault();
+        const expId = document.getElementById('exp-edit-id').value;
+        const payload = {
+            chapter_id: parseInt(document.getElementById('exp-chapter-select').value),
+            title: document.getElementById('exp-title-input').value,
+            aim: document.getElementById('exp-aim-input').value,
+            theory: document.getElementById('exp-theory-input').value,
+            simulation_url: document.getElementById('exp-simurl-input').value
+        };
+
+        let method = 'POST';
+        let url = '/api/admin/experiments';
+        if(expId) {
+            method = 'PUT';
+            payload.id = parseInt(expId);
+        }
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) {
+                closeExperimentModal();
+                loadExperiments();
+            }
+        } catch(err) { console.error(err); }
+    }
+
+    async function deleteExperiment(id) {
+        if(confirm('Are you sure you want to delete this experiment?')) {
+            try {
+                const res = await fetch(`/api/admin/experiments?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadExperiments();
+            } catch(e) { console.error(e); }
+        }
+    }
+
+    // REACTIONS HANDLERS
+    let loadedReactions = [];
+    async function loadReactions() {
+        const grid = document.getElementById('admin-reactions-grid');
+        grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
+        try {
+            const res = await fetch('/api/reactions');
+            const data = await res.json();
+            loadedReactions = data.reactions || [];
+            grid.innerHTML = '';
+            
+            if (loadedReactions.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 border border-dashed border-white/5 rounded-2xl text-slate-500 text-xs">// No reactions in database</div>';
+                return;
+            }
+            
+            loadedReactions.slice(0, 50).forEach(rxn => { // limit to 50 for page speed
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-5 rounded-2xl flex flex-col justify-between border border-white/5 hover:border-cyan-500/10 transition-all';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[8px] font-bold uppercase rounded-md">${rxn.id.toUpperCase()} • CLASS ${rxn.class_level}</span>
+                        </div>
+                        <h4 class="text-sm font-bold text-white uppercase mb-2">${rxn.name}</h4>
+                        <div class="bg-black/20 p-2.5 rounded font-mono text-[10px] font-bold text-cyan-400 border border-white/5 mb-3">${rxn.equation}</div>
+                        <p class="text-[11px] text-slate-400 line-clamp-3 leading-relaxed">${rxn.explanation}</p>
+                    </div>
+                    <div class="flex justify-end gap-2.5 border-t border-white/5 pt-3.5 mt-3.5">
+                        <button onclick="editReaction('${rxn.id}')" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
+                        <button onclick="deleteReaction('${rxn.id}')" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            if(loadedReactions.length > 50) {
+                const note = document.createElement('div');
+                note.className = 'col-span-full text-center py-4 text-xs text-slate-500 font-bold uppercase';
+                note.textContent = `// Showing first 50 of ${loadedReactions.length} reactions inside database.`;
+                grid.appendChild(note);
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    function openReactionModal(rxn = null) {
+        if(rxn) {
+            document.getElementById('reaction-modal-title').textContent = "Edit Reaction";
+            document.getElementById('rxn-id-input').value = rxn.id;
+            document.getElementById('rxn-id-input').disabled = true; // primary key not editable
+            document.getElementById('rxn-class-select').value = rxn.class_level;
+            document.getElementById('rxn-name-input').value = rxn.name;
+            document.getElementById('rxn-equation-input').value = rxn.equation;
+            document.getElementById('rxn-reactants-input').value = rxn.reactants || '';
+            document.getElementById('rxn-products-input').value = rxn.products || '';
+            document.getElementById('rxn-conditions-input').value = rxn.conditions || '';
+            document.getElementById('rxn-explanation-input').value = rxn.explanation || '';
+        } else {
+            document.getElementById('reaction-modal-title').textContent = "Add Reaction";
+            document.getElementById('reaction-form').reset();
+            document.getElementById('rxn-id-input').disabled = false;
+        }
+        document.getElementById('modal-reaction').classList.remove('hidden');
+    }
+
+    function closeReactionModal() { document.getElementById('modal-reaction').classList.add('hidden'); }
+
+    function editReaction(id) {
+        const rxn = loadedReactions.find(r => r.id === id);
+        if(rxn) openReactionModal(rxn);
+    }
+
+    async function submitReaction(e) {
+        e.preventDefault();
+        const rxnId = document.getElementById('rxn-id-input').value;
+        const payload = {
+            id: rxnId,
+            class_level: document.getElementById('rxn-class-select').value,
+            name: document.getElementById('rxn-name-input').value,
+            equation: document.getElementById('rxn-equation-input').value,
+            reactants: document.getElementById('rxn-reactants-input').value,
+            products: document.getElementById('rxn-products-input').value,
+            conditions: document.getElementById('rxn-conditions-input').value,
+            explanation: document.getElementById('rxn-explanation-input').value
+        };
+
+        const isEdit = document.getElementById('rxn-id-input').disabled;
+        let method = isEdit ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch('/api/admin/reactions', {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) {
+                closeReactionModal();
+                loadReactions();
+            }
+        } catch(err) { console.error(err); }
+    }
+
+    async function deleteReaction(id) {
+        if(confirm('Are you sure you want to delete this reaction from catalog?')) {
+            try {
+                const res = await fetch(`/api/admin/reactions?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadReactions();
+            } catch(e) { console.error(e); }
+        }
+    }
+
+    // QUIZZES HANDLERS
+    let loadedQuizzes = [];
+    async function loadQuizzes() {
+        const grid = document.getElementById('admin-quizzes-grid');
+        grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
+        try {
+            const res = await fetch('/api/quizzes');
+            const data = await res.json();
+            loadedQuizzes = data.quizzes || [];
+            grid.innerHTML = '';
+            
+            if (loadedQuizzes.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 border border-dashed border-white/5 rounded-2xl text-slate-500 text-xs">// No quizzes configured</div>';
+                return;
+            }
+            
+            loadedQuizzes.forEach(q => {
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 hover:border-cyan-500/10 transition-all';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">CHAPTER QUIZ • CH-${q.chapter_id}</span>
+                        </div>
+                        <h4 class="text-base font-bold text-white uppercase mb-1">${q.title}</h4>
+                        <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-4">Duration: ${q.duration_minutes}m | Max Marks: ${q.total_marks} | Questions: ${q.questions.length}</div>
+                    </div>
+                    <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
+                        <button onclick="editQuiz(${q.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
+                        <button onclick="deleteQuiz(${q.id})" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    async function openQuizModal(quiz = null) {
+        await populateChapterSelect('quiz-chapter-select', quiz ? quiz.chapter_id : null);
+        if(quiz) {
+            document.getElementById('quiz-modal-title').textContent = "Edit Quiz";
+            document.getElementById('quiz-edit-id').value = quiz.id;
+            document.getElementById('quiz-title-input').value = quiz.title;
+            document.getElementById('quiz-duration-input').value = quiz.duration_minutes;
+            document.getElementById('quiz-marks-input').value = quiz.total_marks;
+        } else {
+            document.getElementById('quiz-modal-title').textContent = "Add Quiz";
+            document.getElementById('quiz-form').reset();
+            document.getElementById('quiz-edit-id').value = '';
+        }
+        document.getElementById('modal-quiz').classList.remove('hidden');
+    }
+
+    function closeQuizModal() { document.getElementById('modal-quiz').classList.add('hidden'); }
+
+    function editQuiz(id) {
+        const quiz = loadedQuizzes.find(q => q.id === id);
+        if(quiz) openQuizModal(quiz);
+    }
+
+    async function submitQuiz(e) {
+        e.preventDefault();
+        const quizId = document.getElementById('quiz-edit-id').value;
+        const payload = {
+            chapter_id: parseInt(document.getElementById('quiz-chapter-select').value),
+            title: document.getElementById('quiz-title-input').value,
+            duration_minutes: parseInt(document.getElementById('quiz-duration-input').value),
+            total_marks: parseInt(document.getElementById('quiz-marks-input').value)
+        };
+
+        let method = 'POST';
+        let url = '/api/admin/quizzes';
+        if(quizId) {
+            method = 'PUT';
+            payload.id = parseInt(quizId);
+        }
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) {
+                closeQuizModal();
+                loadQuizzes();
+            }
+        } catch(err) { console.error(err); }
+    }
+
+    async function deleteQuiz(id) {
+        if(confirm('Are you sure you want to delete this quiz?')) {
+            try {
+                const res = await fetch(`/api/admin/quizzes?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadQuizzes();
+            } catch(e) { console.error(e); }
+        }
+    }
+
+    // Load initial tab content
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTabContent('chapters');
+    });
 </script>
 {% endblock %}

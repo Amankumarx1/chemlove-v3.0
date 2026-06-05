@@ -137,6 +137,11 @@
                     <span class="material-symbols-outlined text-base">quiz</span>
                     Quizzes
                 </a>
+                <a href="/teacher/content"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-pink-950/20 hover:text-pink-400 transition-all {% if active_tab == 'content' or request.path == '/teacher/content' %}bg-pink-950/20 text-pink-400 border border-pink-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">article</span>
+                    Content
+                </a>
                 <a href="/teacher/reports"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-pink-950/20 hover:text-pink-400 transition-all {% if active_tab == 'reports' or request.path == '/teacher/reports' %}bg-pink-950/20 text-pink-400 border border-pink-500/10{% endif %}">
                     <span class="material-symbols-outlined text-base">summarize</span>

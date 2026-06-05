@@ -20,7 +20,15 @@ DROP TABLE IF EXISTS classrooms;
 DROP TABLE IF EXISTS teacher_profiles;
 DROP TABLE IF EXISTS student_profiles;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS quiz_questions;
+DROP TABLE IF EXISTS quizzes;
+DROP TABLE IF EXISTS experiments;
+DROP TABLE IF EXISTS reactions;
+DROP TABLE IF EXISTS badges;
+DROP TABLE IF EXISTS labs;
+DROP TABLE IF EXISTS chapters;
 SET FOREIGN_KEY_CHECKS = 1;
+
 
 -- ── 1. USERS ────────────────────────────────────────────────
 CREATE TABLE users (
@@ -53,6 +61,110 @@ CREATE TABLE teacher_profiles (
     qualifications TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- ── 3.5. SYLLABUS & STATIC CONTENT ───────────────────────────
+CREATE TABLE chapters (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    class_level VARCHAR(50),
+    chapter_number INT,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    learning_objectives JSON,
+    key_points JSON,
+    important_laws JSON,
+    formulas JSON,
+    constants JSON,
+    important_reactions JSON,
+    notes JSON,
+    real_life_applications JSON,
+    virtual_labs JSON,
+    practice_questions JSON,
+    common_mistakes JSON,
+    difficulty VARCHAR(50),
+    estimated_study_time VARCHAR(50),
+    chapter_weightage JSON,
+    next_chapter JSON,
+    quiz_id INT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE labs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    chapter_id INT,
+    description TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'published',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL
+);
+
+CREATE TABLE badges (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    icon VARCHAR(100),
+    xp_reward INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE reactions (
+    id VARCHAR(50) PRIMARY KEY,
+    chapter_id INT,
+    class_level VARCHAR(50),
+    name VARCHAR(255) NOT NULL,
+    equation TEXT,
+    reaction_type VARCHAR(100),
+    reactants JSON,
+    products JSON,
+    conditions VARCHAR(255),
+    explanation LONGTEXT,
+    mechanism JSON,
+    applications LONGTEXT,
+    not_occur LONGTEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL
+);
+
+CREATE TABLE experiments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    chapter_id INT,
+    title VARCHAR(255) NOT NULL,
+    aim LONGTEXT,
+    apparatus JSON,
+    theory LONGTEXT,
+    `procedure` JSON,
+    observations JSON,
+    result LONGTEXT,
+    viva_questions JSON,
+    simulation_url VARCHAR(500),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL
+);
+
+CREATE TABLE quizzes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    chapter_id INT,
+    title VARCHAR(255) NOT NULL,
+    total_marks INT NOT NULL DEFAULT 100,
+    duration_minutes INT NOT NULL DEFAULT 30,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE
+);
+
+CREATE TABLE quiz_questions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    quiz_id INT NOT NULL,
+    question LONGTEXT NOT NULL,
+    option_a TEXT NOT NULL,
+    option_b TEXT NOT NULL,
+    option_c TEXT NOT NULL,
+    option_d TEXT NOT NULL,
+    correct_answer CHAR(1) NOT NULL,
+    explanation LONGTEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
+);
+
 
 -- ── 4. CLASSROOMS ──────────────────────────────────────────
 CREATE TABLE classrooms (
@@ -90,7 +202,9 @@ CREATE TABLE assignments (
     status       VARCHAR(50)  NOT NULL DEFAULT 'draft',
     created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_assignment_status CHECK (status IN ('draft', 'published', 'archived')),
-    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE
+    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL,
+    FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE SET NULL
 );
 
 -- ── 7. SUBMISSIONS ─────────────────────────────────────────
@@ -125,7 +239,8 @@ CREATE TABLE tests (
     created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_test_difficulty CHECK (difficulty IN ('easy', 'medium', 'hard')),
     CONSTRAINT chk_test_status CHECK (status IN ('scheduled', 'active', 'completed', 'cancelled')),
-    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE
+    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL
 );
 
 -- ── 9. TEST ATTEMPTS ───────────────────────────────────────
@@ -165,7 +280,8 @@ CREATE TABLE user_badges (
     badge_id    INT  NOT NULL,              
     unlocked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (user_id, badge_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (badge_id) REFERENCES badges(id) ON DELETE CASCADE
 );
 
 -- ── 12. ATTENDANCE ────────────────────────────────────────
