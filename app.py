@@ -129,444 +129,413 @@ def now_iso():
 
 
 def init_db():
-    with get_db() as connection:
-        # Create users table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL,
-                email TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL,
-                institution TEXT NOT NULL,
-                role TEXT NOT NULL,
-                class_level TEXT,
-                status TEXT DEFAULT 'active',
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )
-            """
-        )
-        
-        # Add status column to users if not exists (handling both SQLite and PG)
-        try:
-            connection.execute("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'")
-        except Exception:
-            pass
-
-        # Create user_history table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS user_history (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                event_type TEXT NOT NULL,
-                event_data TEXT,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # student_profiles table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS student_profiles (
-                user_id INTEGER PRIMARY KEY,
-                current_xp INTEGER DEFAULT 100,
-                level INTEGER DEFAULT 1,
-                weak_topics TEXT,
-                strong_topics TEXT,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # teacher_profiles table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS teacher_profiles (
-                user_id INTEGER PRIMARY KEY,
-                department TEXT DEFAULT 'Chemistry',
-                qualifications TEXT,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # classrooms table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS classrooms (
-                id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL,
-                teacher_id INTEGER NOT NULL,
-                grade TEXT NOT NULL,
-                section TEXT,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # enrollments table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS enrollments (
-                id SERIAL PRIMARY KEY,
-                classroom_id INTEGER NOT NULL,
-                student_id INTEGER NOT NULL,
-                enrolled_at TEXT NOT NULL,
-                FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # chapters table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS chapters (
-                id SERIAL PRIMARY KEY,
-                number INTEGER NOT NULL,
-                title TEXT NOT NULL,
-                class_level TEXT NOT NULL,
-                description TEXT
-            )
-            """
-        )
-        
-        # labs table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS labs (
-                id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL,
-                chapter_id INTEGER,
-                status TEXT DEFAULT 'published',
-                description TEXT,
-                FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL
-            )
-            """
-        )
-        
-        # assignments table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS assignments (
-                id SERIAL PRIMARY KEY,
-                title TEXT NOT NULL,
-                description TEXT,
-                classroom_id INTEGER NOT NULL,
-                chapter_id INTEGER,
-                lab_id INTEGER,
-                marks INTEGER DEFAULT 100,
-                due_date TEXT,
-                instructions TEXT,
-                status TEXT DEFAULT 'draft',
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
-                FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL,
-                FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE SET NULL
-            )
-            """
-        )
-        
-        # submissions table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS submissions (
-                id SERIAL PRIMARY KEY,
-                assignment_id INTEGER NOT NULL,
-                student_id INTEGER NOT NULL,
-                submitted_at TEXT NOT NULL,
-                file_data TEXT,
-                marks_obtained REAL,
-                feedback TEXT,
-                status TEXT DEFAULT 'pending',
-                FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # tests table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS tests (
-                id SERIAL PRIMARY KEY,
-                title TEXT NOT NULL,
-                classroom_id INTEGER NOT NULL,
-                chapter_id INTEGER,
-                duration_minutes INTEGER DEFAULT 30,
-                total_marks INTEGER DEFAULT 100,
-                start_date TEXT,
-                end_date TEXT,
-                difficulty TEXT DEFAULT 'medium',
-                status TEXT DEFAULT 'scheduled',
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
-                FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL
-            )
-            """
-        )
-        
-        # test_questions table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS test_questions (
-                id SERIAL PRIMARY KEY,
-                test_id INTEGER NOT NULL,
-                type TEXT NOT NULL,
-                question_text TEXT NOT NULL,
-                options_json TEXT,
-                correct_answer TEXT NOT NULL,
-                marks INTEGER DEFAULT 1,
-                FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # test_attempts table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS test_attempts (
-                id SERIAL PRIMARY KEY,
-                test_id INTEGER NOT NULL,
-                student_id INTEGER NOT NULL,
-                score REAL,
-                started_at TEXT NOT NULL,
-                completed_at TEXT,
-                status TEXT DEFAULT 'completed',
-                suspicious_alerts_count INTEGER DEFAULT 0,
-                FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # attendance table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS attendance (
-                id SERIAL PRIMARY KEY,
-                classroom_id INTEGER NOT NULL,
-                student_id INTEGER NOT NULL,
-                date TEXT NOT NULL,
-                status TEXT NOT NULL,
-                FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # announcements table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS announcements (
-                id SERIAL PRIMARY KEY,
-                title TEXT NOT NULL,
-                content TEXT NOT NULL,
-                author_id INTEGER NOT NULL,
-                classroom_id INTEGER,
-                target_role TEXT,
-                is_pinned INTEGER DEFAULT 0,
-                publish_at TEXT,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # badges table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS badges (
-                id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE,
-                description TEXT,
-                icon TEXT,
-                requirements_json TEXT
-            )
-            """
-        )
-        
-        # achievements table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS achievements (
-                id SERIAL PRIMARY KEY,
-                student_id INTEGER NOT NULL,
-                badge_id INTEGER NOT NULL,
-                unlocked_at TEXT NOT NULL,
-                FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (badge_id) REFERENCES badges(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # user_xp table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS user_xp (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                amount INTEGER NOT NULL,
-                source TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # notifications table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS notifications (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                title TEXT NOT NULL,
-                message TEXT,
-                is_read INTEGER DEFAULT 0,
-                type TEXT,
-                link TEXT,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # activity_logs table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS activity_logs (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                action TEXT NOT NULL,
-                target_table TEXT,
-                target_id INTEGER,
-                details TEXT,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # theme_preferences table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS theme_preferences (
-                user_id INTEGER PRIMARY KEY,
-                theme TEXT DEFAULT 'system',
-                updated_at TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # leaderboard_entries table
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS leaderboard_entries (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                xp INTEGER NOT NULL,
-                rank INTEGER,
-                week_start TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-            """
-        )
-        
-        # Seed default badges if empty
-        row = connection.execute("SELECT COUNT(*) as count FROM badges").fetchone()
-        if not row or row["count"] == 0:
-            default_badges = [
-                ("Lab Pioneer", "Simulated your first chemical reaction successfully.", "science", '{"reaction_count": 1}'),
-                ("Titration Master", "Completed a precise acid-base neutralization.", "opacity", '{"titration_count": 1}'),
-                ("Concept Overlord", "Unlocked 90% mastery in any syllabus chapter.", "psychology", '{"mastery": 90}'),
-                ("Safety Inspector", "Logged 10 consecutive safe simulations without volatile explosions.", "verified_user", '{"safety_count": 10}')
-            ]
-            for b in default_badges:
-                connection.execute("INSERT INTO badges(name, description, icon, requirements_json) VALUES (%s, %s, %s, %s)", b)
-
-        # Seed default chapters
-        row_ch = connection.execute("SELECT COUNT(*) as count FROM chapters").fetchone()
-        if not row_ch or row_ch["count"] == 0:
-            default_chapters = [
-                (1, "Chemical Reactions and Equations", "10", "Introduction to balancing chemical equations, combination, decomposition, displacement, and redox reactions."),
-                (2, "Acids, Bases and Salts", "10", "Understanding indicators, pH scales, chemical properties of acids and bases, and salts characteristics."),
-                (3, "Metals and Non-metals", "10", "Properties of metals/non-metals, reactivity series, ionic compound properties, and metallurgy."),
-                (4, "Carbon and its Compounds", "10", "Covalent bonding, versatile nature of carbon, homologous series, and functional groups."),
-                (5, "Hydrocarbons", "11", "Alkanes, alkenes, alkynes, isomerism, and methods of preparation (like Wurtz Reaction).")
-            ]
-            for ch in default_chapters:
-                connection.execute("INSERT INTO chapters(number, title, class_level, description) VALUES (%s, %s, %s, %s)", ch)
-
-        # Sync chapters database with JSON files if they exist
-        import glob
-        import re
-        import json
-        
-        chapters_dir = os.path.join('content', 'chapters')
-        if os.path.exists(chapters_dir):
-            for filepath in glob.glob(os.path.join(chapters_dir, 'chapter_*.json')):
-                filename = os.path.basename(filepath)
-                match = re.match(r'chapter_(\d+)\.json', filename)
-                if match:
-                    ch_num = int(match.group(1))
-                    try:
-                        with open(filepath, 'r', encoding='utf-8') as f:
-                            ch_data = json.load(f)
-                        title = ch_data.get("title", f"Chapter {ch_num}")
-                        description = ch_data.get("description", "")
-                        class_level = str(ch_data.get("class", ch_data.get("class_level", "11")))
-                        
-                        existing = connection.execute("SELECT id FROM chapters WHERE number = %s", (ch_num,)).fetchone()
-                        if existing:
-                            connection.execute(
-                                "UPDATE chapters SET title = %s, class_level = %s, description = %s WHERE number = %s",
-                                (title, class_level, description, ch_num)
-                            )
-                        else:
-                            connection.execute(
-                                "INSERT INTO chapters(id, number, title, class_level, description) VALUES (%s, %s, %s, %s, %s)",
-                                (ch_num, ch_num, title, class_level, description)
-                            )
-                    except Exception as e:
-                        print(f"[DATABASE] Error syncing chapter JSON {filename}: {e}")
-                
-        # Seed default labs
-        row_lb = connection.execute("SELECT COUNT(*) as count FROM labs").fetchone()
-        if not row_lb or row_lb["count"] == 0:
-            default_labs = [
-                ("Virtual Sandbox", 5, "published", "Mix any organic/inorganic reagents in a safe virtual drop-zone."),
-                ("Acid-Base Titration Workbench", 2, "published", "Drop-wise addition of titrant into an analyte to trace equivalence pH curves.")
-            ]
-            for lb in default_labs:
-                connection.execute("INSERT INTO labs(name, chapter_id, status, description) VALUES (%s, %s, %s, %s)", lb)
-
-        # Seed or fix default admin user
-        admin_row = connection.execute("SELECT * FROM users WHERE email = %s", ("admin@chemlove.com",)).fetchone()
-        if admin_row:
-            if admin_row["role"] != "admin" or admin_row["status"] != "active":
-                connection.execute(
-                    "UPDATE users SET role = %s, status = %s, password_hash = %s WHERE email = %s",
-                    ("admin", "active", generate_password_hash("admin123"), "admin@chemlove.com")
-                )
-                print("[DATABASE] Updated existing user admin@chemlove.com to role 'admin', status 'active', password 'admin123'.")
-        else:
-            created_at = datetime.now(timezone.utc).isoformat()
+    """Initialise the database.
+    
+    For SQLite: create all tables and seed default data.
+    For PostgreSQL (Supabase): tables already exist — only run a quick
+    connectivity check so we can confirm the connection is working.
+    """
+    if USING_SQLITE:
+        with get_db() as connection:
+            # Create users table
             connection.execute(
                 """
-                INSERT INTO users(name, email, password_hash, institution, role, status, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, 'active', %s, %s)
-                """,
-                ("System Admin", "admin@chemlove.com", generate_password_hash("admin123"), "ChemLove Academy", "admin", created_at, created_at)
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    email TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    institution TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    class_level TEXT,
+                    status TEXT DEFAULT 'active',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
             )
-            print("[DATABASE] Seeded default admin user: admin@chemlove.com / admin123")
+
+            try:
+                connection.execute("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'")
+            except Exception:
+                pass
+
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    event_type TEXT NOT NULL,
+                    event_data TEXT,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS student_profiles (
+                    user_id INTEGER PRIMARY KEY,
+                    current_xp INTEGER DEFAULT 100,
+                    level INTEGER DEFAULT 1,
+                    weak_topics TEXT,
+                    strong_topics TEXT,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS teacher_profiles (
+                    user_id INTEGER PRIMARY KEY,
+                    department TEXT DEFAULT 'Chemistry',
+                    qualifications TEXT,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS classrooms (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    teacher_id INTEGER NOT NULL,
+                    grade TEXT NOT NULL,
+                    section TEXT,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS enrollments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    classroom_id INTEGER NOT NULL,
+                    student_id INTEGER NOT NULL,
+                    enrolled_at TEXT NOT NULL,
+                    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
+                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS chapters (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    number INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    class_level TEXT NOT NULL,
+                    description TEXT
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS labs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    chapter_id INTEGER,
+                    status TEXT DEFAULT 'published',
+                    description TEXT,
+                    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS assignments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    classroom_id INTEGER NOT NULL,
+                    chapter_id INTEGER,
+                    lab_id INTEGER,
+                    marks INTEGER DEFAULT 100,
+                    due_date TEXT,
+                    instructions TEXT,
+                    status TEXT DEFAULT 'draft',
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
+                    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL,
+                    FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE SET NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS submissions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    assignment_id INTEGER NOT NULL,
+                    student_id INTEGER NOT NULL,
+                    submitted_at TEXT NOT NULL,
+                    file_data TEXT,
+                    marks_obtained REAL,
+                    feedback TEXT,
+                    status TEXT DEFAULT 'pending',
+                    FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
+                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS tests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    classroom_id INTEGER NOT NULL,
+                    chapter_id INTEGER,
+                    duration_minutes INTEGER DEFAULT 30,
+                    total_marks INTEGER DEFAULT 100,
+                    start_date TEXT,
+                    end_date TEXT,
+                    difficulty TEXT DEFAULT 'medium',
+                    status TEXT DEFAULT 'scheduled',
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
+                    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS test_questions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    test_id INTEGER NOT NULL,
+                    type TEXT NOT NULL,
+                    question_text TEXT NOT NULL,
+                    options_json TEXT,
+                    correct_answer TEXT NOT NULL,
+                    marks INTEGER DEFAULT 1,
+                    FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS test_attempts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    test_id INTEGER NOT NULL,
+                    student_id INTEGER NOT NULL,
+                    score REAL,
+                    started_at TEXT NOT NULL,
+                    completed_at TEXT,
+                    status TEXT DEFAULT 'completed',
+                    suspicious_alerts_count INTEGER DEFAULT 0,
+                    FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE,
+                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS attendance (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    classroom_id INTEGER NOT NULL,
+                    student_id INTEGER NOT NULL,
+                    date TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
+                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS announcements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    author_id INTEGER NOT NULL,
+                    classroom_id INTEGER,
+                    target_role TEXT,
+                    is_pinned INTEGER DEFAULT 0,
+                    publish_at TEXT,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS badges (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    description TEXT,
+                    icon TEXT,
+                    requirements_json TEXT
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS achievements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    student_id INTEGER NOT NULL,
+                    badge_id INTEGER NOT NULL,
+                    unlocked_at TEXT NOT NULL,
+                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (badge_id) REFERENCES badges(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_xp (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    amount INTEGER NOT NULL,
+                    source TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    message TEXT,
+                    is_read INTEGER DEFAULT 0,
+                    type TEXT,
+                    link TEXT,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS activity_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    action TEXT NOT NULL,
+                    target_table TEXT,
+                    target_id INTEGER,
+                    details TEXT,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS theme_preferences (
+                    user_id INTEGER PRIMARY KEY,
+                    theme TEXT DEFAULT 'system',
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS leaderboard_entries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    xp INTEGER NOT NULL,
+                    rank INTEGER,
+                    week_start TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+
+            # Seed default badges
+            row = connection.execute("SELECT COUNT(*) as count FROM badges").fetchone()
+            if not row or row["count"] == 0:
+                default_badges = [
+                    ("Lab Pioneer", "Simulated your first chemical reaction successfully.", "science", '{"reaction_count": 1}'),
+                    ("Titration Master", "Completed a precise acid-base neutralization.", "opacity", '{"titration_count": 1}'),
+                    ("Concept Overlord", "Unlocked 90% mastery in any syllabus chapter.", "psychology", '{"mastery": 90}'),
+                    ("Safety Inspector", "Logged 10 consecutive safe simulations without volatile explosions.", "verified_user", '{"safety_count": 10}')
+                ]
+                for b in default_badges:
+                    connection.execute("INSERT INTO badges(name, description, icon, requirements_json) VALUES (%s, %s, %s, %s)", b)
+
+            # Seed default chapters
+            row_ch = connection.execute("SELECT COUNT(*) as count FROM chapters").fetchone()
+            if not row_ch or row_ch["count"] == 0:
+                default_chapters = [
+                    (1, "Chemical Reactions and Equations", "10", "Introduction to balancing chemical equations, combination, decomposition, displacement, and redox reactions."),
+                    (2, "Acids, Bases and Salts", "10", "Understanding indicators, pH scales, chemical properties of acids and bases, and salts characteristics."),
+                    (3, "Metals and Non-metals", "10", "Properties of metals/non-metals, reactivity series, ionic compound properties, and metallurgy."),
+                    (4, "Carbon and its Compounds", "10", "Covalent bonding, versatile nature of carbon, homologous series, and functional groups."),
+                    (5, "Hydrocarbons", "11", "Alkanes, alkenes, alkynes, isomerism, and methods of preparation (like Wurtz Reaction).")
+                ]
+                for ch in default_chapters:
+                    connection.execute("INSERT INTO chapters(number, title, class_level, description) VALUES (%s, %s, %s, %s)", ch)
+
+            # Sync chapter JSON files
+            import glob, re, json
+            chapters_dir = os.path.join('content', 'chapters')
+            if os.path.exists(chapters_dir):
+                for filepath in glob.glob(os.path.join(chapters_dir, 'chapter_*.json')):
+                    filename = os.path.basename(filepath)
+                    match = re.match(r'chapter_(\d+)\.json', filename)
+                    if match:
+                        ch_num = int(match.group(1))
+                        try:
+                            with open(filepath, 'r', encoding='utf-8') as f:
+                                ch_data = json.load(f)
+                            title = ch_data.get("title", f"Chapter {ch_num}")
+                            description = ch_data.get("description", "")
+                            class_level = str(ch_data.get("class", ch_data.get("class_level", "11")))
+                            existing = connection.execute("SELECT id FROM chapters WHERE number = %s", (ch_num,)).fetchone()
+                            if existing:
+                                connection.execute(
+                                    "UPDATE chapters SET title = %s, class_level = %s, description = %s WHERE number = %s",
+                                    (title, class_level, description, ch_num)
+                                )
+                            else:
+                                connection.execute(
+                                    "INSERT INTO chapters(id, number, title, class_level, description) VALUES (%s, %s, %s, %s, %s)",
+                                    (ch_num, ch_num, title, class_level, description)
+                                )
+                        except Exception as e:
+                            print(f"[DATABASE] Error syncing chapter JSON {filename}: {e}")
+
+            # Seed default labs
+            row_lb = connection.execute("SELECT COUNT(*) as count FROM labs").fetchone()
+            if not row_lb or row_lb["count"] == 0:
+                default_labs = [
+                    ("Virtual Sandbox", 5, "published", "Mix any organic/inorganic reagents in a safe virtual drop-zone."),
+                    ("Acid-Base Titration Workbench", 2, "published", "Drop-wise addition of titrant into an analyte to trace equivalence pH curves.")
+                ]
+                for lb in default_labs:
+                    connection.execute("INSERT INTO labs(name, chapter_id, status, description) VALUES (%s, %s, %s, %s)", lb)
+
+            # Ensure default admin user exists
+            admin_row = connection.execute("SELECT * FROM users WHERE email = %s", ("admin@chemlove.com",)).fetchone()
+            if admin_row:
+                if admin_row["role"] != "admin" or admin_row["status"] != "active":
+                    connection.execute(
+                        "UPDATE users SET role = %s, status = %s, password_hash = %s WHERE email = %s",
+                        ("admin", "active", generate_password_hash("admin123"), "admin@chemlove.com")
+                    )
+            else:
+                created_at = now_iso()
+                connection.execute(
+                    """
+                    INSERT INTO users(name, email, password_hash, institution, role, status, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    ("Admin", "admin@chemlove.com", generate_password_hash("admin123"),
+                     "ChemLove", "admin", "active", created_at, created_at)
+                )
+            print("[DATABASE] SQLite initialised successfully.")
+    else:
+        # PostgreSQL / Supabase — tables already exist, just verify connectivity
+        try:
+            with get_db() as connection:
+                connection.execute("SELECT 1").fetchone()
+            print("[DATABASE] PostgreSQL connection verified successfully.")
+        except Exception as e:
+            print(f"[DATABASE] PostgreSQL connectivity check failed: {e}")
 
 
 def user_from_row(row):
