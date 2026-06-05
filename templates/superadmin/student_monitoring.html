@@ -1,0 +1,198 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Student Monitor{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Back Navigation -->
+    <a href="/superadmin/control-center" class="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-xs font-bold uppercase tracking-wider mb-6">
+        <span class="material-symbols-outlined text-base">arrow_back</span> Return to Control Center
+    </a>
+
+    <!-- Student Info Header Block -->
+    <div class="glass-morphism p-8 rounded-3xl mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+        <div class="absolute -right-8 -top-8 w-24 h-24 bg-cyan-400/5 rounded-full blur-xl"></div>
+        <div>
+            <div class="inline-flex items-center gap-2 bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4 border border-cyan-500/10">
+                <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                Student Telemetry Node
+            </div>
+            <h1 class="text-3xl font-black uppercase text-white tracking-tight leading-none mb-2">{{ student.name }}</h1>
+            <p class="text-slate-400 text-xs font-mono">{{ student.email }} | {{ student.institution }}</p>
+        </div>
+        
+        <!-- Batch stats -->
+        <div class="flex items-center gap-4 bg-slate-900/40 border border-white/5 px-6 py-3.5 rounded-2xl">
+            <div>
+                <div class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Current Grade</div>
+                <div class="text-sm font-black text-white">Class {{ student.classLevel or '9-12' }}</div>
+            </div>
+            <div class="border-l border-white/5 pl-4">
+                <div class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Total XP</div>
+                <div class="text-sm font-black text-cyan-400">{{ student.current_xp or 100 }} XP</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Monitoring Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-8">
+        <!-- Left Column: Core telemetry stats -->
+        <div class="lg:col-span-1 space-y-8">
+            <!-- Quick Actions -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-6 w-full text-center">Administrative Actions</h3>
+                <div class="space-y-4">
+                    <!-- Issue Certificate -->
+                    <form method="POST" action="/superadmin/student-monitoring/{{ student.id }}" class="border-b border-white/5 pb-4">
+                        <input type="hidden" name="action" value="issue_certificate">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Issue Verified Certificate</label>
+                        <div class="flex gap-2">
+                            <select name="course_id" required class="flex-grow px-3 py-2 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                                {% for c in courses %}
+                                    <option value="{{ c.id }}">{{ c.title }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="kinetic-gradient text-on-primary px-3 rounded-xl text-xs font-bold flex items-center justify-center">
+                                <span class="material-symbols-outlined">workspace_premium</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Edit Batch / Class level -->
+                    <form method="POST" action="/superadmin/student-monitoring/{{ student.id }}" class="border-b border-white/5 pb-4">
+                        <input type="hidden" name="action" value="move_batch">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Change Grade Batch</label>
+                        <div class="flex gap-2">
+                            <select name="class_level" required class="flex-grow px-3 py-2 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                                <option value="9" {% if student.classLevel == '9' %}selected{% endif %}>Class 9</option>
+                                <option value="10" {% if student.classLevel == '10' %}selected{% endif %}>Class 10</option>
+                                <option value="11" {% if student.classLevel == '11' %}selected{% endif %}>Class 11</option>
+                                <option value="12" {% if student.classLevel == '12' %}selected{% endif %}>Class 12</option>
+                            </select>
+                            <button type="submit" class="kinetic-gradient text-on-primary px-4 rounded-xl text-xs font-bold">
+                                Move
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Account Access Control Toggle -->
+                    <form method="POST" action="/superadmin/student-monitoring/{{ student.id }}" class="pt-2">
+                        <input type="hidden" name="action" value="toggle_access">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Syllabus Access Restriction</label>
+                        {% if student.status == 'active' %}
+                            <button type="submit" class="w-full bg-red-950/20 border border-red-500/20 hover:bg-red-900/20 hover:border-red-500 transition-all py-3 rounded-xl text-xs font-black uppercase tracking-widest text-red-400">
+                                Suspend Account
+                            </button>
+                        {% else %}
+                            <button type="submit" class="w-full bg-emerald-950/20 border border-emerald-500/20 hover:bg-emerald-900/20 hover:border-emerald-500 transition-all py-3 rounded-xl text-xs font-black uppercase tracking-widest text-emerald-400 animate-pulse">
+                                Re-Activate Account
+                            </button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <!-- Attendance Metrics -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-cyan-400">co_present</span>
+                    Attendance Telemetry
+                </h3>
+                <div class="text-center py-4 border-b border-white/5 mb-4">
+                    <div class="text-4xl font-black text-white">{{ attendance_stats.percentage }}%</div>
+                    <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-1">Average Attendance Rate</div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div class="bg-emerald-950/10 border border-emerald-500/10 p-2.5 rounded-xl">
+                        <div class="font-bold text-emerald-400">{{ attendance_stats.present }}</div>
+                        <div class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Present</div>
+                    </div>
+                    <div class="bg-red-950/10 border border-red-500/10 p-2.5 rounded-xl">
+                        <div class="font-bold text-red-400">{{ attendance_stats.absent }}</div>
+                        <div class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Absent</div>
+                    </div>
+                    <div class="bg-amber-950/10 border border-amber-500/10 p-2.5 rounded-xl">
+                        <div class="font-bold text-amber-400">{{ attendance_stats.late }}</div>
+                        <div class="text-[8px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Late</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Learning Progress Logs -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Enrolled Courses -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-6">Course Enrollment & Progress</h3>
+                <div class="space-y-4">
+                    {% for c in enrollments %}
+                        <div class="border border-white/5 bg-[#171d1e]/40 p-4 rounded-2xl flex justify-between items-center gap-4">
+                            <div>
+                                <h4 class="text-sm font-bold text-white uppercase tracking-tight">{{ c.course_title }}</h4>
+                                <p class="text-[10px] text-slate-500 mt-1">Enrolled on: {{ c.enrolled_at }}</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="text-right">
+                                    <div class="text-xs font-black text-cyan-400">{{ c.progress }}%</div>
+                                    <div class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Complete</div>
+                                </div>
+                                <span class="material-symbols-outlined text-cyan-500">
+                                    {% if c.progress == 100 %}verified{% else %}incomplete_circle{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-xs text-slate-500 py-6">This student is not enrolled in any courses.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Quiz Submissions -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-6">Quiz Evaluation Logs</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-white/5 text-[9px] uppercase tracking-widest text-slate-500">
+                                <th class="py-2.5 px-3">Evaluation Module</th>
+                                <th class="py-2.5 px-3">Raw Score</th>
+                                <th class="py-2.5 px-3 text-right">Completion Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5">
+                            {% for ta in quiz_attempts %}
+                                <tr>
+                                    <td class="py-3 px-3 font-bold text-white">{{ ta.test_title }}</td>
+                                    <td class="py-3 px-3 font-mono text-cyan-400 font-bold">{{ ta.score }}</td>
+                                    <td class="py-3 px-3 text-right text-slate-500">{{ ta.completed_at or 'Incomplete' }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="3" class="py-6 text-center text-slate-500">No quiz attempt logs found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Activity Logs Timeline -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-6">Activity Timeline Registry</h3>
+                <div class="space-y-4 max-h-96 overflow-y-auto pr-2 scrollbar-thin">
+                    {% for log in history %}
+                        <div class="flex items-start gap-3 text-xs border-l-2 border-slate-800 pl-4 py-1 relative">
+                            <span class="absolute w-2 h-2 rounded-full bg-cyan-400 -left-[5px] top-2"></span>
+                            <div class="flex-grow">
+                                <div class="font-bold text-white uppercase text-[10px] tracking-wider">{{ log.event_type }}</div>
+                                <p class="text-slate-400 mt-1 font-mono text-[9px] truncate max-w-md">{{ log.event_data }}</p>
+                            </div>
+                            <span class="text-[9px] text-slate-500 font-medium whitespace-nowrap">{{ log.created_at }}</span>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-xs text-slate-500 py-6">No registry entries recorded.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

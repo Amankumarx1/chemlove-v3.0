@@ -36,6 +36,13 @@
     </script>
 </head>
 <body class="bg-surface text-on-surface font-body selection:bg-tertiary selection:text-on-tertiary flex flex-col min-h-screen">
+    {% if current_user and current_user.is_impersonating %}
+    <div class="bg-gradient-to-r from-rose-600 to-pink-600 text-white py-3 px-4 text-center text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-3 relative z-50 shadow-md">
+        <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+        <span>Impersonation Session: Viewing as <strong>{{ current_user.name }}</strong> ({{ current_user.role|upper }})</span>
+        <a href="/auth/stop-impersonation" class="bg-white/20 hover:bg-white/30 active:bg-white/40 border border-white/20 px-3 py-1.5 rounded-lg transition-all text-[10px] font-black uppercase tracking-widest ml-4">Stop Impersonation</a>
+    </div>
+    {% endif %}
     {% include 'components/navbar.html' %}
     
     <main class="flex-grow">

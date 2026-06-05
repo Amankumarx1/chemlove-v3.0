@@ -36,6 +36,13 @@
     </script>
 </head>
 <body class="bg-surface text-on-surface font-body grid-bg min-h-screen relative overflow-x-hidden flex flex-col">
+    {% if current_user and current_user.is_impersonating %}
+    <div class="bg-gradient-to-r from-rose-600 to-pink-600 text-white py-3 px-4 text-center text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-3 relative z-50 shadow-md">
+        <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+        <span>Impersonation Session: Viewing as <strong>{{ current_user.name }}</strong> ({{ current_user.role|upper }})</span>
+        <a href="/auth/stop-impersonation" class="bg-white/20 hover:bg-white/30 active:bg-white/40 border border-white/20 px-3 py-1.5 rounded-lg transition-all text-[10px] font-black uppercase tracking-widest ml-4">Stop Impersonation</a>
+    </div>
+    {% endif %}
     <!-- Ambient background glows -->
     <div class="absolute top-1/4 -right-20 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
     <div class="absolute bottom-0 -left-20 w-96 h-96 bg-tertiary/5 rounded-full blur-[120px] pointer-events-none"></div>

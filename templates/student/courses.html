@@ -1,0 +1,63 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Enrolled Courses{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Header -->
+    <div class="mb-12">
+        <div class="inline-flex items-center gap-2 bg-primary-container/20 text-primary px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
+            <span class="w-2 h-2 rounded-full bg-primary live-pulse"></span>
+            Academic Catalog
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Enrolled Courses</h1>
+        <p class="text-slate-400 mt-2 text-sm font-medium">Track your curriculum completion, browse modules, and earn verifiable course certificates.</p>
+    </div>
+
+    <!-- Courses Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {% for e in enrollments %}
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 bg-[#171d1e]/40 hover:border-cyan-500/20 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute -right-8 -top-8 w-24 h-24 bg-primary/5 rounded-full blur-xl"></div>
+                <div>
+                    <!-- Category & Status -->
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-[9px] font-black tracking-widest uppercase text-cyan-400 bg-cyan-950/40 px-2.5 py-1 rounded-md">{{ e.category }}</span>
+                        <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500">Class {{ current_user.classLevel or '9-12' }} syllabus</span>
+                    </div>
+                    
+                    <!-- Title & description -->
+                    <h3 class="text-xl font-bold text-white uppercase tracking-tight mb-2">{{ e.course_title }}</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-6">{{ e.description or 'No course description available.' }}</p>
+                </div>
+
+                <!-- Progress Section -->
+                <div class="border-t border-white/5 pt-6 mt-6">
+                    <div class="flex justify-between items-center text-xs font-bold uppercase tracking-wider mb-2">
+                        <span class="text-slate-500">Course Completion</span>
+                        <span class="text-cyan-400 font-mono">{{ e.progress }}%</span>
+                    </div>
+                    <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5 mb-6">
+                        <div class="h-full bg-gradient-to-r from-primary to-cyan-500 rounded-full" style="width: {{ e.progress }}%"></div>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <a href="/student/course/{{ e.course_id }}" class="kinetic-gradient text-on-primary text-[10px] font-black uppercase tracking-wider px-5 py-3 rounded-xl hover:scale-105 active:scale-95 transition-all">
+                            Browse Modules
+                        </a>
+                        {% if e.progress == 100 %}
+                            <span class="text-[9px] font-black tracking-widest text-emerald-400 uppercase bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-1 rounded-md flex items-center gap-1">
+                                <span class="material-symbols-outlined text-xs">verified</span> Course Complete
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-span-full glass-morphism p-12 rounded-3xl text-center">
+                <span class="material-symbols-outlined text-5xl text-slate-600 mb-4">collections_bookmark</span>
+                <h3 class="text-lg font-bold text-white uppercase mb-2">No Courses Enrolled</h3>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto">You have not been assigned to any courses. Please contact the administrator.</p>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

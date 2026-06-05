@@ -466,6 +466,150 @@ def run_tests():
     assert "/contact" in headers.get("Location", ""), f"Redirect Location mismatch: {headers.get('Location')}"
     print("SUCCESS: Contact page POST verified redirect")
 
+
+    print("\n--- STEP 14: Super Admin Controls & Telemetry ---")
+    # Admin activates Student back
+    status, _, _, _, resp_json = admin.request(
+        "PUT", "/api/admin/users",
+        {
+            "id": student_id,
+            "name": "Student Test",
+            "role": "student",
+            "status": "active"
+        }
+    )
+    assert status == 200 and resp_json.get("ok"), "Failed to activate student back"
+    print("SUCCESS: Student account re-activated by Admin")
+
+    # Re-login student to restore session cookies
+    status, url, _, _, _ = student.request(
+        "POST", "/login",
+        {"email": "student_test@example.com", "password": "pass123"},
+        is_json=False,
+        follow_redirects=False
+    )
+    assert status == 302 or status == 200, f"Student re-login failed: {status}"
+    print("SUCCESS: Student session restored successfully")
+
+    superadmin = ChemLoveClient()
+    # Login as Super Admin
+    status, url, _, _, _ = superadmin.request(
+        "POST", "/login",
+        {"email": "superadmin@chemlove.com", "password": "superadmin123"},
+        is_json=False,
+        follow_redirects=False
+    )
+    assert status == 302 or status == 200, f"Super Admin login failed: {status}"
+    print("SUCCESS: Super Admin login successful")
+
+    # Access /superadmin/dashboard
+    status, _, _, body, _ = superadmin.request("GET", "/superadmin/dashboard")
+    assert status == 200, f"Super Admin dashboard returned {status}"
+    assert "System Control" in body or "Executive Dashboard" in body or "Executive Overview" in body or "Audit Log" in body, "Expected dashboard content not found"
+    print("SUCCESS: Super Admin executive dashboard verified")
+
+    # Access /superadmin/control-center
+    status, _, _, body, _ = superadmin.request("GET", "/superadmin/control-center")
+    assert status == 200, f"Super Admin control center returned {status}"
+    assert "User Control Center" in body or "Registered Nodes" in body or "users" in body or "Create User" in body, "Expected control center content not found"
+    print("SUCCESS: Super Admin control center verified")
+
+
+    print("\n--- STEP 15: Super Admin Impersonation ---")
+    # Impersonate student using already retrieved student_id from step 5
+    
+    # Do impersonation GET request
+    status, _, headers, _, _ = superadmin.request("GET", f"/superadmin/impersonate/{student_id}", follow_redirects=False)
+    assert status == 302, f"Impersonation did not redirect: {status}"
+    print("SUCCESS: Impersonation redirect code verified")
+
+    # Fetch profile using superadmin client (who is impersonating the student)
+    status, _, _, _, resp_json = superadmin.request("GET", "/api/profile")
+    assert status == 200, "Failed to fetch profile under impersonation"
+    profile = resp_json.get("profile", {})
+    assert profile.get("email") == "student_test@example.com", f"Impersonation failed: expected student email, got {profile.get('email')}"
+    assert profile.get("is_impersonating") is True, f"Expected is_impersonating to be True, got {profile.get('is_impersonating')}"
+    print("SUCCESS: Impersonated profile details verified")
+
+    # Stop impersonation
+    status, _, headers, _, _ = superadmin.request("GET", "/auth/stop-impersonation", follow_redirects=False)
+    assert status == 302, f"Stop impersonation did not redirect: {status}"
+    
+    # Fetch profile again as superadmin client (should be back to superadmin)
+    status, _, _, _, resp_json = superadmin.request("GET", "/api/profile")
+    assert status == 200, "Failed to fetch profile after stopping impersonation"
+    profile = resp_json.get("profile", {})
+    assert profile.get("email") == "superadmin@chemlove.com", f"Stop impersonation failed: expected superadmin email, got {profile.get('email')}"
+    print("SUCCESS: Super Admin returned to original session successfully")
+
+
+    print("\n--- STEP 16: Admin Permissions Matrix (RBAC) ---")
+    # GET /admin/permissions
+    status, _, _, body, _ = admin.request("GET", "/admin/permissions")
+    assert status == 200, f"Admin permissions page returned {status}"
+    assert "RBAC Permission Management" in body or "Permissions Panel" in body or "Capability matrix" in body, "Expected permissions panel content not found"
+    print("SUCCESS: Admin permissions panel GET verified")
+
+    # POST to /admin/permissions
+    # Turn off manage_users for admin role, keep manage_content on
+    status, _, _, body, _ = admin.request(
+        "POST", "/admin/permissions",
+        {"manage_content": "on"},
+        is_json=False,
+        follow_redirects=True
+    )
+    assert status == 200, f"POST to /admin/permissions returned status {status}"
+    print("SUCCESS: Admin permission matrix post committed")
+
+
+    print("\n--- STEP 17: Content Catalog CRUD APIs ---")
+    # 17.1 Create Course
+    status, _, _, _, resp_json = superadmin.request(
+        "POST", "/api/admin/courses",
+        {"title": "Test Bio Course", "category": "Biology", "description": "Test Bio Description", "class_level": "9", "status": "active"}
+    )
+    assert status == 200 and resp_json.get("ok"), f"Create course failed: {status}"
+    new_course_id = resp_json.get("id")
+    print(f"SUCCESS: Created Course with ID: {new_course_id}")
+
+    # 17.2 Create Module in the Course
+    status, _, _, _, resp_json = superadmin.request(
+        "POST", "/api/admin/modules",
+        {"course_id": new_course_id, "title": "Cell Biology Intro", "description": "Intro to cell structure", "order_index": 1}
+    )
+    assert status == 200 and resp_json.get("ok"), f"Create module failed: {status}"
+    new_module_id = resp_json.get("id")
+    print(f"SUCCESS: Created Module with ID: {new_module_id}")
+
+    # 17.3 Create Lesson in the Course (needs chapter_id; we map to seeded chapter ID 4, which is for Class 9)
+    status, _, _, _, resp_json = superadmin.request(
+        "POST", "/api/admin/lessons",
+        {"chapter_id": 4, "title": "Organelles Study", "content": "Learn about mitochondria", "order_index": 1, "status": "published"}
+    )
+    assert status == 200 and resp_json.get("ok"), f"Create lesson failed: {status}"
+    new_lesson_id = resp_json.get("id")
+    print(f"SUCCESS: Created Lesson with ID: {new_lesson_id}")
+
+    # 17.4 Create Resource in the Lesson
+    status, _, _, _, resp_json = superadmin.request(
+        "POST", "/api/admin/resources",
+        {"lesson_id": new_lesson_id, "title": "Organelle PDF Diagram", "file_path": "https://example.com/organelles.pdf", "file_type": "pdf", "status": "published"}
+    )
+    assert status == 200 and resp_json.get("ok"), f"Create resource failed: {status}"
+    new_resource_id = resp_json.get("id")
+    print(f"SUCCESS: Created Resource with ID: {new_resource_id}")
+
+    # Clean up the created LMS objects using DELETE requests
+    status, _, _, _, resp_json = superadmin.request("DELETE", f"/api/admin/resources?id={new_resource_id}")
+    assert status == 200 and resp_json.get("ok"), f"DELETE resource failed: {status}"
+    status, _, _, _, resp_json = superadmin.request("DELETE", f"/api/admin/lessons?id={new_lesson_id}")
+    assert status == 200 and resp_json.get("ok"), f"DELETE lesson failed: {status}"
+    status, _, _, _, resp_json = superadmin.request("DELETE", f"/api/admin/modules?id={new_module_id}")
+    assert status == 200 and resp_json.get("ok"), f"DELETE module failed: {status}"
+    status, _, _, _, resp_json = superadmin.request("DELETE", f"/api/admin/courses?id={new_course_id}")
+    assert status == 200 and resp_json.get("ok"), f"DELETE course failed: {status}"
+    print("SUCCESS: Deleted course catalog components to keep database clean")
+
     # Final DB cleanup
     db_cleanup()
     print("\n*** ALL TESTS PASSED SUCCESSFULLY! ***")

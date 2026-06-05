@@ -1,0 +1,98 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Permissions Panel{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Page Header -->
+    <div class="mb-10">
+        <div class="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4 border border-emerald-500/10">
+            <span class="material-symbols-outlined text-xs">admin_panel_settings</span> RBAC Board
+        </div>
+        <h1 class="text-3xl font-black uppercase tracking-tight text-white leading-none">RBAC Permission Management</h1>
+        <p class="text-xs text-slate-400 mt-2">Adjust platform-wide capability scopes for Administrator nodes. Super Admins retain absolute access bypass keys.</p>
+    </div>
+
+    <!-- Permission Panel Form -->
+    <div class="glass-morphism p-8 rounded-3xl max-w-2xl">
+        <form method="POST" action="/admin/permissions" class="space-y-6">
+            <div class="space-y-4 divide-y divide-white/5">
+                <!-- Row 1 -->
+                <div class="flex items-center justify-between py-4">
+                    <div>
+                        <h4 class="text-sm font-bold text-white uppercase tracking-tight">User Administration</h4>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Allow Admins to create, suspend, edit, or remove Student/Teacher nodes.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="manage_users" {% if perms.manage_users %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-950 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white"></div>
+                    </label>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="flex items-center justify-between py-4">
+                    <div>
+                        <h4 class="text-sm font-bold text-white uppercase tracking-tight">Global Content CMS</h4>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Grant scope to construct Courses, Modules, Chapters, and Resources.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="manage_content" {% if perms.manage_content %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-950 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white"></div>
+                    </label>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="flex items-center justify-between py-4">
+                    <div>
+                        <h4 class="text-sm font-bold text-white uppercase tracking-tight">Assessment Authority</h4>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Authorise creating, grading, and deleting Quizzes and Assignments.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="manage_assessments" {% if perms.manage_assessments %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-950 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white"></div>
+                    </label>
+                </div>
+
+                <!-- Row 4 -->
+                <div class="flex items-center justify-between py-4">
+                    <div>
+                        <h4 class="text-sm font-bold text-white uppercase tracking-tight">Credentials Issuance</h4>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Permit issuing, verification, or revoking course certificates.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="manage_certificates" {% if perms.manage_certificates %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-950 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white"></div>
+                    </label>
+                </div>
+
+                <!-- Row 5 -->
+                <div class="flex items-center justify-between py-4">
+                    <div>
+                        <h4 class="text-sm font-bold text-white uppercase tracking-tight">Notifications Broadcast</h4>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Permit sending announcements, alerts, and platform notifications.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="send_notifications" {% if perms.send_notifications %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-950 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white"></div>
+                    </label>
+                </div>
+
+                <!-- Row 6 -->
+                <div class="flex items-center justify-between py-4">
+                    <div>
+                        <h4 class="text-sm font-bold text-white uppercase tracking-tight">Reports Telemetry Access</h4>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Allow viewing platform logs, analytics charts, and school telemetry.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="view_reports" {% if perms.view_reports %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-950 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="w-full mt-6 kinetic-gradient text-on-primary py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.01] active:scale-95 transition-all">
+                Commit Capability Matrix Updates
+            </button>
+        </form>
+    </div>
+{% endblock %}

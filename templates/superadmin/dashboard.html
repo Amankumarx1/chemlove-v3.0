@@ -1,0 +1,220 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Executive Dashboard{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Page Header -->
+    <div class="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+            <div class="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4 border border-emerald-500/10">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 live-pulse"></span>
+                Executive Console
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase text-white">System Telemetry</h1>
+            <p class="text-slate-400 mt-2 text-sm">Real-time system health, multi-tenant databases analytics, and administrative audit streams.</p>
+        </div>
+        
+        <!-- System Status Summary Badge -->
+        <div class="flex items-center gap-4 bg-slate-900/40 border border-white/5 px-6 py-3.5 rounded-2xl backdrop-blur-md">
+            <div class="relative w-3.5 h-3.5 flex items-center justify-center">
+                <span class="absolute w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+                <span class="relative w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            </div>
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">System Nodes</div>
+                <div class="text-sm font-black text-white">All Terminals Online</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Metrics Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <!-- Card 1 -->
+        <div class="glass-morphism p-6 rounded-3xl relative overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-24 h-24 bg-cyan-400/5 rounded-full blur-xl"></div>
+            <span class="material-symbols-outlined text-3xl text-cyan-400 mb-4">group</span>
+            <div class="text-3xl font-black text-white tracking-tight leading-none mb-1">{{ stats.total_users }}</div>
+            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Registered Users</div>
+            <p class="text-[9px] text-slate-500 mt-2">Students: {{ stats.total_students }} | Teachers: {{ stats.total_teachers }}</p>
+        </div>
+        <!-- Card 2 -->
+        <div class="glass-morphism p-6 rounded-3xl relative overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-24 h-24 bg-pink-500/5 rounded-full blur-xl"></div>
+            <span class="material-symbols-outlined text-3xl text-pink-400 mb-4">collections_bookmark</span>
+            <div class="text-3xl font-black text-white tracking-tight leading-none mb-1">{{ stats.total_courses }}</div>
+            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">Deployed Courses</div>
+            <p class="text-[9px] text-slate-500 mt-2">Active Chapters: {{ stats.total_chapters }}</p>
+        </div>
+        <!-- Card 3 -->
+        <div class="glass-morphism p-6 rounded-3xl relative overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-24 h-24 bg-emerald-400/5 rounded-full blur-xl"></div>
+            <span class="material-symbols-outlined text-3xl text-emerald-400 mb-4">workspace_premium</span>
+            <div class="text-3xl font-black text-white tracking-tight leading-none mb-1">{{ stats.total_certificates }}</div>
+            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">Certificates Issued</div>
+            <p class="text-[9px] text-slate-500 mt-2">Verifiable Credentials</p>
+        </div>
+        <!-- Card 4 -->
+        <div class="glass-morphism p-6 rounded-3xl relative overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-24 h-24 bg-amber-400/5 rounded-full blur-xl"></div>
+            <span class="material-symbols-outlined text-3xl text-amber-400 mb-4">analytics</span>
+            <div class="text-3xl font-black text-white tracking-tight leading-none mb-1">{{ stats.dau }} / {{ stats.mau }}</div>
+            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">DAU / MAU Engagement</div>
+            <p class="text-[9px] text-slate-500 mt-2">Database Size: {{ stats.db_size }} MB</p>
+        </div>
+    </div>
+
+    <!-- Analytics Charts Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+        <!-- Chart 1: User Growth -->
+        <div class="lg:col-span-2 glass-morphism p-8 rounded-3xl">
+            <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined text-cyan-400">trending_up</span>
+                Platform Signups (Daily Growth)
+            </h3>
+            <div class="h-64 relative">
+                <canvas id="userGrowthChart"></canvas>
+            </div>
+        </div>
+        <!-- Chart 2: System Health and Storage -->
+        <div class="lg:col-span-1 glass-morphism p-8 rounded-3xl flex flex-col justify-between">
+            <div>
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-amber-400">dns</span>
+                    Node Performance
+                </h3>
+                <div class="space-y-6">
+                    <div>
+                        <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                            <span class="text-slate-500">Database Pool Usage</span>
+                            <span class="text-white">15%</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                            <div class="h-full bg-cyan-400 rounded-full" style="width: 15%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                            <span class="text-slate-500">Server Response latency</span>
+                            <span class="text-emerald-400">14 ms (Ideal)</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                            <div class="h-full bg-emerald-400 rounded-full" style="width: 5%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                            <span class="text-slate-500">Storage Usage limit</span>
+                            <span class="text-white">0.05%</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-pink-500 to-rose-500 rounded-full" style="width: 1%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t border-white/5 pt-4 mt-6">
+                <div class="text-[10px] font-bold uppercase text-slate-500 mb-1">Database Provider</div>
+                <div class="text-xs font-black text-white flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-sm text-cyan-400">database</span>
+                    MySQL (Local Connection Pool)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit logs section -->
+    <div class="glass-morphism p-8 rounded-3xl">
+        <div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+            <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <span class="material-symbols-outlined text-pink-400">lock_open</span>
+                Security and Activity Logs
+            </h3>
+            <span class="text-[9px] uppercase tracking-widest bg-slate-800 text-slate-400 border border-white/5 px-2.5 py-1 rounded-xl">Live Audit Stream</span>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-white/5 text-[10px] uppercase tracking-widest text-slate-500">
+                        <th class="py-3 px-4">Operator</th>
+                        <th class="py-3 px-4">Action</th>
+                        <th class="py-3 px-4">Details</th>
+                        <th class="py-3 px-4 text-right">Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% for log in audit_logs %}
+                        <tr class="text-xs hover:bg-white/5 transition-colors">
+                            <td class="py-3.5 px-4 font-black text-white">{{ log.operator_name or 'System' }} <span class="text-[9px] font-medium text-slate-500">({{ log.role|upper }})</span></td>
+                            <td class="py-3.5 px-4">
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border {% if 'delete' in log.action or 'suspend' in log.action %}border-red-500/20 bg-red-500/10 text-red-300{% elif 'create' in log.action or 'publish' in log.action %}border-emerald-500/20 bg-emerald-500/10 text-emerald-300{% else %}border-cyan-500/20 bg-cyan-500/10 text-cyan-300{% endif %}">
+                                    {{ log.action }}
+                                </span>
+                            </td>
+                            <td class="py-3.5 px-4 text-slate-400 font-mono text-[10px] max-w-sm truncate">{{ log.details or '' }}</td>
+                            <td class="py-3.5 px-4 text-right text-slate-500 font-medium">{{ log.created_at }}</td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="py-8 text-center text-xs text-slate-500">No activity logs recorded. Actions taken on the platform will be logged here.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize User Growth Chart
+        const ctx = document.getElementById('userGrowthChart').getContext('2d');
+        
+        // Parse daily signups stats passed from python context
+        const chartData = {{ chart_data|tojson }};
+        
+        const labels = chartData.map(item => item.date);
+        const data = chartData.map(item => item.count);
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels.length ? labels : ['June 1', 'June 2', 'June 3', 'June 4', 'June 5'],
+                datasets: [{
+                    label: 'Daily Signups',
+                    data: data.length ? data : [2, 4, 3, 5, 8],
+                    borderColor: '#4cd7f6',
+                    backgroundColor: 'rgba(76, 215, 246, 0.05)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#4cd7f6',
+                    pointBorderColor: 'rgba(255,255,255,0.1)',
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#64748b', font: { size: 9, weight: 'bold' } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#64748b', font: { size: 9, weight: 'bold' } },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

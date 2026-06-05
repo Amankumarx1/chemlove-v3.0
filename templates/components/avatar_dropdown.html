@@ -13,6 +13,8 @@
                     Class {{ current_user.classLevel or '9-12' }} Student
                 {% elif current_user.role == 'teacher' %}
                     Teacher
+                {% elif current_user.role == 'superadmin' %}
+                    Super Admin
                 {% else %}
                     Administrator
                 {% endif %}
@@ -33,13 +35,19 @@
                 <a href="/teacher/dashboard" class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-pink-950/20 hover:text-pink-400 transition-all">
                     <span class="material-symbols-outlined text-sm">dashboard</span> Dashboard
                 </a>
-            {% elif current_user.role == 'admin' %}
+            {% elif current_user.role in ('admin', 'superadmin') %}
                 <a href="/profile" class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
                     <span class="material-symbols-outlined text-sm">person</span> Profile
                 </a>
+                {% if current_user.role == 'superadmin' %}
+                <a href="/superadmin/dashboard" class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="material-symbols-outlined text-sm">dashboard</span> Dashboard
+                </a>
+                {% else %}
                 <a href="/admin/dashboard" class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
                     <span class="material-symbols-outlined text-sm">dashboard</span> Dashboard
                 </a>
+                {% endif %}
             {% endif %}
             <form method="POST" action="/logout" class="block w-full">
                 <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-950/20 transition-all text-left">

@@ -11,23 +11,38 @@
                 Curriculum Core
             </div>
             <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase text-white">Curriculum Manager</h1>
-            <p class="text-slate-400 mt-2 text-sm max-w-xl">Dynamically update the syllabus chapters, laboratory applets, quiz evaluations, and reactions catalog stored in MySQL.</p>
+            <p class="text-slate-400 mt-2 text-sm max-w-xl">Dynamically update courses, modules, chapters, lessons, resources, and certificates stored in MySQL.</p>
         </div>
     </div>
 
     <!-- Navigation Tabs -->
     <div class="flex gap-2.5 overflow-x-auto pb-4 border-b border-white/5 mb-8">
-        <button onclick="switchAdminTab('chapters')" id="tab-btn-chapters" class="admin-tab-btn active px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950/20 border border-cyan-500/10 transition-all flex items-center gap-2">
+        <button onclick="switchAdminTab('chapters')" id="tab-btn-chapters" class="admin-tab-btn active px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950/20 border border-cyan-500/10 transition-all flex items-center gap-2 whitespace-nowrap">
             <span class="material-symbols-outlined text-base">auto_stories</span> Chapters
         </button>
-        <button onclick="switchAdminTab('experiments')" id="tab-btn-experiments" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2">
+        <button onclick="switchAdminTab('experiments')" id="tab-btn-experiments" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
             <span class="material-symbols-outlined text-base">science</span> Experiments
         </button>
-        <button onclick="switchAdminTab('reactions')" id="tab-btn-reactions" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2">
+        <button onclick="switchAdminTab('reactions')" id="tab-btn-reactions" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
             <span class="material-symbols-outlined text-base">chemistry</span> Reactions
         </button>
-        <button onclick="switchAdminTab('quizzes')" id="tab-btn-quizzes" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2">
+        <button onclick="switchAdminTab('quizzes')" id="tab-btn-quizzes" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
             <span class="material-symbols-outlined text-base">quiz</span> Quizzes
+        </button>
+        <button onclick="switchAdminTab('courses')" id="tab-btn-courses" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
+            <span class="material-symbols-outlined text-base">collections_bookmark</span> Courses
+        </button>
+        <button onclick="switchAdminTab('modules')" id="tab-btn-modules" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
+            <span class="material-symbols-outlined text-base">folder_open</span> Modules
+        </button>
+        <button onclick="switchAdminTab('lessons')" id="tab-btn-lessons" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
+            <span class="material-symbols-outlined text-base">book</span> Lessons
+        </button>
+        <button onclick="switchAdminTab('resources')" id="tab-btn-resources" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
+            <span class="material-symbols-outlined text-base">attachment</span> Resources
+        </button>
+        <button onclick="switchAdminTab('certificates')" id="tab-btn-certificates" class="admin-tab-btn px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
+            <span class="material-symbols-outlined text-base">workspace_premium</span> Certificates
         </button>
     </div>
 
@@ -90,6 +105,90 @@
             <div id="admin-quizzes-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
         </div>
 
+        <!-- SECTION: COURSES -->
+        <div id="admin-sec-courses" class="admin-section hidden space-y-6">
+            <div class="flex justify-between items-center bg-black/10 p-5 rounded-2xl border border-white/5">
+                <div>
+                    <h3 class="text-base font-bold text-white uppercase">LMS Courses</h3>
+                    <p class="text-xs text-slate-500 mt-1">Create and configure general learning courses.</p>
+                </div>
+                <button onclick="openCourseModal()" class="bg-primary hover:scale-[1.02] active:scale-98 text-on-primary text-xs font-bold uppercase px-4.5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/10">
+                    <span class="material-symbols-outlined text-sm">add_circle</span> Add Course
+                </button>
+            </div>
+            <div id="admin-courses-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+        </div>
+
+        <!-- SECTION: MODULES -->
+        <div id="admin-sec-modules" class="admin-section hidden space-y-6">
+            <div class="flex justify-between items-center bg-black/10 p-5 rounded-2xl border border-white/5">
+                <div>
+                    <h3 class="text-base font-bold text-white uppercase">Course Modules</h3>
+                    <p class="text-xs text-slate-500 mt-1">Structure courses by partitioning them into modules.</p>
+                </div>
+                <button onclick="openModuleModal()" class="bg-primary hover:scale-[1.02] active:scale-98 text-on-primary text-xs font-bold uppercase px-4.5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/10">
+                    <span class="material-symbols-outlined text-sm">add_circle</span> Add Module
+                </button>
+            </div>
+            <div id="admin-modules-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+        </div>
+
+        <!-- SECTION: LESSONS -->
+        <div id="admin-sec-lessons" class="admin-section hidden space-y-6">
+            <div class="flex justify-between items-center bg-black/10 p-5 rounded-2xl border border-white/5">
+                <div>
+                    <h3 class="text-base font-bold text-white uppercase">Syllabus Lessons</h3>
+                    <p class="text-xs text-slate-500 mt-1">Add lessons and details inside text chapters.</p>
+                </div>
+                <button onclick="openLessonModal()" class="bg-primary hover:scale-[1.02] active:scale-98 text-on-primary text-xs font-bold uppercase px-4.5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/10">
+                    <span class="material-symbols-outlined text-sm">add_circle</span> Add Lesson
+                </button>
+            </div>
+            <div id="admin-lessons-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+        </div>
+
+        <!-- SECTION: RESOURCES -->
+        <div id="admin-sec-resources" class="admin-section hidden space-y-6">
+            <div class="flex justify-between items-center bg-black/10 p-5 rounded-2xl border border-white/5">
+                <div>
+                    <h3 class="text-base font-bold text-white uppercase">Lesson Resources</h3>
+                    <p class="text-xs text-slate-500 mt-1">Attach media files (PDFs, PPTs, videos, links) to lessons.</p>
+                </div>
+                <button onclick="openResourceModal()" class="bg-primary hover:scale-[1.02] active:scale-98 text-on-primary text-xs font-bold uppercase px-4.5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/10">
+                    <span class="material-symbols-outlined text-sm">add_circle</span> Add Resource
+                </button>
+            </div>
+            <div id="admin-resources-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+        </div>
+
+        <!-- SECTION: CERTIFICATES -->
+        <div id="admin-sec-certificates" class="admin-section hidden space-y-6">
+            <div class="flex justify-between items-center bg-black/10 p-5 rounded-2xl border border-white/5">
+                <div>
+                    <h3 class="text-base font-bold text-white uppercase">Issued Certificates</h3>
+                    <p class="text-xs text-slate-500 mt-1">Monitor, verify, or revoke verifiable certificates.</p>
+                </div>
+            </div>
+            <div class="glass-morphism p-6 rounded-3xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-white/5 text-[9px] uppercase tracking-widest text-slate-500">
+                                <th class="py-3 px-4">Student</th>
+                                <th class="py-3 px-4">Course</th>
+                                <th class="py-3 px-4">Verification ID</th>
+                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-certificates-tbody" class="divide-y divide-white/5 text-slate-300">
+                            <!-- Dynamically populated rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- MODAL: CHAPTER EDIT -->
@@ -116,6 +215,12 @@
                 <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Title</label>
                     <input type="text" id="ch-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="Structure of Atom" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Associated Module</label>
+                    <select id="ch-module-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary">
+                        <option value="">No Module Alignment</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Description</label>
@@ -249,12 +354,179 @@
         </div>
     </div>
 
+    <!-- MODAL: COURSE EDIT -->
+    <div id="modal-course" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+        <div class="glass-morphism max-w-lg w-full p-8 rounded-3xl space-y-6 max-h-[85vh] overflow-y-auto">
+            <h3 id="course-modal-title" class="text-xl font-bold uppercase text-white">Add Course</h3>
+            <form id="course-form" onsubmit="submitCourse(event)" class="space-y-4">
+                <input type="hidden" id="course-edit-id">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Course Title</label>
+                    <input type="text" id="course-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Class level</label>
+                        <select id="course-class-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                            <option value="9">Class 9</option>
+                            <option value="10">Class 10</option>
+                            <option value="11">Class 11</option>
+                            <option value="12">Class 12</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Category</label>
+                        <input type="text" id="course-category-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="Chemistry" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Description</label>
+                    <textarea id="course-description-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary min-h-[80px]" required></textarea>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Status</label>
+                    <select id="course-status-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                        <option value="active">Active</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Save Course</button>
+                    <button type="button" onclick="closeCourseModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: MODULE EDIT -->
+    <div id="modal-module" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+        <div class="glass-morphism max-w-lg w-full p-8 rounded-3xl space-y-6 max-h-[85vh] overflow-y-auto">
+            <h3 id="module-modal-title" class="text-xl font-bold uppercase text-white">Add Module</h3>
+            <form id="module-form" onsubmit="submitModule(event)" class="space-y-4">
+                <input type="hidden" id="module-edit-id">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Parent Course</label>
+                    <select id="module-course-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Module Title</label>
+                    <input type="text" id="module-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Order Index</label>
+                    <input type="number" id="module-order-input" value="0" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Description</label>
+                    <textarea id="module-description-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary min-h-[80px]"></textarea>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Save Module</button>
+                    <button type="button" onclick="closeModuleModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: LESSON EDIT -->
+    <div id="modal-lesson" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+        <div class="glass-morphism max-w-lg w-full p-8 rounded-3xl space-y-6 max-h-[85vh] overflow-y-auto">
+            <h3 id="lesson-modal-title" class="text-xl font-bold uppercase text-white">Add Lesson</h3>
+            <form id="lesson-form" onsubmit="submitLesson(event)" class="space-y-4">
+                <input type="hidden" id="lesson-edit-id">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Parent Chapter</label>
+                    <select id="lesson-chapter-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Lesson Title</label>
+                    <input type="text" id="lesson-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Order Index</label>
+                        <input type="number" id="lesson-order-input" value="0" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Status</label>
+                        <select id="lesson-status-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                            <option value="published">Published</option>
+                            <option value="draft">Draft</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Lesson Text Content</label>
+                    <textarea id="lesson-content-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary min-h-[120px]" required></textarea>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Save Lesson</button>
+                    <button type="button" onclick="closeLessonModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: RESOURCE EDIT -->
+    <div id="modal-resource" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+        <div class="glass-morphism max-w-lg w-full p-8 rounded-3xl space-y-6 max-h-[85vh] overflow-y-auto">
+            <h3 id="resource-modal-title" class="text-xl font-bold uppercase text-white">Add Resource</h3>
+            <form id="resource-form" onsubmit="submitResource(event)" class="space-y-4">
+                <input type="hidden" id="resource-edit-id">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Parent Lesson</label>
+                    <select id="resource-lesson-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Resource Title</label>
+                    <input type="text" id="resource-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Resource Type</label>
+                        <select id="resource-type-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                            <option value="link">Web Link</option>
+                            <option value="pdf">PDF File</option>
+                            <option value="video">Video URL</option>
+                            <option value="ppt">PPT Slides</option>
+                            <option value="zip">ZIP Archive</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Status</label>
+                        <select id="resource-status-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                            <option value="published">Published</option>
+                            <option value="draft">Draft</option>
+                            <option value="archived">Archived</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">File Path or Web URL</label>
+                    <input type="text" id="resource-path-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="e.g. https://example.com/slide.ppt" required>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Save Resource</button>
+                    <button type="button" onclick="closeResourceModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     let activeAdminTab = 'chapters';
     let loadedChapters = [];
+    let loadedExperiments = [];
+    let loadedReactions = [];
+    let loadedQuizzes = [];
+    
+    let loadedCourses = [];
+    let loadedModules = [];
+    let loadedLessons = [];
+    let loadedResources = [];
+    let loadedCertificates = [];
 
     // Switching views
     function switchAdminTab(tab) {
@@ -277,9 +549,14 @@
         else if (tab === 'experiments') await loadExperiments();
         else if (tab === 'reactions') await loadReactions();
         else if (tab === 'quizzes') await loadQuizzes();
+        else if (tab === 'courses') await loadCoursesList();
+        else if (tab === 'modules') await loadModulesList();
+        else if (tab === 'lessons') await loadLessonsList();
+        else if (tab === 'resources') await loadResourcesList();
+        else if (tab === 'certificates') await loadCertificatesList();
     }
 
-    // CHAPTERS HANDLERS
+    // ── CHAPTERS HANDLERS ────────────────────────────────────────────────────
     async function loadChapters() {
         const grid = document.getElementById('admin-chapters-grid');
         grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
@@ -315,13 +592,31 @@
         } catch (e) { console.error(e); }
     }
 
-    function openChapterModal(ch = null) {
+    async function populateChapterModulesDropdown() {
+        const select = document.getElementById('ch-module-select');
+        select.innerHTML = '<option value="">No Module Alignment</option>';
+        try {
+            const res = await fetch('/api/admin/modules');
+            const data = await res.json();
+            const mods = data.modules || [];
+            mods.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.title;
+                select.appendChild(opt);
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    async function openChapterModal(ch = null) {
+        await populateChapterModulesDropdown();
         if(ch) {
             document.getElementById('chapter-modal-title').textContent = "Edit Chapter";
             document.getElementById('ch-edit-id').value = ch.id;
             document.getElementById('ch-class-select').value = ch.class_level;
             document.getElementById('ch-number-input').value = ch.chapter_number;
             document.getElementById('ch-title-input').value = ch.title;
+            document.getElementById('ch-module-select').value = ch.module_id || '';
             document.getElementById('ch-description-input').value = ch.description;
         } else {
             document.getElementById('chapter-modal-title').textContent = "Add Chapter";
@@ -345,16 +640,15 @@
             class_level: document.getElementById('ch-class-select').value,
             chapter_number: parseInt(document.getElementById('ch-number-input').value),
             title: document.getElementById('ch-title-input').value,
-            description: document.getElementById('ch-description-input').value
+            description: document.getElementById('ch-description-input').value,
+            module_id: document.getElementById('ch-module-select').value ? parseInt(document.getElementById('ch-module-select').value) : null
         };
-
         let method = 'POST';
         let url = '/api/admin/chapters';
         if(chId) {
             method = 'PUT';
             payload.id = parseInt(chId);
         }
-
         try {
             const res = await fetch(url, {
                 method,
@@ -369,7 +663,7 @@
     }
 
     async function deleteChapter(id) {
-        if(confirm('Are you sure you want to delete this chapter? This will cascade delete quizzes and set related experiments to null.')) {
+        if(confirm('Are you sure you want to delete this chapter?')) {
             try {
                 const res = await fetch(`/api/admin/chapters?id=${id}`, { method: 'DELETE' });
                 if(res.ok) loadChapters();
@@ -377,32 +671,31 @@
         }
     }
 
-    // EXPERIMENTS HANDLERS
+    // ── EXPERIMENTS HANDLERS ─────────────────────────────────────────────────
     async function loadExperiments() {
         const grid = document.getElementById('admin-experiments-grid');
         grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
         try {
             const res = await fetch('/api/experiments');
-            const exps = await res.json();
+            const data = await res.json();
+            loadedExperiments = data.experiments || [];
             grid.innerHTML = '';
             
-            if (exps.length === 0) {
+            if (loadedExperiments.length === 0) {
                 grid.innerHTML = '<div class="col-span-full text-center py-12 border border-dashed border-white/5 rounded-2xl text-slate-500 text-xs">// No experiments in database</div>';
                 return;
             }
             
-            exps.forEach(exp => {
+            loadedExperiments.forEach(exp => {
                 const card = document.createElement('div');
                 card.className = 'glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 hover:border-cyan-500/10 transition-all';
                 card.innerHTML = `
                     <div>
                         <div class="flex justify-between items-start mb-3">
-                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">EXPERIMENT MODULE</span>
+                            <span class="bg-pink-950/40 text-pink-400 border border-pink-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">CLASS ${exp.class_level || '11'} EXPERIMENT</span>
                         </div>
                         <h4 class="text-base font-bold text-white uppercase mb-2">${exp.title}</h4>
-                        <div class="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wide">Aim:</div>
-                        <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed mb-4">${exp.aim}</p>
-                        ${exp.simulation_url ? `<div class="text-[10px] font-semibold text-slate-600 truncate">Simulation: ${exp.simulation_url}</div>` : ''}
+                        <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed">${exp.aim}</p>
                     </div>
                     <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
                         <button onclick="editExperiment(${exp.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
@@ -411,36 +704,34 @@
                 `;
                 grid.appendChild(card);
             });
+        } catch (e) { console.error(e); }
+    }
+
+    async function populateChaptersDropdown(selectId) {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '';
+        try {
+            const res = await fetch('/api/chapters');
+            const data = await res.json();
+            const chs = data.chapters || [];
+            chs.forEach(ch => {
+                const opt = document.createElement('option');
+                opt.value = ch.id;
+                opt.textContent = `[Class ${ch.class_level}] ${ch.title}`;
+                select.appendChild(opt);
+            });
         } catch(e) { console.error(e); }
     }
 
-    async function populateChapterSelect(selectId, selectedVal = null) {
-        const select = document.getElementById(selectId);
-        select.innerHTML = '<option value="" disabled selected>Select Chapter</option>';
-        if (loadedChapters.length === 0) {
-            const res = await fetch('/api/chapters');
-            const data = await res.json();
-            loadedChapters = data.chapters || [];
-        }
-        loadedChapters.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.id;
-            opt.textContent = `CH ${c.chapter_number}: ${c.title} (Class ${c.class_level})`;
-            if(selectedVal && String(c.id) === String(selectedVal)) {
-                opt.selected = true;
-            }
-            select.appendChild(opt);
-        });
-    }
-
     async function openExperimentModal(exp = null) {
-        await populateChapterSelect('exp-chapter-select', exp ? exp.chapter_id : null);
+        await populateChaptersDropdown('exp-chapter-select');
         if(exp) {
             document.getElementById('experiment-modal-title').textContent = "Edit Experiment";
             document.getElementById('exp-edit-id').value = exp.id;
+            document.getElementById('exp-chapter-select').value = exp.chapter_id;
             document.getElementById('exp-title-input').value = exp.title;
             document.getElementById('exp-aim-input').value = exp.aim;
-            document.getElementById('exp-theory-input').value = exp.theory;
+            document.getElementById('exp-theory-input').value = exp.theory || '';
             document.getElementById('exp-simurl-input').value = exp.simulation_url || '';
         } else {
             document.getElementById('experiment-modal-title').textContent = "Add Experiment";
@@ -452,13 +743,9 @@
 
     function closeExperimentModal() { document.getElementById('modal-experiment').classList.add('hidden'); }
 
-    async function editExperiment(id) {
-        try {
-            const res = await fetch('/api/experiments');
-            const exps = await res.json();
-            const exp = exps.find(e => e.id === id);
-            if(exp) openExperimentModal(exp);
-        } catch(e) { console.error(e); }
+    function editExperiment(id) {
+        const exp = loadedExperiments.find(e => e.id === id);
+        if(exp) openExperimentModal(exp);
     }
 
     async function submitExperiment(e) {
@@ -471,14 +758,12 @@
             theory: document.getElementById('exp-theory-input').value,
             simulation_url: document.getElementById('exp-simurl-input').value
         };
-
         let method = 'POST';
         let url = '/api/admin/experiments';
         if(expId) {
             method = 'PUT';
             payload.id = parseInt(expId);
         }
-
         try {
             const res = await fetch(url, {
                 method,
@@ -501,8 +786,7 @@
         }
     }
 
-    // REACTIONS HANDLERS
-    let loadedReactions = [];
+    // ── REACTIONS HANDLERS ───────────────────────────────────────────────────
     async function loadReactions() {
         const grid = document.getElementById('admin-reactions-grid');
         grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
@@ -517,46 +801,40 @@
                 return;
             }
             
-            loadedReactions.slice(0, 50).forEach(rxn => { // limit to 50 for page speed
+            loadedReactions.forEach(rxn => {
                 const card = document.createElement('div');
-                card.className = 'glass-morphism p-5 rounded-2xl flex flex-col justify-between border border-white/5 hover:border-cyan-500/10 transition-all';
+                card.className = 'glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 hover:border-cyan-500/10 transition-all';
                 card.innerHTML = `
                     <div>
                         <div class="flex justify-between items-start mb-3">
-                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[8px] font-bold uppercase rounded-md">${rxn.id.toUpperCase()} • CLASS ${rxn.class_level}</span>
+                            <span class="bg-[#1b2524] text-emerald-400 border border-emerald-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">CLASS ${rxn.class_level} • Code ID: ${rxn.id}</span>
                         </div>
-                        <h4 class="text-sm font-bold text-white uppercase mb-2">${rxn.name}</h4>
-                        <div class="bg-black/20 p-2.5 rounded font-mono text-[10px] font-bold text-cyan-400 border border-white/5 mb-3">${rxn.equation}</div>
-                        <p class="text-[11px] text-slate-400 line-clamp-3 leading-relaxed">${rxn.explanation}</p>
+                        <h4 class="text-base font-bold text-white uppercase mb-1">${rxn.reaction_name}</h4>
+                        <div class="text-[11px] font-mono text-cyan-400 mb-2 font-bold">${rxn.balanced_equation}</div>
+                        <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed">${rxn.explanation}</p>
                     </div>
-                    <div class="flex justify-end gap-2.5 border-t border-white/5 pt-3.5 mt-3.5">
+                    <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
                         <button onclick="editReaction('${rxn.id}')" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
                         <button onclick="deleteReaction('${rxn.id}')" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
                     </div>
                 `;
                 grid.appendChild(card);
             });
-            if(loadedReactions.length > 50) {
-                const note = document.createElement('div');
-                note.className = 'col-span-full text-center py-4 text-xs text-slate-500 font-bold uppercase';
-                note.textContent = `// Showing first 50 of ${loadedReactions.length} reactions inside database.`;
-                grid.appendChild(note);
-            }
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
     }
 
     function openReactionModal(rxn = null) {
         if(rxn) {
             document.getElementById('reaction-modal-title').textContent = "Edit Reaction";
             document.getElementById('rxn-id-input').value = rxn.id;
-            document.getElementById('rxn-id-input').disabled = true; // primary key not editable
+            document.getElementById('rxn-id-input').disabled = true;
             document.getElementById('rxn-class-select').value = rxn.class_level;
-            document.getElementById('rxn-name-input').value = rxn.name;
-            document.getElementById('rxn-equation-input').value = rxn.equation;
+            document.getElementById('rxn-name-input').value = rxn.reaction_name;
+            document.getElementById('rxn-equation-input').value = rxn.balanced_equation;
             document.getElementById('rxn-reactants-input').value = rxn.reactants || '';
             document.getElementById('rxn-products-input').value = rxn.products || '';
             document.getElementById('rxn-conditions-input').value = rxn.conditions || '';
-            document.getElementById('rxn-explanation-input').value = rxn.explanation || '';
+            document.getElementById('rxn-explanation-input').value = rxn.explanation;
         } else {
             document.getElementById('reaction-modal-title').textContent = "Add Reaction";
             document.getElementById('reaction-form').reset();
@@ -585,10 +863,13 @@
             conditions: document.getElementById('rxn-conditions-input').value,
             explanation: document.getElementById('rxn-explanation-input').value
         };
-
-        const isEdit = document.getElementById('rxn-id-input').disabled;
-        let method = isEdit ? 'PUT' : 'POST';
-
+        
+        let method = 'POST';
+        // We check if the input is disabled, indicating update
+        if(document.getElementById('rxn-id-input').disabled) {
+            method = 'PUT';
+        }
+        
         try {
             const res = await fetch('/api/admin/reactions', {
                 method,
@@ -603,7 +884,7 @@
     }
 
     async function deleteReaction(id) {
-        if(confirm('Are you sure you want to delete this reaction from catalog?')) {
+        if(confirm('Are you sure you want to delete this reaction?')) {
             try {
                 const res = await fetch(`/api/admin/reactions?id=${id}`, { method: 'DELETE' });
                 if(res.ok) loadReactions();
@@ -611,8 +892,7 @@
         }
     }
 
-    // QUIZZES HANDLERS
-    let loadedQuizzes = [];
+    // ── QUIZZES HANDLERS ─────────────────────────────────────────────────────
     async function loadQuizzes() {
         const grid = document.getElementById('admin-quizzes-grid');
         grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
@@ -623,7 +903,7 @@
             grid.innerHTML = '';
             
             if (loadedQuizzes.length === 0) {
-                grid.innerHTML = '<div class="col-span-full text-center py-12 border border-dashed border-white/5 rounded-2xl text-slate-500 text-xs">// No quizzes configured</div>';
+                grid.innerHTML = '<div class="col-span-full text-center py-12 border border-dashed border-white/5 rounded-2xl text-slate-500 text-xs">// No quizzes in database</div>';
                 return;
             }
             
@@ -633,10 +913,10 @@
                 card.innerHTML = `
                     <div>
                         <div class="flex justify-between items-start mb-3">
-                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">CHAPTER QUIZ • CH-${q.chapter_id}</span>
+                            <span class="bg-[#1b2524] text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">${q.chapter} Evaluation</span>
                         </div>
                         <h4 class="text-base font-bold text-white uppercase mb-1">${q.title}</h4>
-                        <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-4">Duration: ${q.duration_minutes}m | Max Marks: ${q.total_marks} | Questions: ${q.questions.length}</div>
+                        <p class="text-xs text-slate-400 leading-relaxed">Questions: ${q.questions ? q.questions.length : 0} | Marks: ${q.total_marks || 10} | Time: ${q.duration_minutes || 10} Mins</p>
                     </div>
                     <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
                         <button onclick="editQuiz(${q.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
@@ -645,17 +925,18 @@
                 `;
                 grid.appendChild(card);
             });
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
     }
 
     async function openQuizModal(quiz = null) {
-        await populateChapterSelect('quiz-chapter-select', quiz ? quiz.chapter_id : null);
+        await populateChaptersDropdown('quiz-chapter-select');
         if(quiz) {
             document.getElementById('quiz-modal-title').textContent = "Edit Quiz";
             document.getElementById('quiz-edit-id').value = quiz.id;
+            document.getElementById('quiz-chapter-select').value = quiz.chapter_id;
             document.getElementById('quiz-title-input').value = quiz.title;
-            document.getElementById('quiz-duration-input').value = quiz.duration_minutes;
-            document.getElementById('quiz-marks-input').value = quiz.total_marks;
+            document.getElementById('quiz-duration-input').value = quiz.duration_minutes || 10;
+            document.getElementById('quiz-marks-input').value = quiz.total_marks || 10;
         } else {
             document.getElementById('quiz-modal-title').textContent = "Add Quiz";
             document.getElementById('quiz-form').reset();
@@ -706,6 +987,505 @@
             try {
                 const res = await fetch(`/api/admin/quizzes?id=${id}`, { method: 'DELETE' });
                 if(res.ok) loadQuizzes();
+            } catch(e) { console.error(e); }
+        }
+    }
+
+    // ── COURSES HANDLERS ─────────────────────────────────────────────────────
+    async function loadCoursesList() {
+        const grid = document.getElementById('admin-courses-grid');
+        grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
+        try {
+            const res = await fetch('/api/admin/courses');
+            const data = await res.json();
+            loadedCourses = data.courses || [];
+            grid.innerHTML = '';
+            
+            if (loadedCourses.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 border border-dashed border-white/5 rounded-2xl text-slate-500 text-xs">// No courses found</div>';
+                return;
+            }
+            
+            loadedCourses.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 hover:border-cyan-500/10 transition-all';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">CLASS ${c.class_level} • ${c.category}</span>
+                            <span class="text-[9px] font-bold uppercase tracking-wider ${c.status === 'active' ? 'text-emerald-400' : 'text-slate-500'}">${c.status}</span>
+                        </div>
+                        <h4 class="text-base font-bold text-white uppercase mb-2">${c.title}</h4>
+                        <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed">${c.description || 'No description.'}</p>
+                    </div>
+                    <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
+                        <button onclick="editCourse(${c.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
+                        <button onclick="deleteCourse(${c.id})" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    function openCourseModal(course = null) {
+        if(course) {
+            document.getElementById('course-modal-title').textContent = "Edit Course";
+            document.getElementById('course-edit-id').value = course.id;
+            document.getElementById('course-title-input').value = course.title;
+            document.getElementById('course-class-select').value = course.class_level;
+            document.getElementById('course-category-input').value = course.category;
+            document.getElementById('course-description-input').value = course.description || '';
+            document.getElementById('course-status-select').value = course.status;
+        } else {
+            document.getElementById('course-modal-title').textContent = "Add Course";
+            document.getElementById('course-form').reset();
+            document.getElementById('course-edit-id').value = '';
+        }
+        document.getElementById('modal-course').classList.remove('hidden');
+    }
+
+    function closeCourseModal() { document.getElementById('modal-course').classList.add('hidden'); }
+
+    function editCourse(id) {
+        const c = loadedCourses.find(item => item.id === id);
+        if(c) openCourseModal(c);
+    }
+
+    async function submitCourse(e) {
+        e.preventDefault();
+        const courseId = document.getElementById('course-edit-id').value;
+        const payload = {
+            title: document.getElementById('course-title-input').value,
+            class_level: document.getElementById('course-class-select').value,
+            category: document.getElementById('course-category-input').value,
+            description: document.getElementById('course-description-input').value,
+            status: document.getElementById('course-status-select').value
+        };
+
+        let method = 'POST';
+        let url = '/api/admin/courses';
+        if(courseId) {
+            method = 'PUT';
+            payload.id = parseInt(courseId);
+        }
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) {
+                closeCourseModal();
+                loadCoursesList();
+            }
+        } catch(err) { console.error(err); }
+    }
+
+    async function deleteCourse(id) {
+        if(confirm('Are you sure you want to delete this course? All modules, course enrollments, and certificates linked will be permanently deleted.')) {
+            try {
+                const res = await fetch(`/api/admin/courses?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadCoursesList();
+            } catch(e) { console.error(e); }
+        }
+    }
+
+    // ── MODULES HANDLERS ─────────────────────────────────────────────────────
+    async function loadModulesList() {
+        const grid = document.getElementById('admin-modules-grid');
+        grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
+        try {
+            const res = await fetch('/api/admin/modules');
+            const data = await res.json();
+            loadedModules = data.modules || [];
+            grid.innerHTML = '';
+            
+            if (loadedModules.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 border border-dashed border-white/5 rounded-2xl text-slate-500 text-xs">// No modules found</div>';
+                return;
+            }
+            
+            loadedModules.forEach(m => {
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 hover:border-cyan-500/10 transition-all';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">Order: ${m.order_index}</span>
+                        </div>
+                        <h4 class="text-base font-bold text-white uppercase mb-2">${m.title}</h4>
+                        <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed">${m.description || 'No description.'}</p>
+                    </div>
+                    <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
+                        <button onclick="editModule(${m.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
+                        <button onclick="deleteModule(${m.id})" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    async function populateCoursesDropdown(selectId) {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '';
+        try {
+            const res = await fetch('/api/admin/courses');
+            const data = await res.json();
+            const list = data.courses || [];
+            list.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = `[Class ${c.class_level}] ${c.title}`;
+                select.appendChild(opt);
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    async function openModuleModal(m = null) {
+        await populateCoursesDropdown('module-course-select');
+        if(m) {
+            document.getElementById('module-modal-title').textContent = "Edit Module";
+            document.getElementById('module-edit-id').value = m.id;
+            document.getElementById('module-course-select').value = m.course_id;
+            document.getElementById('module-title-input').value = m.title;
+            document.getElementById('module-order-input').value = m.order_index;
+            document.getElementById('module-description-input').value = m.description || '';
+        } else {
+            document.getElementById('module-modal-title').textContent = "Add Module";
+            document.getElementById('module-form').reset();
+            document.getElementById('module-edit-id').value = '';
+        }
+        document.getElementById('modal-module').classList.remove('hidden');
+    }
+
+    function closeModuleModal() { document.getElementById('modal-module').classList.add('hidden'); }
+
+    function editModule(id) {
+        const m = loadedModules.find(item => item.id === id);
+        if(m) openModuleModal(m);
+    }
+
+    async function submitModule(e) {
+        e.preventDefault();
+        const moduleId = document.getElementById('module-edit-id').value;
+        const payload = {
+            course_id: parseInt(document.getElementById('module-course-select').value),
+            title: document.getElementById('module-title-input').value,
+            order_index: parseInt(document.getElementById('module-order-input').value),
+            description: document.getElementById('module-description-input').value
+        };
+
+        let method = 'POST';
+        let url = '/api/admin/modules';
+        if(moduleId) {
+            method = 'PUT';
+            payload.id = parseInt(moduleId);
+        }
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) {
+                closeModuleModal();
+                loadModulesList();
+            }
+        } catch(err) { console.error(err); }
+    }
+
+    async function deleteModule(id) {
+        if(confirm('Are you sure you want to delete this module? Chapters and syllabus units inside will lose their module mapping.')) {
+            try {
+                const res = await fetch(`/api/admin/modules?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadModulesList();
+            } catch(e) { console.error(e); }
+        }
+    }
+
+    // ── LESSONS HANDLERS ─────────────────────────────────────────────────────
+    async function loadLessonsList() {
+        const grid = document.getElementById('admin-lessons-grid');
+        grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
+        try {
+            const res = await fetch('/api/admin/lessons');
+            const data = await res.json();
+            loadedLessons = data.lessons || [];
+            grid.innerHTML = '';
+            
+            if (loadedLessons.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 border border-dashed border-white/5 rounded-2xl text-slate-500 text-xs">// No lessons found</div>';
+                return;
+            }
+            
+            loadedLessons.forEach(l => {
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 hover:border-cyan-500/10 transition-all';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">Order: ${l.order_index} • ${l.status}</span>
+                        </div>
+                        <h4 class="text-base font-bold text-white uppercase mb-2">${l.title}</h4>
+                        <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed">${l.content || 'No content.'}</p>
+                    </div>
+                    <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
+                        <button onclick="editLesson(${l.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
+                        <button onclick="deleteLesson(${l.id})" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    async function openLessonModal(lesson = null) {
+        await populateChaptersDropdown('lesson-chapter-select');
+        if(lesson) {
+            document.getElementById('lesson-modal-title').textContent = "Edit Lesson";
+            document.getElementById('lesson-edit-id').value = lesson.id;
+            document.getElementById('lesson-chapter-select').value = lesson.chapter_id;
+            document.getElementById('lesson-title-input').value = lesson.title;
+            document.getElementById('lesson-order-input').value = lesson.order_index;
+            document.getElementById('lesson-status-select').value = lesson.status;
+            document.getElementById('lesson-content-input').value = lesson.content || '';
+        } else {
+            document.getElementById('lesson-modal-title').textContent = "Add Lesson";
+            document.getElementById('lesson-form').reset();
+            document.getElementById('lesson-edit-id').value = '';
+        }
+        document.getElementById('modal-lesson').classList.remove('hidden');
+    }
+
+    function closeLessonModal() { document.getElementById('modal-lesson').classList.add('hidden'); }
+
+    function editLesson(id) {
+        const l = loadedLessons.find(item => item.id === id);
+        if(l) openLessonModal(l);
+    }
+
+    async function submitLesson(e) {
+        e.preventDefault();
+        const lessonId = document.getElementById('lesson-edit-id').value;
+        const payload = {
+            chapter_id: parseInt(document.getElementById('lesson-chapter-select').value),
+            title: document.getElementById('lesson-title-input').value,
+            order_index: parseInt(document.getElementById('lesson-order-input').value),
+            status: document.getElementById('lesson-status-select').value,
+            content: document.getElementById('lesson-content-input').value
+        };
+
+        let method = 'POST';
+        let url = '/api/admin/lessons';
+        if(lessonId) {
+            method = 'PUT';
+            payload.id = parseInt(lessonId);
+        }
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) {
+                closeLessonModal();
+                loadLessonsList();
+            }
+        } catch(err) { console.error(err); }
+    }
+
+    async function deleteLesson(id) {
+        if(confirm('Are you sure you want to delete this lesson? All student completions and resource attachments will be deleted.')) {
+            try {
+                const res = await fetch(`/api/admin/lessons?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadLessonsList();
+            } catch(e) { console.error(e); }
+        }
+    }
+
+    // ── RESOURCES HANDLERS ───────────────────────────────────────────────────
+    async function loadResourcesList() {
+        const grid = document.getElementById('admin-resources-grid');
+        grid.innerHTML = '<div class="col-span-full py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
+        try {
+            const res = await fetch('/api/admin/resources');
+            const data = await res.json();
+            loadedResources = data.resources || [];
+            grid.innerHTML = '';
+            
+            if (loadedResources.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 border border-dashed border-white/5 rounded-2xl text-slate-500 text-xs">// No resources found</div>';
+                return;
+            }
+            
+            loadedResources.forEach(r => {
+                const card = document.createElement('div');
+                card.className = 'glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 hover:border-cyan-500/10 transition-all';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">${r.file_type} • ${r.status}</span>
+                        </div>
+                        <h4 class="text-base font-bold text-white uppercase mb-1 truncate">${r.title}</h4>
+                        <p class="text-[10px] text-slate-500 font-mono truncate mb-2">${r.file_path}</p>
+                    </div>
+                    <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
+                        <button onclick="editResource(${r.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
+                        <button onclick="deleteResource(${r.id})" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    async function populateLessonsDropdown(selectId) {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '';
+        try {
+            const res = await fetch('/api/admin/lessons');
+            const data = await res.json();
+            const list = data.lessons || [];
+            list.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.id;
+                opt.textContent = l.title;
+                select.appendChild(opt);
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    async function openResourceModal(res = null) {
+        await populateLessonsDropdown('resource-lesson-select');
+        if(res) {
+            document.getElementById('resource-modal-title').textContent = "Edit Resource";
+            document.getElementById('resource-edit-id').value = res.id;
+            document.getElementById('resource-lesson-select').value = res.lesson_id;
+            document.getElementById('resource-title-input').value = res.title;
+            document.getElementById('resource-type-select').value = res.file_type;
+            document.getElementById('resource-status-select').value = res.status;
+            document.getElementById('resource-path-input').value = res.file_path;
+        } else {
+            document.getElementById('resource-modal-title').textContent = "Add Resource";
+            document.getElementById('resource-form').reset();
+            document.getElementById('resource-edit-id').value = '';
+        }
+        document.getElementById('modal-resource').classList.remove('hidden');
+    }
+
+    function closeResourceModal() { document.getElementById('modal-resource').classList.add('hidden'); }
+
+    function editResource(id) {
+        const r = loadedResources.find(item => item.id === id);
+        if(r) openResourceModal(r);
+    }
+
+    async function submitResource(e) {
+        e.preventDefault();
+        const resourceId = document.getElementById('resource-edit-id').value;
+        const payload = {
+            lesson_id: parseInt(document.getElementById('resource-lesson-select').value),
+            title: document.getElementById('resource-title-input').value,
+            file_type: document.getElementById('resource-type-select').value,
+            status: document.getElementById('resource-status-select').value,
+            file_path: document.getElementById('resource-path-input').value
+        };
+
+        let method = 'POST';
+        let url = '/api/admin/resources';
+        if(resourceId) {
+            method = 'PUT';
+            payload.id = parseInt(resourceId);
+        }
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) {
+                closeResourceModal();
+                loadResourcesList();
+            }
+        } catch(err) { console.error(err); }
+    }
+
+    async function deleteResource(id) {
+        if(confirm('Are you sure you want to delete this resource file?')) {
+            try {
+                const res = await fetch(`/api/admin/resources?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadResourcesList();
+            } catch(e) { console.error(e); }
+        }
+    }
+
+    // ── CERTIFICATES HANDLERS ────────────────────────────────────────────────
+    async function loadCertificatesList() {
+        const tbody = document.getElementById('admin-certificates-tbody');
+        tbody.innerHTML = '<tr><td colspan="5" class="py-12 flex justify-center"><div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></td></tr>';
+        try {
+            const res = await fetch('/api/admin/certificates');
+            const data = await res.json();
+            loadedCertificates = data.certificates || [];
+            tbody.innerHTML = '';
+            
+            if (loadedCertificates.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-slate-500">// No issued certificates registered</td></tr>';
+                return;
+            }
+            
+            loadedCertificates.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-white/5 transition-colors border-b border-white/5";
+                tr.innerHTML = `
+                    <td class="py-4 px-4">
+                        <div class="font-bold text-white">${c.student_name}</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5">${c.student_email}</div>
+                    </td>
+                    <td class="py-4 px-4 text-slate-300 font-medium">${c.course_title}</td>
+                    <td class="py-4 px-4 font-mono font-bold text-cyan-400 text-xs">${c.verification_id}</td>
+                    <td class="py-4 px-4">
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${c.status === 'issued' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-red-500/20 bg-red-500/10 text-red-300'}">
+                            ${c.status}
+                        </span>
+                    </td>
+                    <td class="py-4 px-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            ${c.status === 'issued' ? 
+                                `<button onclick="toggleCertStatus(${c.id}, 'revoked')" class="text-[10px] font-black uppercase text-amber-400 hover:text-amber-300 transition-colors">Revoke</button>` : 
+                                `<button onclick="toggleCertStatus(${c.id}, 'issued')" class="text-[10px] font-black uppercase text-emerald-400 hover:text-emerald-300 transition-colors">Restore</button>`
+                            }
+                            <button onclick="deleteCertificate(${c.id})" class="text-[10px] font-black uppercase text-rose-500 hover:text-rose-400 transition-colors">Purge</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    async function toggleCertStatus(id, newStatus) {
+        try {
+            const res = await fetch('/api/admin/certificates', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status: newStatus })
+            });
+            if(res.ok) loadCertificatesList();
+        } catch(err) { console.error(err); }
+    }
+
+    async function deleteCertificate(id) {
+        if(confirm('Are you absolutely sure you want to permanently delete this certificate record? Verify state logs will be lost.')) {
+            try {
+                const res = await fetch(`/api/admin/certificates?id=${id}`, { method: 'DELETE' });
+                if(res.ok) loadCertificatesList();
             } catch(e) { console.error(e); }
         }
     }

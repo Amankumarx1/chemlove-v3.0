@@ -1,0 +1,158 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Teacher Monitor{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Back Navigation -->
+    <a href="/superadmin/control-center" class="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-xs font-bold uppercase tracking-wider mb-6">
+        <span class="material-symbols-outlined text-base">arrow_back</span> Return to Control Center
+    </a>
+
+    <!-- Teacher Info Header Block -->
+    <div class="glass-morphism p-8 rounded-3xl mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+        <div class="absolute -right-8 -top-8 w-24 h-24 bg-pink-500/5 rounded-full blur-xl"></div>
+        <div>
+            <div class="inline-flex items-center gap-2 bg-pink-500/20 text-pink-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4 border border-pink-500/10">
+                <span class="w-2 h-2 rounded-full bg-pink-400"></span>
+                Teacher Telemetry Node
+            </div>
+            <h1 class="text-3xl font-black uppercase text-white tracking-tight leading-none mb-2">{{ teacher.name }}</h1>
+            <p class="text-slate-400 text-xs font-mono">{{ teacher.email }} | {{ teacher.institution }}</p>
+        </div>
+        
+        <!-- Teacher stats -->
+        <div class="flex items-center gap-4 bg-slate-900/40 border border-white/5 px-6 py-3.5 rounded-2xl">
+            <div>
+                <div class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Department</div>
+                <div class="text-sm font-black text-white">{{ teacher.department or 'Chemistry' }}</div>
+            </div>
+            <div class="border-l border-white/5 pl-4">
+                <div class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Classrooms Managed</div>
+                <div class="text-sm font-black text-pink-400">{{ classrooms|length }} Rooms</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Monitoring Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-8">
+        <!-- Left Column: Core Actions -->
+        <div class="lg:col-span-1 space-y-8">
+            <!-- Management Controls -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-6 w-full text-center">Manage Teacher Assignments</h3>
+                <div class="space-y-4">
+                    <!-- Assign Course mapping -->
+                    <form method="POST" action="/superadmin/teacher-monitoring/{{ teacher.id }}" class="border-b border-white/5 pb-4">
+                        <input type="hidden" name="action" value="assign_course">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Assign Course Management</label>
+                        <div class="flex gap-2">
+                            <select name="course_id" required class="flex-grow px-3 py-2 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                                {% for c in all_courses %}
+                                    <option value="{{ c.id }}">{{ c.title }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="kinetic-gradient text-on-primary px-3 rounded-xl text-xs font-bold flex items-center justify-center">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Edit Department -->
+                    <form method="POST" action="/superadmin/teacher-monitoring/{{ teacher.id }}" class="border-b border-white/5 pb-4">
+                        <input type="hidden" name="action" value="update_department">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Adjust Department Code</label>
+                        <div class="flex gap-2">
+                            <input type="text" name="department" value="{{ teacher.department or 'Chemistry' }}" required class="flex-grow px-3 py-2 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                            <button type="submit" class="kinetic-gradient text-on-primary px-4 rounded-xl text-xs font-bold">
+                                Save
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Disable access -->
+                    <form method="POST" action="/superadmin/teacher-monitoring/{{ teacher.id }}" class="pt-2">
+                        <input type="hidden" name="action" value="toggle_access">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Login Access Restriction</label>
+                        {% if teacher.status == 'active' %}
+                            <button type="submit" class="w-full bg-red-950/20 border border-red-500/20 hover:bg-red-900/20 hover:border-red-500 transition-all py-3 rounded-xl text-xs font-black uppercase tracking-widest text-red-400">
+                                Suspend Account
+                            </button>
+                        {% else %}
+                            <button type="submit" class="w-full bg-emerald-950/20 border border-emerald-500/20 hover:bg-emerald-900/20 hover:border-emerald-500 transition-all py-3 rounded-xl text-xs font-black uppercase tracking-widest text-emerald-400 animate-pulse">
+                                Re-Activate Account
+                            </button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <!-- Classrooms managed list -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-pink-400">school</span>
+                    Managed Classrooms
+                </h3>
+                <div class="space-y-4">
+                    {% for room in classrooms %}
+                        <div class="border border-white/5 bg-slate-900/40 p-4 rounded-2xl">
+                            <h4 class="text-sm font-black text-white uppercase">{{ room.name }}</h4>
+                            <p class="text-[9px] text-slate-500 mt-1">Grade: {{ room.grade }} | Section: {{ room.section or 'N/A' }}</p>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-xs text-slate-500 py-4">No active classrooms managed.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Teacher Activities and Courses -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Assigned Courses list -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-pink-400">bookmark</span>
+                    Assigned LMS Courses Catalog
+                </h3>
+                <div class="space-y-4">
+                    {% for tc in assigned_courses %}
+                        <div class="border border-white/5 bg-[#171d1e]/40 p-4 rounded-2xl flex justify-between items-center gap-4">
+                            <div>
+                                <h4 class="text-sm font-bold text-white uppercase tracking-tight">{{ tc.course_title }}</h4>
+                                <p class="text-[9px] text-slate-500 mt-1">Assigned on: {{ tc.assigned_at }}</p>
+                            </div>
+                            <!-- Remove course option -->
+                            <form method="POST" action="/superadmin/teacher-monitoring/{{ teacher.id }}">
+                                <input type="hidden" name="action" value="remove_course">
+                                <input type="hidden" name="course_id" value="{{ tc.course_id }}">
+                                <button type="submit" class="text-rose-500 hover:text-rose-400 text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-base">delete</span>
+                                </button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-xs text-slate-500 py-6">No courses currently assigned to this teacher.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Activity Logs Registry -->
+            <div class="glass-morphism p-8 rounded-3xl">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-6">Activity Timeline Registry</h3>
+                <div class="space-y-4 max-h-96 overflow-y-auto pr-2 scrollbar-thin">
+                    {% for log in history %}
+                        <div class="flex items-start gap-3 text-xs border-l-2 border-slate-800 pl-4 py-1 relative">
+                            <span class="absolute w-2 h-2 rounded-full bg-pink-400 -left-[5px] top-2"></span>
+                            <div class="flex-grow">
+                                <div class="font-bold text-white uppercase text-[10px] tracking-wider">{{ log.event_type }}</div>
+                                <p class="text-slate-400 mt-1 font-mono text-[9px] truncate max-w-md">{{ log.event_data }}</p>
+                            </div>
+                            <span class="text-[9px] text-slate-500 font-medium whitespace-nowrap">{{ log.created_at }}</span>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-xs text-slate-500 py-6">No registry entries recorded for this teacher.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

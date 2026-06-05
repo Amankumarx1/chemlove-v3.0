@@ -11,6 +11,8 @@
                     Student
                     {% elif current_user.role == 'teacher' %}
                     Teacher
+                    {% elif current_user.role == 'superadmin' %}
+                    Super Admin
                     {% else %}
                     Admin
                     {% endif %}
@@ -46,6 +48,11 @@
         <div>
             <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">Learning Journey</div>
             <div class="space-y-1">
+                <a href="/student/courses"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all {% if active_tab == 'courses' or 'course' in request.path and not 'chapter' in request.path %}bg-cyan-950/20 text-cyan-400 border border-cyan-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">collections_bookmark</span>
+                    My Courses
+                </a>
                 <a href="/student/chapters"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all {% if active_tab == 'chapters' or 'chapter' in request.path %}bg-cyan-950/20 text-cyan-400 border border-cyan-500/10{% endif %}">
                     <span class="material-symbols-outlined text-base">menu_book</span>
@@ -60,6 +67,11 @@
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all {% if active_tab == 'experiments' or 'experiment' in request.path %}bg-cyan-950/20 text-cyan-400 border border-cyan-500/10{% endif %}">
                     <span class="material-symbols-outlined text-base">experiment</span>
                     Experiments
+                </a>
+                <a href="/student/certificates"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all {% if active_tab == 'certificates' or request.path == '/student/certificates' %}bg-cyan-950/20 text-cyan-400 border border-cyan-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">workspace_premium</span>
+                    Certificates
                 </a>
             </div>
         </div>
@@ -177,10 +189,10 @@
             </div>
         </div>
 
-        {% elif current_user.role == 'admin' %}
-        <!-- Admin Portal Sidebar Items -->
+        {% elif current_user.role == 'superadmin' %}
+        <!-- Super Admin Portal Sidebar Items -->
         <div>
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3"></div>
+            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">System Control</div>
             <div class="space-y-1">
                 <a href="/profile"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'profile' or request.path == '/profile' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
@@ -189,31 +201,95 @@
                 </a>
             </div>
 
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3"></div>
+            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-6 mb-2 px-3">Executive Console</div>
+            <div class="space-y-1">
+                <a href="/superadmin/dashboard"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'dashboard' or request.path == '/superadmin/dashboard' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">dashboard</span>
+                    Executive Dashboard
+                </a>
+                <a href="/superadmin/control-center"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'users' or request.path == '/superadmin/control-center' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">manage_accounts</span>
+                    User Control Center
+                </a>
+                <a href="/admin/content"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'content' or request.path == '/admin/content' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">article</span>
+                    Global CMS
+                </a>
+                <a href="/admin/permissions"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'permissions' or request.path == '/admin/permissions' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">rule</span>
+                    Permissions Panel
+                </a>
+            </div>
+
+            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-6 mb-2 px-3">Ecosystem</div>
+            <div class="space-y-1">
+                <a href="/about"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if request.path == '/about' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">info</span>
+                    About
+                </a>
+                <a href="/contact"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if request.path == '/contact' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">contact_support</span>
+                    Contact
+                </a>
+            </div>
+        </div>
+
+        {% elif current_user.role == 'admin' %}
+        <!-- Admin Portal Sidebar Items -->
+        <div>
+            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">Admin Settings</div>
+            <div class="space-y-1">
+                <a href="/profile"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'profile' or request.path == '/profile' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">person</span>
+                    Profile Settings
+                </a>
+            </div>
+
+            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-6 mb-2 px-3">Management</div>
             <div class="space-y-1">
                 <a href="/admin/dashboard"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'dashboard' or request.path == '/admin/dashboard' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
                     <span class="material-symbols-outlined text-base">dashboard</span>
                     Dashboard
                 </a>
+                {% if check_permission('manage_users') %}
                 <a href="/admin/users"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'users' or request.path == '/admin/users' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
                     <span class="material-symbols-outlined text-base">manage_accounts</span>
                     Users
                 </a>
+                {% endif %}
+                {% if check_permission('manage_content') %}
                 <a href="/admin/content"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'content' or request.path == '/admin/content' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
                     <span class="material-symbols-outlined text-base">article</span>
-                    Content
+                    Content CMS
                 </a>
+                {% endif %}
+                {% if check_permission('view_reports') %}
                 <a href="/admin/analytics"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'analytics' or request.path == '/admin/analytics' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
                     <span class="material-symbols-outlined text-base">analytics</span>
                     Analytics
                 </a>
+                {% endif %}
+                {% if check_permission('manage_users') %}
+                <a href="/admin/permissions"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'permissions' or request.path == '/admin/permissions' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">rule</span>
+                    Permissions Panel
+                </a>
+                {% endif %}
             </div>
 
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3"></div>
+            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-6 mb-2 px-3">Ecosystem</div>
             <div class="space-y-1">
                 <a href="/about"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if request.path == '/about' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
