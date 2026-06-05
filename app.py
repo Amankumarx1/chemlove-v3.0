@@ -1055,6 +1055,55 @@ def superadmin_dashboard():
     return render_template('superadmin/dashboard.html', current_user=get_current_user(), stats=stats, audit_logs=audit_logs, chart_data=chart_data, active_tab='dashboard')
 
 
+@app.route('/superadmin/erp-stub')
+@superadmin_required
+def superadmin_erp_stub():
+    module = request.args.get('module', 'System Administration')
+    metrics = {
+        'Academies': [
+            {'title': 'Partner Schools', 'val': '12 Active', 'desc': 'Colleges & Institutions linked'},
+            {'title': 'Branches', 'val': '34 Nodes', 'desc': 'Physical labs synchronization status'},
+            {'title': 'Coordinators', 'val': '15 Registered', 'desc': 'Active institution operators'}
+        ],
+        'Assessments': [
+            {'title': 'Quiz Bank Entries', 'val': '1,420 Items', 'desc': 'Physics, Biology & Chemistry'},
+            {'title': 'Coding Challenges', 'val': '84 Challenges', 'desc': 'Syntax compilation validators'},
+            {'title': 'Avg Class Rank', 'val': 'Top 10%', 'desc': 'Across all connected academies'}
+        ],
+        'Certifications': [
+            {'title': 'Certificate Templates', 'val': '5 Premium', 'desc': 'SVG Custom vector layouts'},
+            {'title': 'Revocation Keys', 'val': '0 Active', 'desc': 'Security keys validation status'},
+            {'title': 'Achievements Badges', 'val': '12 Unlocked', 'desc': 'Live gamification statistics'}
+        ],
+        'Communications': [
+            {'title': 'Send Grid SMTP Status', 'val': 'Connected', 'desc': 'Email relay server validation'},
+            {'title': 'Scheduled Broadcasts', 'val': '2 Pending', 'desc': 'System notifications queue'},
+            {'title': 'Relay Latency', 'val': '1.2s', 'desc': 'Websocket messaging broker'}
+        ],
+        'Settings': [
+            {'title': 'Branding Override', 'val': 'ChemLove Premium', 'desc': 'Global brand title'},
+            {'title': 'Multi-Factor Auth (MFA)', 'val': 'Enforced', 'desc': 'Security authentication keys'},
+            {'title': 'SMTP Relay Server', 'val': 'smtp.gmail.com', 'desc': 'Mail system transport configurations'}
+        ],
+        'AI': [
+            {'title': 'LLM Gateway', 'val': 'DeepSeek / Gemini', 'desc': 'Active inference nodes status'},
+            {'title': 'AI Generation Queue', 'val': '0 In-Queue', 'desc': 'Auto-quiz compilation request log'},
+            {'title': 'Token Budget Utilisation', 'val': '14.2%', 'desc': 'Platform-wide consumption telemetry'}
+        ],
+        'System': [
+            {'title': 'Database Backup', 'val': 'Daily Autocommit', 'desc': 'Automated SQL binary backups'},
+            {'title': 'Intrusion Detection System', 'val': 'Shield Active', 'desc': 'Threat monitoring terminal logs'},
+            {'title': 'Backup History', 'val': '14 Backups', 'desc': 'Available restore snapshots'}
+        ]
+    }
+    selected_metrics = metrics.get(module, [
+        {'title': 'ERP Component', 'val': 'Scalable Node', 'desc': 'Under Supervision'},
+        {'title': 'System Integration', 'val': 'Connected', 'desc': 'Operational'},
+        {'title': 'Status', 'val': 'Optimal', 'desc': 'All services live'}
+    ])
+    return render_template('superadmin/erp_stub.html', current_user=get_current_user(), module=module, metrics=selected_metrics, active_tab=module.lower())
+
+
 @app.route('/superadmin/control-center', methods=['GET', 'POST'])
 @superadmin_required
 def superadmin_control_center():

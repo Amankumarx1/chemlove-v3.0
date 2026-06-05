@@ -1,0 +1,110 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | {{ module }} Control Hub{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Page Header -->
+    <div class="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+            <div class="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4 border border-emerald-500/10">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 live-pulse"></span>
+                Enterprise Node Integration
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase text-white">{{ module }}</h1>
+            <p class="text-slate-400 mt-2 text-sm">Centralized administration node configurations, diagnostic logs, and platform telemetry indicators.</p>
+        </div>
+        
+        <!-- Live status -->
+        <div class="flex items-center gap-4 bg-slate-900/40 border border-white/5 px-6 py-3.5 rounded-2xl backdrop-blur-md">
+            <div class="relative w-3.5 h-3.5 flex items-center justify-center">
+                <span class="absolute w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+                <span class="relative w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            </div>
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Module Status</div>
+                <div class="text-sm font-black text-white">Fully Synchronized</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Metrics Display -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        {% for m in metrics %}
+        <div class="glass-morphism p-6 rounded-3xl relative overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-24 h-24 bg-cyan-400/5 rounded-full blur-xl"></div>
+            <div class="text-2xl font-black text-white tracking-tight leading-none mb-1">{{ m.val }}</div>
+            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">{{ m.title }}</div>
+            <p class="text-[11px] text-slate-500 mt-3">{{ m.desc }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Interactive ERP Mock Control Center -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Configuration Card -->
+        <div class="lg:col-span-2 glass-morphism p-8 rounded-3xl">
+            <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined text-cyan-400">tune</span>
+                {{ module }} Parameters Configuration
+            </h3>
+            
+            <div class="space-y-6">
+                <div class="flex justify-between items-center py-3 border-b border-white/5">
+                    <div>
+                        <div class="text-xs font-black text-white uppercase tracking-wider">Automated Synchronization</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">Allow system to auto-sync updates with cloud cluster nodes every 60 seconds.</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-950 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white"></div>
+                    </label>
+                </div>
+
+                <div class="flex justify-between items-center py-3 border-b border-white/5">
+                    <div>
+                        <div class="text-xs font-black text-white uppercase tracking-wider">Debug Telemetry Broadcast</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">Stream granular backend execution logs to the audit broker dashboard.</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-950 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white"></div>
+                    </label>
+                </div>
+
+                <div class="flex justify-between items-center py-3">
+                    <div>
+                        <div class="text-xs font-black text-white uppercase tracking-wider">Access Scope Restriction</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">Enforce standard RBAC security validations on all query parameters.</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-950 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white"></div>
+                    </label>
+                </div>
+
+                <button class="w-full mt-6 kinetic-gradient text-on-primary py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.01] active:scale-95 transition-all">
+                    Apply Parameters Configurations
+                </button>
+            </div>
+        </div>
+
+        <!-- Diagnostic Console -->
+        <div class="lg:col-span-1 glass-morphism p-8 rounded-3xl flex flex-col justify-between">
+            <div>
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-amber-400">terminal</span>
+                    Diagnostic Logs
+                </h3>
+                <div class="bg-slate-950/80 rounded-2xl p-4 font-mono text-[9px] text-emerald-400 space-y-2.5 h-64 overflow-y-auto scrollbar-thin border border-white/5">
+                    <div class="text-slate-500">[00:41:02] INITIALISING LOG STREAM...</div>
+                    <div>[00:41:03] CONNECTED TO REDIS CACHE AGENT</div>
+                    <div>[00:41:14] BROADCAST SCOPE MATRIX LOADED</div>
+                    <div>[00:41:52] AUDIT LOG SYNC COMPLETED</div>
+                    <div class="text-amber-400">[00:42:01] WARNING: API LATENCY SPOOK (14ms)</div>
+                    <div>[00:42:15] DB CONNECTION HEARTBEAT ACQUIRED</div>
+                    <div>[00:42:20] ALL SYSTEM SERVICES OPTIMAL</div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
