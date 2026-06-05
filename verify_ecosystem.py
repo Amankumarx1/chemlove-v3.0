@@ -2,8 +2,10 @@ import urllib.request
 import urllib.parse
 import json
 import http.cookiejar
-import sqlite3
+import os
 import sys
+from dotenv import load_dotenv
+import mysql.connector
 
 BASE_URL = "http://localhost:5000"
 
@@ -60,20 +62,83 @@ class ChemLoveClient:
 
 def db_cleanup():
     print("[CLEANUP] Cleaning up test database records...")
-    conn = sqlite3.connect("chemlove.db")
-    cursor = conn.cursor()
-    
-    # Get user IDs of test users to be extra thorough, though cascades handle most
-    cursor.execute("SELECT id FROM users WHERE email IN ('student_test@example.com', 'teacher_test@example.com', 'admin_test@example.com')")
-    user_ids = [row[0] for row in cursor.fetchall()]
-    
-    if user_ids:
-        placeholders = ",".join("?" for _ in user_ids)
-        cursor.execute(f"DELETE FROM users WHERE id IN ({placeholders})", user_ids)
-        
-    conn.commit()
-    conn.close()
-    print("[CLEANUP] Cleanup finished.")
+    load_dotenv()
+    database_url = os.getenv("DATABASE_URL")
+
+    def parse_mysql_url(url):
+        if not url.startswith("mysql://"):
+            raise ValueError("Must start with mysql://")
+        rem = url[8:]
+        if "@" in rem:
+            auth, host_port_db = rem.split("@", 1)
+            if ":" in auth:
+                user, password = auth.split(":", 1)
+            else:
+                user = auth
+                password = ""
+        else:
+            user = "root"
+            password = ""
+            host_port_db = rem
+            
+        if "/" in host_port_db:
+            host_port, database = host_port_db.split("/", 1)
+        else:
+            host_port = host_port_db
+            database = ""
+            
+        if "?" in database:
+            database = database.split("?", 1)[0]
+            
+        if ":" in host_port:
+            host, port = host_port.split(":", 1)
+            port = int(port)
+        else:
+            host = host_port
+            port = 3306
+            
+        import urllib.parse
+        return {
+            "host": host,
+            "port": port,
+            "user": urllib.parse.unquote(user),
+            "password": urllib.parse.unquote(password),
+            "database": database
+        }
+
+    if database_url and database_url.startswith("mysql://"):
+        try:
+            db_config = parse_mysql_url(database_url)
+        except Exception as e:
+            print(f"[CLEANUP] WARNING: Error parsing DATABASE_URL: {e}")
+            return
+    else:
+        db_config = {
+            "host": os.getenv("MYSQL_HOST", "localhost"),
+            "port": int(os.getenv("MYSQL_PORT", 3306)),
+            "user": os.getenv("MYSQL_USER", "root"),
+            "password": os.getenv("MYSQL_PASSWORD", ""),
+            "database": os.getenv("MYSQL_DATABASE", "chemlove")
+        }
+
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+        # Get user IDs of test users to be extra thorough, though cascades handle most
+        cursor.execute(
+            "SELECT id FROM users WHERE email IN ('student_test@example.com', 'teacher_test@example.com', 'admin_test@example.com')"
+        )
+        user_ids = [row[0] for row in cursor.fetchall()]
+
+        if user_ids:
+            placeholders = ",".join("%s" for _ in user_ids)
+            cursor.execute(f"DELETE FROM users WHERE id IN ({placeholders})", user_ids)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("[CLEANUP] Cleanup finished.")
+    except Exception as e:
+        print(f"[CLEANUP] WARNING: Failed to clean up: {e}")
 
 def run_tests():
     # 1. Start clean

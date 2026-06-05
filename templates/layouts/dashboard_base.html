@@ -43,10 +43,12 @@
     <div class="flex flex-grow min-h-screen">
         {% include 'components/sidebar.html' %}
 
-        <!-- Main Content Area -->
-        <main class="flex-grow p-6 md:p-8 max-w-7xl mx-auto w-full relative z-10">
-            {% block dashboard_content %}{% endblock %}
-        </main>
+        <!-- Main Content Area Wrapper -->
+        <div class="flex-grow md:pl-64 w-full">
+            <main class="p-6 md:p-8 max-w-7xl mx-auto w-full relative z-10">
+                {% block dashboard_content %}{% endblock %}
+            </main>
+        </div>
     </div>
 
     <!-- Flash message alerts -->

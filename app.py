@@ -1,553 +1,267 @@
 import os
-import sqlite3
+import json
+import glob
+import re
 from datetime import datetime, timezone
+from functools import wraps
 
 from dotenv import load_dotenv
 load_dotenv()
 
-import psycopg
-from psycopg.rows import dict_row
+import mysql.connector
+from mysql.connector.pooling import MySQLConnectionPool
 from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "change-this-secret-key")
 
-# ── No-cache for authentication pages ──────────────────────────────────────
-_AUTH_PATHS = ('/login', '/signup', '/auth')
-
-@app.after_request
-def no_cache_html(response):
-    """Prevent the browser from caching any server-rendered HTML page.
-    This ensures that after login/logout the correct navbar (logged-in vs
-    logged-out) is always shown without needing a manual refresh.
-    Static assets (JS, CSS, images) are excluded so they remain cached.
-    """
-    content_type = response.headers.get('Content-Type', '')
-    if 'text/html' in content_type:
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-    return response
-
+# ── Database connection pool ────────────────────────────────────────────────
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-class SQLiteCursorWrapper:
-    def __init__(self, cursor, lastrowid=None):
-        self.cursor = cursor
-        self._lastrowid = lastrowid
-        self.description = cursor.description
-        self.colnames = [col[0] for col in self.description] if self.description else []
+def parse_mysql_url(url):
+    """Parse mysql://user:password@host:port/database URL."""
+    if not url.startswith("mysql://"):
+        raise ValueError("Invalid MySQL URL format. Must start with mysql://")
+    
+    rem = url[8:]
+    if "@" in rem:
+        auth, host_port_db = rem.split("@", 1)
+        if ":" in auth:
+            user, password = auth.split(":", 1)
+        else:
+            user = auth
+            password = ""
+    else:
+        user = "root"
+        password = ""
+        host_port_db = rem
+        
+    if "/" in host_port_db:
+        host_port, database = host_port_db.split("/", 1)
+    else:
+        host_port = host_port_db
+        database = ""
+        
+    if "?" in database:
+        database = database.split("?", 1)[0]
+        
+    if ":" in host_port:
+        host, port = host_port.split(":", 1)
+        port = int(port)
+    else:
+        host = host_port
+        port = 3306
+        
+    import urllib.parse
+    return {
+        "host": host,
+        "port": port,
+        "user": urllib.parse.unquote(user),
+        "password": urllib.parse.unquote(password),
+        "database": database
+    }
 
-    def _to_dict(self, row):
-        if row is None:
-            return None
-        return dict(zip(self.colnames, row))
+if DATABASE_URL and DATABASE_URL.startswith("mysql://"):
+    try:
+        db_config = parse_mysql_url(DATABASE_URL)
+    except Exception as e:
+        raise RuntimeError(f"Error parsing DATABASE_URL: {e}")
+else:
+    db_config = {
+        "host": os.getenv("MYSQL_HOST", "localhost"),
+        "port": int(os.getenv("MYSQL_PORT", 3306)),
+        "user": os.getenv("MYSQL_USER", "root"),
+        "password": os.getenv("MYSQL_PASSWORD", ""),
+        "database": os.getenv("MYSQL_DATABASE", "chemlove")
+    }
+
+try:
+    pool = MySQLConnectionPool(
+        pool_name="chemlove_pool",
+        pool_size=10,
+        **db_config
+    )
+except Exception as e:
+    print(f"[DATABASE] CRITICAL ERROR: Could not create MySQL pool: {e}")
+    pool = None
+
+
+class MySQLCursorWrapper:
+    def __init__(self, cursor):
+        self.cursor = cursor
+
+    @property
+    def lastrowid(self):
+        return self.cursor.lastrowid
 
     def fetchone(self):
-        row = self.cursor.fetchone()
-        if not row:
-            if self._lastrowid is not None:
-                return {"id": self._lastrowid}
-            return None
-        return self._to_dict(row)
+        return self.cursor.fetchone()
 
     def fetchall(self):
-        rows = self.cursor.fetchall()
-        return [self._to_dict(r) for r in rows]
+        return self.cursor.fetchall()
+
+    def __iter__(self):
+        return iter(self.cursor)
 
 
-class SQLiteConnectionWrapper:
-    def __init__(self, conn):
-        self.conn = conn
+class MySQLConnectionWrapper:
+    def __init__(self, pool):
+        self.pool = pool
+        self.conn = None
+        self.cursor = None
 
     def __enter__(self):
+        if not self.pool:
+            raise RuntimeError("Database connection pool is not initialized.")
+        self.conn = self.pool.get_connection()
+        self.cursor = self.conn.cursor(dictionary=True)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is not None:
-            self.conn.rollback()
-        else:
-            self.conn.commit()
-        self.conn.close()
+        if self.cursor:
+            self.cursor.close()
+        if self.conn:
+            if exc_type is not None:
+                self.conn.rollback()
+            else:
+                self.conn.commit()
+            self.conn.close()
 
     def execute(self, query, params=None):
-        # Translate placeholder and serial syntax to be compatible with SQLite
-        query = query.replace('%s', '?')
-        if "SERIAL PRIMARY KEY" in query:
-            query = query.replace("SERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
-        
-        cursor = self.conn.cursor()
-        try:
-            if params:
-                cursor.execute(query, params)
-            else:
-                cursor.execute(query)
-            return SQLiteCursorWrapper(cursor)
-        except Exception as e:
-            if "RETURNING" in query.upper() and ("near \"RETURNING\"" in str(e).lower() or "syntax error" in str(e).lower()):
-                clean_query = query
-                returning_idx = query.upper().rfind("RETURNING")
-                if returning_idx != -1:
-                    clean_query = query[:returning_idx].strip()
-                if params:
-                    cursor.execute(clean_query, params)
-                else:
-                    cursor.execute(clean_query)
-                return SQLiteCursorWrapper(cursor, lastrowid=cursor.lastrowid)
-            raise e
+        self.cursor.execute(query, params or ())
+        return MySQLCursorWrapper(self.cursor)
 
-
-USING_SQLITE = False
 
 def get_db():
-    global USING_SQLITE
-    
-    if USING_SQLITE:
-        conn = sqlite3.connect("chemlove.db")
-        return SQLiteConnectionWrapper(conn)
-        
-    if not DATABASE_URL:
-        print("[DATABASE] DATABASE_URL is not set. Falling back to local SQLite (chemlove.db).")
-        USING_SQLITE = True
-        conn = sqlite3.connect("chemlove.db")
-        return SQLiteConnectionWrapper(conn)
-        
-    try:
-        # Connect to PostgreSQL with a brief timeout so startup doesn't hang
-        return psycopg.connect(DATABASE_URL, row_factory=dict_row, connect_timeout=3)
-    except Exception as e:
-        print(f"[DATABASE] Connection to PostgreSQL failed: {e}")
-        print("[DATABASE] Falling back to local SQLite (chemlove.db).")
-        USING_SQLITE = True
-        conn = sqlite3.connect("chemlove.db")
-        return SQLiteConnectionWrapper(conn)
+    """Return a wrapper around a pooled MySQL connection (used as a context manager)."""
+    return MySQLConnectionWrapper(pool)
 
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
 
+# ── No-cache for server-rendered HTML ──────────────────────────────────────
+@app.after_request
+def no_cache_html(response):
+    if 'text/html' in response.headers.get('Content-Type', ''):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+
+# ── Startup connectivity check ─────────────────────────────────────────────
 def init_db():
-    """Initialise the database.
-    
-    For SQLite: create all tables and seed default data.
-    For PostgreSQL (Supabase): tables already exist — only run a quick
-    connectivity check so we can confirm the connection is working.
-    """
-    if USING_SQLITE:
-        with get_db() as connection:
-            # Create users table
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    email TEXT NOT NULL UNIQUE,
-                    password_hash TEXT NOT NULL,
-                    institution TEXT NOT NULL,
-                    role TEXT NOT NULL,
-                    class_level TEXT,
-                    status TEXT DEFAULT 'active',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )
-                """
-            )
-
-            try:
-                connection.execute("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'")
-            except Exception:
-                pass
-
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS user_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    event_type TEXT NOT NULL,
-                    event_data TEXT,
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS student_profiles (
-                    user_id INTEGER PRIMARY KEY,
-                    current_xp INTEGER DEFAULT 100,
-                    level INTEGER DEFAULT 1,
-                    weak_topics TEXT,
-                    strong_topics TEXT,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS teacher_profiles (
-                    user_id INTEGER PRIMARY KEY,
-                    department TEXT DEFAULT 'Chemistry',
-                    qualifications TEXT,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS classrooms (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    teacher_id INTEGER NOT NULL,
-                    grade TEXT NOT NULL,
-                    section TEXT,
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS enrollments (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    classroom_id INTEGER NOT NULL,
-                    student_id INTEGER NOT NULL,
-                    enrolled_at TEXT NOT NULL,
-                    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
-                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS chapters (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    number INTEGER NOT NULL,
-                    title TEXT NOT NULL,
-                    class_level TEXT NOT NULL,
-                    description TEXT
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS labs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    chapter_id INTEGER,
-                    status TEXT DEFAULT 'published',
-                    description TEXT,
-                    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS assignments (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    classroom_id INTEGER NOT NULL,
-                    chapter_id INTEGER,
-                    lab_id INTEGER,
-                    marks INTEGER DEFAULT 100,
-                    due_date TEXT,
-                    instructions TEXT,
-                    status TEXT DEFAULT 'draft',
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
-                    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL,
-                    FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE SET NULL
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS submissions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    assignment_id INTEGER NOT NULL,
-                    student_id INTEGER NOT NULL,
-                    submitted_at TEXT NOT NULL,
-                    file_data TEXT,
-                    marks_obtained REAL,
-                    feedback TEXT,
-                    status TEXT DEFAULT 'pending',
-                    FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
-                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS tests (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    classroom_id INTEGER NOT NULL,
-                    chapter_id INTEGER,
-                    duration_minutes INTEGER DEFAULT 30,
-                    total_marks INTEGER DEFAULT 100,
-                    start_date TEXT,
-                    end_date TEXT,
-                    difficulty TEXT DEFAULT 'medium',
-                    status TEXT DEFAULT 'scheduled',
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
-                    FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS test_questions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    test_id INTEGER NOT NULL,
-                    type TEXT NOT NULL,
-                    question_text TEXT NOT NULL,
-                    options_json TEXT,
-                    correct_answer TEXT NOT NULL,
-                    marks INTEGER DEFAULT 1,
-                    FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS test_attempts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    test_id INTEGER NOT NULL,
-                    student_id INTEGER NOT NULL,
-                    score REAL,
-                    started_at TEXT NOT NULL,
-                    completed_at TEXT,
-                    status TEXT DEFAULT 'completed',
-                    suspicious_alerts_count INTEGER DEFAULT 0,
-                    FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE,
-                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS attendance (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    classroom_id INTEGER NOT NULL,
-                    student_id INTEGER NOT NULL,
-                    date TEXT NOT NULL,
-                    status TEXT NOT NULL,
-                    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
-                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS announcements (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    author_id INTEGER NOT NULL,
-                    classroom_id INTEGER,
-                    target_role TEXT,
-                    is_pinned INTEGER DEFAULT 0,
-                    publish_at TEXT,
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS badges (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL UNIQUE,
-                    description TEXT,
-                    icon TEXT,
-                    requirements_json TEXT
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS achievements (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    student_id INTEGER NOT NULL,
-                    badge_id INTEGER NOT NULL,
-                    unlocked_at TEXT NOT NULL,
-                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY (badge_id) REFERENCES badges(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS user_xp (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    amount INTEGER NOT NULL,
-                    source TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS notifications (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    title TEXT NOT NULL,
-                    message TEXT,
-                    is_read INTEGER DEFAULT 0,
-                    type TEXT,
-                    link TEXT,
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS activity_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    action TEXT NOT NULL,
-                    target_table TEXT,
-                    target_id INTEGER,
-                    details TEXT,
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS theme_preferences (
-                    user_id INTEGER PRIMARY KEY,
-                    theme TEXT DEFAULT 'system',
-                    updated_at TEXT NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS leaderboard_entries (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    xp INTEGER NOT NULL,
-                    rank INTEGER,
-                    week_start TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """
-            )
-
-            # Seed default badges
-            row = connection.execute("SELECT COUNT(*) as count FROM badges").fetchone()
-            if not row or row["count"] == 0:
-                default_badges = [
-                    ("Lab Pioneer", "Simulated your first chemical reaction successfully.", "science", '{"reaction_count": 1}'),
-                    ("Titration Master", "Completed a precise acid-base neutralization.", "opacity", '{"titration_count": 1}'),
-                    ("Concept Overlord", "Unlocked 90% mastery in any syllabus chapter.", "psychology", '{"mastery": 90}'),
-                    ("Safety Inspector", "Logged 10 consecutive safe simulations without volatile explosions.", "verified_user", '{"safety_count": 10}')
-                ]
-                for b in default_badges:
-                    connection.execute("INSERT INTO badges(name, description, icon, requirements_json) VALUES (%s, %s, %s, %s)", b)
-
-            # Seed default chapters
-            row_ch = connection.execute("SELECT COUNT(*) as count FROM chapters").fetchone()
-            if not row_ch or row_ch["count"] == 0:
-                default_chapters = [
-                    (1, "Chemical Reactions and Equations", "10", "Introduction to balancing chemical equations, combination, decomposition, displacement, and redox reactions."),
-                    (2, "Acids, Bases and Salts", "10", "Understanding indicators, pH scales, chemical properties of acids and bases, and salts characteristics."),
-                    (3, "Metals and Non-metals", "10", "Properties of metals/non-metals, reactivity series, ionic compound properties, and metallurgy."),
-                    (4, "Carbon and its Compounds", "10", "Covalent bonding, versatile nature of carbon, homologous series, and functional groups."),
-                    (5, "Hydrocarbons", "11", "Alkanes, alkenes, alkynes, isomerism, and methods of preparation (like Wurtz Reaction).")
-                ]
-                for ch in default_chapters:
-                    connection.execute("INSERT INTO chapters(number, title, class_level, description) VALUES (%s, %s, %s, %s)", ch)
-
-            # Sync chapter JSON files
-            import glob, re, json
-            chapters_dir = os.path.join('content', 'chapters')
-            if os.path.exists(chapters_dir):
-                for filepath in glob.glob(os.path.join(chapters_dir, 'chapter_*.json')):
-                    filename = os.path.basename(filepath)
-                    match = re.match(r'chapter_(\d+)\.json', filename)
-                    if match:
-                        ch_num = int(match.group(1))
-                        try:
-                            with open(filepath, 'r', encoding='utf-8') as f:
-                                ch_data = json.load(f)
-                            title = ch_data.get("title", f"Chapter {ch_num}")
-                            description = ch_data.get("description", "")
-                            class_level = str(ch_data.get("class", ch_data.get("class_level", "11")))
-                            existing = connection.execute("SELECT id FROM chapters WHERE number = %s", (ch_num,)).fetchone()
-                            if existing:
-                                connection.execute(
-                                    "UPDATE chapters SET title = %s, class_level = %s, description = %s WHERE number = %s",
-                                    (title, class_level, description, ch_num)
-                                )
-                            else:
-                                connection.execute(
-                                    "INSERT INTO chapters(id, number, title, class_level, description) VALUES (%s, %s, %s, %s, %s)",
-                                    (ch_num, ch_num, title, class_level, description)
-                                )
-                        except Exception as e:
-                            print(f"[DATABASE] Error syncing chapter JSON {filename}: {e}")
-
-            # Seed default labs
-            row_lb = connection.execute("SELECT COUNT(*) as count FROM labs").fetchone()
-            if not row_lb or row_lb["count"] == 0:
-                default_labs = [
-                    ("Virtual Sandbox", 5, "published", "Mix any organic/inorganic reagents in a safe virtual drop-zone."),
-                    ("Acid-Base Titration Workbench", 2, "published", "Drop-wise addition of titrant into an analyte to trace equivalence pH curves.")
-                ]
-                for lb in default_labs:
-                    connection.execute("INSERT INTO labs(name, chapter_id, status, description) VALUES (%s, %s, %s, %s)", lb)
-
-            # Ensure default admin user exists
-            admin_row = connection.execute("SELECT * FROM users WHERE email = %s", ("admin@chemlove.com",)).fetchone()
-            if admin_row:
-                if admin_row["role"] != "admin" or admin_row["status"] != "active":
-                    connection.execute(
-                        "UPDATE users SET role = %s, status = %s, password_hash = %s WHERE email = %s",
-                        ("admin", "active", generate_password_hash("admin123"), "admin@chemlove.com")
-                    )
-            else:
-                created_at = now_iso()
-                connection.execute(
-                    """
-                    INSERT INTO users(name, email, password_hash, institution, role, status, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """,
-                    ("Admin", "admin@chemlove.com", generate_password_hash("admin123"),
-                     "ChemLove", "admin", "active", created_at, created_at)
-                )
-            print("[DATABASE] SQLite initialised successfully.")
-    else:
-        # PostgreSQL / Supabase — tables already exist, just verify connectivity
-        try:
-            with get_db() as connection:
-                connection.execute("SELECT 1").fetchone()
-            print("[DATABASE] PostgreSQL connection verified successfully.")
-        except Exception as e:
-            print(f"[DATABASE] PostgreSQL connectivity check failed: {e}")
+    """Verify MySQL database is reachable. Tables are managed via schema.sql."""
+    try:
+        with get_db() as conn:
+            conn.execute("SELECT 1").fetchone()
+        print("[DATABASE] MySQL connection verified successfully.")
+    except Exception as e:
+        print(f"[DATABASE] WARNING: Could not reach MySQL database: {e}")
 
 
+init_db()
+
+
+# ── Static content helpers ─────────────────────────────────────────────────
+_CONTENT_DIR = os.path.join(os.path.dirname(__file__), 'content')
+
+
+def load_json(path):
+    """Load a JSON file relative to the content directory."""
+    full_path = os.path.join(_CONTENT_DIR, path)
+    if not os.path.exists(full_path):
+        return None
+    with open(full_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def all_chapters():
+    """Return a list of all chapter metadata dicts, sorted by number."""
+    chapters = []
+    pattern = os.path.join(_CONTENT_DIR, 'chapters', 'chapter_*.json')
+    for filepath in sorted(glob.glob(pattern)):
+        filename = os.path.basename(filepath)
+        m = re.match(r'chapter_(\d+)\.json', filename)
+        if m:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                try:
+                    chapters.append(json.load(f))
+                except Exception:
+                    pass
+    return chapters
+
+
+def get_chapter(chapter_id):
+    return load_json(f'chapters/chapter_{chapter_id}.json')
+
+
+def all_labs():
+    return load_json('labs.json') or []
+
+
+def all_badges():
+    return load_json('badges.json') or []
+
+
+def get_badge(badge_id):
+    for b in all_badges():
+        if b['id'] == badge_id:
+            return b
+    return None
+
+
+def all_experiments():
+    experiments = []
+    exp_dir = os.path.join(_CONTENT_DIR, 'experiments')
+    if os.path.exists(exp_dir):
+        for filename in sorted(os.listdir(exp_dir)):
+            if filename.endswith('.json'):
+                with open(os.path.join(exp_dir, filename), 'r', encoding='utf-8') as f:
+                    try:
+                        experiments.append(json.load(f))
+                    except Exception:
+                        pass
+    return experiments
+
+
+def get_experiment(experiment_id):
+    return load_json(f'experiments/{experiment_id}.json')
+
+
+def all_quizzes():
+    quizzes = []
+    quiz_dir = os.path.join(_CONTENT_DIR, 'quizzes')
+    if os.path.exists(quiz_dir):
+        for filename in sorted(os.listdir(quiz_dir)):
+            if filename.endswith('.json'):
+                with open(os.path.join(quiz_dir, filename), 'r', encoding='utf-8') as f:
+                    try:
+                        quizzes.append(json.load(f))
+                    except Exception:
+                        pass
+    return quizzes
+
+
+def get_quiz(chapter_id):
+    return load_json(f'quizzes/{chapter_id}.json')
+
+
+# ── User helpers ───────────────────────────────────────────────────────────
 def user_from_row(row):
     return {
-        "id": row["id"],
-        "name": row["name"],
-        "email": row["email"],
+        "id":          row["id"],
+        "name":        row["name"],
+        "email":       row["email"],
         "institution": row["institution"],
-        "role": row["role"],
-        "classLevel": row["class_level"],
-        "createdAt": row["created_at"],
-        "updatedAt": row["updated_at"],
+        "role":        row["role"],
+        "status":      row.get("status", "active"),
+        "classLevel":  row.get("class_level"),
+        "createdAt":   str(row["created_at"]),
+        "updatedAt":   str(row["updated_at"]),
     }
 
 
@@ -555,37 +269,85 @@ def get_current_user():
     user_id = session.get("user_id")
     if not user_id:
         return None
-    with get_db() as connection:
-        row = connection.execute("SELECT * FROM users WHERE id = %s", (user_id,)).fetchone()
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM users WHERE id = %s", (user_id,)).fetchone()
         if not row:
             return None
         if row.get("status") == 'suspended':
             session.pop("user_id", None)
             return None
-        
+
         user_dict = user_from_row(row)
-        user_dict["status"] = row.get("status", "active")
-        
+
         if user_dict["role"] == "student":
-            sp = connection.execute("SELECT current_xp, level FROM student_profiles WHERE user_id = %s", (user_id,)).fetchone()
-            if sp:
-                user_dict["current_xp"] = sp["current_xp"]
-                user_dict["level"] = sp["level"]
-            else:
-                user_dict["current_xp"] = 100
-                user_dict["level"] = 1
+            sp = conn.execute(
+                "SELECT current_xp, level FROM student_profiles WHERE user_id = %s",
+                (user_id,)
+            ).fetchone()
+            user_dict["current_xp"] = sp["current_xp"] if sp else 100
+            user_dict["level"]      = sp["level"]      if sp else 1
+
     return user_dict
 
 
 def add_history(user_id, event_type, event_data=None):
-    with get_db() as connection:
-        connection.execute(
-            "INSERT INTO user_history(user_id, event_type, event_data, created_at) VALUES (%s, %s, %s, %s)",
-            (user_id, event_type, event_data, now_iso()),
+    """Record only meaningful events — not every click."""
+    TRACKED_EVENTS = {
+        'login_success', 'logout', 'signup_success',
+        'assignment_submission', 'test_submitted',
+        'badge_unlocked', 'contact_message_sent',
+        'profile_updated',
+    }
+    if event_type not in TRACKED_EVENTS:
+        return
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO user_history(user_id, event_type, event_data, created_at) VALUES (%s, %s, %s, NOW())",
+            (user_id, event_type, event_data),
         )
 
 
-init_db()
+# ── Role decorators ────────────────────────────────────────────────────────
+def student_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            flash('Please login first.', 'error')
+            return redirect(url_for('login'))
+        if user['role'] != 'student':
+            flash('Unauthorized access.', 'error')
+            return redirect(url_for('home'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def teacher_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            flash('Please login first.', 'error')
+            return redirect(url_for('login'))
+        if user['role'] != 'teacher':
+            flash('Unauthorized access. Teacher role required.', 'error')
+            return redirect(url_for('profile_page'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            flash('Please login first.', 'error')
+            return redirect(url_for('login'))
+        if user['role'] != 'admin':
+            flash('Unauthorized access. Admin role required.', 'error')
+            return redirect(url_for('profile_page'))
+        return f(*args, **kwargs)
+    return decorated
 
 
 def redirect_by_role(user):
@@ -597,6 +359,10 @@ def redirect_by_role(user):
         return redirect(url_for('admin_dashboard'))
     return redirect(url_for('home'))
 
+
+# ============================================================
+# PUBLIC ROUTES
+# ============================================================
 
 @app.route('/')
 def home():
@@ -616,12 +382,10 @@ def about():
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
     if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        email = request.form.get('email', '').strip()
-        phone = request.form.get('phone', '').strip()
-        role = request.form.get('role', '').strip()
-        subject = request.form.get('subject', '').strip()
+        name    = request.form.get('name', '').strip()
+        email   = request.form.get('email', '').strip()
         message = request.form.get('message', '').strip()
+        subject = request.form.get('subject', '').strip()
 
         if not name or not email or not message:
             flash('Please fill in Name, Email, and Message fields.', 'error')
@@ -631,31 +395,30 @@ def contact():
         if user:
             add_history(user['id'], "contact_message_sent", f"subject={subject}")
 
-        print(f"[CONTACT FORM] Form submission received from {name} ({email}) - Role: {role}, Subject: {subject}")
         flash('Thank you for reaching out! We will get back to you shortly.', 'success')
         return redirect(url_for('contact'))
 
     return render_template('landing/contact.html', current_user=get_current_user())
 
 
+# Redirect aliases
 @app.route('/index.html')
 def index_html_redirect():
     return redirect(url_for('home'))
 
-
 @app.route('/login.html')
 def login_html_redirect():
     return redirect(url_for('login'))
-
 
 @app.route('/signup.html')
 def signup_html_redirect():
     return redirect(url_for('signup'))
 
 
+# ── Auth ───────────────────────────────────────────────────────────────────
+
 @app.route('/auth')
 def auth_page():
-    """Canonical /auth URL – redirect logged-in users to their dashboard."""
     user = get_current_user()
     if user:
         return redirect_by_role(user)
@@ -668,12 +431,13 @@ def signup():
     user = get_current_user()
     if user:
         return redirect_by_role(user)
+
     if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
+        name        = request.form.get('name', '').strip()
+        email       = request.form.get('email', '').strip().lower()
+        password    = request.form.get('password', '')
         institution = request.form.get('institution', '').strip()
-        role = request.form.get('role', '').strip()
+        role        = request.form.get('role', '').strip()
         class_level = request.form.get('classLevel', '').strip()
 
         if not name or not email or not password or not institution or not role:
@@ -684,43 +448,39 @@ def signup():
             flash('Please select class level for student role.', 'error')
             return redirect(url_for('signup'))
 
-        with get_db() as connection:
-            existing = connection.execute("SELECT id FROM users WHERE email = %s", (email,)).fetchone()
-        if existing:
-            flash('Email already exists. Please login.', 'error')
-            return redirect(url_for('signup'))
+        with get_db() as conn:
+            existing = conn.execute("SELECT id FROM users WHERE email = %s", (email,)).fetchone()
+            if existing:
+                flash('Email already exists. Please login.', 'error')
+                return redirect(url_for('signup'))
 
-        created_at = now_iso()
-        password_hash = generate_password_hash(password)
-        with get_db() as connection:
-            cursor = connection.execute(
+            cursor = conn.execute(
                 """
                 INSERT INTO users(name, email, password_hash, institution, role, class_level, status, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, 'active', %s, %s)
-                RETURNING id
+                VALUES (%s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
                 """,
-                (name, email, password_hash, institution, role, class_level if role == 'student' else None, created_at, created_at),
+                (name, email, generate_password_hash(password), institution, role,
+                 class_level if role == 'student' else None),
             )
-            user_id = cursor.fetchone()["id"]
-            
-            # Create corresponding profile
+            user_id = cursor.lastrowid
+
             if role == 'student':
-                connection.execute(
+                conn.execute(
                     "INSERT INTO student_profiles(user_id, current_xp, level) VALUES (%s, 100, 1)",
                     (user_id,)
                 )
             elif role == 'teacher':
-                connection.execute(
+                conn.execute(
                     "INSERT INTO teacher_profiles(user_id, department) VALUES (%s, 'Chemistry')",
                     (user_id,)
                 )
+
+            user_row = conn.execute("SELECT * FROM users WHERE id = %s", (user_id,)).fetchone()
+
         session['user_id'] = user_id
         add_history(user_id, "signup_success", f"role={role}")
         flash('Signup successful. Welcome!', 'success')
-        
-        with get_db() as connection:
-            user = connection.execute("SELECT * FROM users WHERE id = %s", (user_id,)).fetchone()
-        return redirect_by_role(user)
+        return redirect_by_role(user_row)
 
     return render_template('landing/auth.html', active_form='signup')
 
@@ -730,11 +490,13 @@ def login():
     user = get_current_user()
     if user:
         return redirect_by_role(user)
+
     if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
+        email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
-        with get_db() as connection:
-            user = connection.execute("SELECT * FROM users WHERE email = %s", (email,)).fetchone()
+
+        with get_db() as conn:
+            user = conn.execute("SELECT * FROM users WHERE email = %s", (email,)).fetchone()
 
         if not user or not check_password_hash(user['password_hash'], password):
             flash('Invalid email or password.', 'error')
@@ -762,6 +524,8 @@ def logout():
     return redirect(url_for('home'))
 
 
+# ── Profile ────────────────────────────────────────────────────────────────
+
 @app.route('/profile')
 def profile_page():
     user = get_current_user()
@@ -780,15 +544,15 @@ def profile_api():
     if request.method == 'GET':
         return jsonify({"profile": user})
 
-    payload = request.get_json(silent=True) or {}
-    name = (payload.get("name") or user["name"]).strip()
+    payload     = request.get_json(silent=True) or {}
+    name        = (payload.get("name") or user["name"]).strip()
     institution = (payload.get("institution") or user["institution"]).strip()
-    class_level = (payload.get("classLevel") if user["role"] == "student" else None)
-    updated_at = now_iso()
-    with get_db() as connection:
-        connection.execute(
-            "UPDATE users SET name = %s, institution = %s, class_level = %s, updated_at = %s WHERE id = %s",
-            (name, institution, class_level, updated_at, user["id"]),
+    class_level = payload.get("classLevel") if user["role"] == "student" else None
+
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE users SET name = %s, institution = %s, class_level = %s, updated_at = NOW() WHERE id = %s",
+            (name, institution, class_level, user["id"]),
         )
     add_history(user["id"], "profile_updated")
     return jsonify({"ok": True})
@@ -799,12 +563,12 @@ def history_api():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
-    with get_db() as connection:
-        rows = connection.execute(
+    with get_db() as conn:
+        rows = conn.execute(
             "SELECT event_type, event_data, created_at FROM user_history WHERE user_id = %s ORDER BY id DESC LIMIT 50",
             (user["id"],),
         ).fetchall()
-    return jsonify({"history": rows})
+    return jsonify({"history": [dict(r) for r in rows]})
 
 
 @app.route('/dashboard')
@@ -813,79 +577,13 @@ def dashboard_page():
     if not user:
         flash('Please login first.', 'error')
         return redirect(url_for('login'))
-    if user['role'] == 'student':
-        return redirect(url_for('student_dashboard'))
-    elif user['role'] == 'teacher':
-        return redirect(url_for('teacher_dashboard'))
-    elif user['role'] == 'admin':
-        return redirect(url_for('admin_dashboard'))
-    return redirect(url_for('home'))
-
-
-@app.route('/api/log_event', methods=['POST'])
-def log_event_api():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    payload = request.get_json(silent=True) or {}
-    event_type = payload.get("event_type")
-    event_data = payload.get("event_data")
-    
-    if not event_type:
-        return jsonify({"error": "Missing event_type"}), 400
-        
-    add_history(user["id"], event_type, event_data)
-    return jsonify({"ok": True})
+    return redirect_by_role(user)
 
 
 # ============================================================
-# ROLE-BASED PORTALS DECORATORS & ROUTING
+# STUDENT PORTAL
 # ============================================================
 
-from functools import wraps
-
-def student_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        user = get_current_user()
-        if not user:
-            flash('Please login first.', 'error')
-            return redirect(url_for('login'))
-        if user['role'] != 'student':
-            flash('Unauthorized access.', 'error')
-            return redirect(url_for('home'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-def teacher_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        user = get_current_user()
-        if not user:
-            flash('Please login first.', 'error')
-            return redirect(url_for('login'))
-        if user['role'] != 'teacher':
-            flash('Unauthorized access. Teacher role required.', 'error')
-            return redirect(url_for('profile_page'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        user = get_current_user()
-        if not user:
-            flash('Please login first.', 'error')
-            return redirect(url_for('login'))
-        if user['role'] != 'admin':
-            flash('Unauthorized access. Admin role required.', 'error')
-            return redirect(url_for('profile_page'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-# Student portal endpoints
 @app.route('/student/dashboard')
 @student_required
 def student_dashboard():
@@ -895,21 +593,17 @@ def student_dashboard():
 @app.route('/student/chapters')
 @student_required
 def student_chapters():
-    with get_db() as connection:
-        rows = connection.execute("SELECT * FROM chapters").fetchall()
-    return render_template('student/chapters.html', current_user=get_current_user(), chapters=rows, active_tab='chapters')
+    chapters = all_chapters()
+    return render_template('student/chapters.html', current_user=get_current_user(), chapters=chapters, active_tab='chapters')
 
 
 @app.route('/student/chapter/<int:chapter_id>')
 @student_required
 def student_chapter_view(chapter_id):
-    import json
-    chapter_file = os.path.join('content', 'chapters', f'chapter_{chapter_id}.json')
-    if not os.path.exists(chapter_file):
+    chapter_data = get_chapter(chapter_id)
+    if not chapter_data:
         flash('Chapter content not found.', 'error')
         return redirect(url_for('student_chapters'))
-    with open(chapter_file, 'r', encoding='utf-8') as f:
-        chapter_data = json.load(f)
     return render_template('student/chapter_view.html', current_user=get_current_user(), chapter_data=chapter_data, active_tab='chapters')
 
 
@@ -922,60 +616,32 @@ def student_reactions():
 @app.route('/student/experiments')
 @student_required
 def student_experiments():
-    import json
-    experiments = []
-    exp_dir = os.path.join('content', 'experiments')
-    if os.path.exists(exp_dir):
-        for filename in sorted(os.listdir(exp_dir)):
-            if filename.endswith('.json'):
-                with open(os.path.join(exp_dir, filename), 'r', encoding='utf-8') as f:
-                    try:
-                        experiments.append(json.load(f))
-                    except Exception:
-                        pass
-    return render_template('student/experiments.html', current_user=get_current_user(), experiments=experiments, active_tab='experiments')
+    return render_template('student/experiments.html', current_user=get_current_user(), experiments=all_experiments(), active_tab='experiments')
 
 
 @app.route('/student/experiment/<int:experiment_id>')
 @student_required
 def student_experiment_view(experiment_id):
-    import json
-    exp_file = os.path.join('content', 'experiments', f'{experiment_id}.json')
-    if not os.path.exists(exp_file):
+    exp = get_experiment(experiment_id)
+    if not exp:
         flash('Experiment content not found.', 'error')
         return redirect(url_for('student_experiments'))
-    with open(exp_file, 'r', encoding='utf-8') as f:
-        experiment_data = json.load(f)
-    return render_template('student/experiment_view.html', current_user=get_current_user(), experiment=experiment_data, active_tab='experiments')
+    return render_template('student/experiment_view.html', current_user=get_current_user(), experiment=exp, active_tab='experiments')
 
 
 @app.route('/student/quizzes')
 @student_required
 def student_quizzes():
-    import json
-    quizzes = []
-    quiz_dir = os.path.join('content', 'quizzes')
-    if os.path.exists(quiz_dir):
-        for filename in sorted(os.listdir(quiz_dir)):
-            if filename.endswith('.json'):
-                with open(os.path.join(quiz_dir, filename), 'r', encoding='utf-8') as f:
-                    try:
-                        quizzes.append(json.load(f))
-                    except Exception:
-                        pass
-    return render_template('student/quizzes.html', current_user=get_current_user(), quizzes=quizzes, active_tab='quizzes')
+    return render_template('student/quizzes.html', current_user=get_current_user(), quizzes=all_quizzes(), active_tab='quizzes')
 
 
 @app.route('/student/quiz/<int:chapter_id>')
 @student_required
 def student_quiz_view(chapter_id):
-    import json
-    quiz_file = os.path.join('content', 'quizzes', f'{chapter_id}.json')
-    if not os.path.exists(quiz_file):
+    quiz_data = get_quiz(chapter_id)
+    if not quiz_data:
         flash('Quiz not found.', 'error')
         return redirect(url_for('student_quizzes'))
-    with open(quiz_file, 'r', encoding='utf-8') as f:
-        quiz_data = json.load(f)
     return render_template('student/quiz_view.html', current_user=get_current_user(), quiz=quiz_data, active_tab='quizzes')
 
 
@@ -997,7 +663,10 @@ def student_profile():
     return redirect(url_for('profile_page'))
 
 
-# Teacher portal routes
+# ============================================================
+# TEACHER PORTAL
+# ============================================================
+
 @app.route('/teacher/dashboard')
 @teacher_required
 def teacher_dashboard():
@@ -1034,7 +703,10 @@ def teacher_reports():
     return render_template('teacher/reports.html', current_user=get_current_user(), active_tab='reports')
 
 
-# Admin portal routes
+# ============================================================
+# ADMIN PORTAL
+# ============================================================
+
 @app.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
@@ -1060,536 +732,760 @@ def admin_analytics():
 
 
 # ============================================================
-# API SYSTEM ENDPOINTS
+# API — CLASSROOMS
 # ============================================================
-
-import json
 
 @app.route('/api/classrooms', methods=['GET', 'POST', 'DELETE'])
 def api_classrooms():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
-        
+
     if request.method == 'GET':
-        with get_db() as connection:
+        with get_db() as conn:
             if user['role'] == 'teacher':
-                rows = connection.execute(
-                    "SELECT c.*, (SELECT COUNT(*) FROM enrollments WHERE classroom_id = c.id) as student_count FROM classrooms c WHERE c.teacher_id = %s",
+                rows = conn.execute(
+                    """
+                    SELECT c.*, (SELECT COUNT(*) FROM enrollments WHERE classroom_id = c.id) AS student_count
+                    FROM classrooms c WHERE c.teacher_id = %s
+                    """,
                     (user['id'],)
                 ).fetchall()
             elif user['role'] == 'admin':
-                rows = connection.execute(
-                    "SELECT c.*, u.name as teacher_name, (SELECT COUNT(*) FROM enrollments WHERE classroom_id = c.id) as student_count FROM classrooms c LEFT JOIN users u ON c.teacher_id = u.id"
+                rows = conn.execute(
+                    """
+                    SELECT c.*, u.name AS teacher_name,
+                           (SELECT COUNT(*) FROM enrollments WHERE classroom_id = c.id) AS student_count
+                    FROM classrooms c LEFT JOIN users u ON c.teacher_id = u.id
+                    """
                 ).fetchall()
             else:
-                rows = connection.execute(
-                    "SELECT c.*, u.name as teacher_name FROM classrooms c JOIN enrollments e ON c.id = e.classroom_id LEFT JOIN users u ON c.teacher_id = u.id WHERE e.student_id = %s",
+                rows = conn.execute(
+                    """
+                    SELECT c.*, u.name AS teacher_name
+                    FROM classrooms c
+                    JOIN enrollments e ON c.id = e.classroom_id
+                    LEFT JOIN users u ON c.teacher_id = u.id
+                    WHERE e.student_id = %s
+                    """,
                     (user['id'],)
                 ).fetchall()
-        return jsonify({"classrooms": rows})
-        
+        return jsonify({"classrooms": [dict(r) for r in rows]})
+
     elif request.method == 'POST':
-        payload = request.get_json(silent=True) or {}
-        name = payload.get("name")
-        grade = payload.get("grade")
-        section = payload.get("section")
+        payload    = request.get_json(silent=True) or {}
+        name       = payload.get("name")
+        grade      = payload.get("grade")
+        section    = payload.get("section")
         teacher_id = payload.get("teacher_id") or user['id']
-        
+
         if not name or not grade:
             return jsonify({"error": "Missing name or grade"}), 400
-            
-        with get_db() as connection:
-            connection.execute(
-                "INSERT INTO classrooms(name, teacher_id, grade, section, created_at) VALUES (%s, %s, %s, %s, %s)",
-                (name, teacher_id, grade, section, now_iso())
+
+        with get_db() as conn:
+            conn.execute(
+                "INSERT INTO classrooms(name, teacher_id, grade, section, created_at) VALUES (%s, %s, %s, %s, NOW())",
+                (name, teacher_id, grade, section)
             )
         return jsonify({"ok": True})
-        
+
     elif request.method == 'DELETE':
         cid = request.args.get("id")
         if not cid:
             return jsonify({"error": "Missing classroom id"}), 400
-        with get_db() as connection:
+        with get_db() as conn:
             if user['role'] == 'teacher':
-                connection.execute("DELETE FROM classrooms WHERE id = %s AND teacher_id = %s", (cid, user['id']))
+                conn.execute("DELETE FROM classrooms WHERE id = %s AND teacher_id = %s", (cid, user['id']))
             elif user['role'] == 'admin':
-                connection.execute("DELETE FROM classrooms WHERE id = %s", (cid,))
+                conn.execute("DELETE FROM classrooms WHERE id = %s", (cid,))
             else:
                 return jsonify({"error": "Forbidden"}), 403
         return jsonify({"ok": True})
 
+
+# ============================================================
+# API — STUDENTS / ENROLLMENTS
+# ============================================================
 
 @app.route('/api/students', methods=['GET', 'POST', 'DELETE'])
 def api_students():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
-        
+
     if request.method == 'GET':
         classroom_id = request.args.get("classroom_id")
-        student_id = request.args.get("student_id")
-        
-        with get_db() as connection:
+        student_id   = request.args.get("student_id")
+
+        with get_db() as conn:
             if student_id:
-                student_details = connection.execute(
-                    "SELECT u.id, u.name, u.email, u.institution, u.class_level, sp.current_xp, sp.level, sp.weak_topics, sp.strong_topics FROM users u LEFT JOIN student_profiles sp ON u.id = sp.user_id WHERE u.id = %s AND u.role = 'student'",
+                student = conn.execute(
+                    """
+                    SELECT u.id, u.name, u.email, u.institution, u.class_level,
+                           sp.current_xp, sp.level
+                    FROM users u
+                    LEFT JOIN student_profiles sp ON u.id = sp.user_id
+                    WHERE u.id = %s AND u.role = 'student'
+                    """,
                     (student_id,)
                 ).fetchone()
-                
-                if not student_details:
+                if not student:
                     return jsonify({"error": "Student not found"}), 404
-                    
-                history_rows = connection.execute(
+
+                history = conn.execute(
                     "SELECT event_type, event_data, created_at FROM user_history WHERE user_id = %s ORDER BY id DESC LIMIT 20",
                     (student_id,)
                 ).fetchall()
-                
-                attempts_rows = connection.execute(
-                    "SELECT ta.*, t.title as test_title FROM test_attempts ta JOIN tests t ON ta.test_id = t.id WHERE ta.student_id = %s",
+                attempts = conn.execute(
+                    "SELECT ta.*, t.title AS test_title FROM test_attempts ta JOIN tests t ON ta.test_id = t.id WHERE ta.student_id = %s",
                     (student_id,)
                 ).fetchall()
-                
-                badges_rows = connection.execute(
-                    "SELECT b.name, b.description, b.icon, a.unlocked_at FROM achievements a JOIN badges b ON a.badge_id = b.id WHERE a.student_id = %s",
+                badges_rows = conn.execute(
+                    "SELECT badge_id, unlocked_at FROM user_badges WHERE user_id = %s",
                     (student_id,)
                 ).fetchall()
-                
-                sub_rows = connection.execute(
-                    "SELECT s.*, a.title as assignment_title FROM submissions s JOIN assignments a ON s.assignment_id = a.id WHERE s.student_id = %s",
+                submissions = conn.execute(
+                    "SELECT s.*, a.title AS assignment_title FROM submissions s JOIN assignments a ON s.assignment_id = a.id WHERE s.student_id = %s",
                     (student_id,)
                 ).fetchall()
-                
+
+                # Enrich badges with static metadata
+                badges = []
+                for b in badges_rows:
+                    meta = get_badge(b["badge_id"])
+                    if meta:
+                        badges.append({**meta, "unlocked_at": str(b["unlocked_at"])})
+
                 return jsonify({
-                    "student": student_details,
-                    "history": history_rows,
-                    "attempts": attempts_rows,
-                    "badges": badges_rows,
-                    "submissions": sub_rows
+                    "student":     dict(student),
+                    "history":     [dict(r) for r in history],
+                    "attempts":    [dict(r) for r in attempts],
+                    "badges":      badges,
+                    "submissions": [dict(r) for r in submissions],
                 })
-                
+
             elif classroom_id:
-                rows = connection.execute(
+                rows = conn.execute(
                     """
-                    SELECT u.id, u.name, u.email, u.institution, u.class_level, u.status, sp.current_xp, sp.level 
-                    FROM users u 
-                    JOIN enrollments e ON u.id = e.student_id 
-                    LEFT JOIN student_profiles sp ON u.id = sp.user_id 
+                    SELECT u.id, u.name, u.email, u.institution, u.class_level, u.status,
+                           sp.current_xp, sp.level
+                    FROM users u
+                    JOIN enrollments e ON u.id = e.student_id
+                    LEFT JOIN student_profiles sp ON u.id = sp.user_id
                     WHERE e.classroom_id = %s
                     """,
                     (classroom_id,)
                 ).fetchall()
             else:
-                rows = connection.execute(
-                    "SELECT u.id, u.name, u.email, u.institution, u.class_level, u.status, sp.current_xp, sp.level FROM users u LEFT JOIN student_profiles sp ON u.id = sp.user_id WHERE u.role = 'student'"
+                rows = conn.execute(
+                    """
+                    SELECT u.id, u.name, u.email, u.institution, u.class_level, u.status,
+                           sp.current_xp, sp.level
+                    FROM users u
+                    LEFT JOIN student_profiles sp ON u.id = sp.user_id
+                    WHERE u.role = 'student'
+                    """
                 ).fetchall()
-                
-        return jsonify({"students": rows})
-        
+
+        return jsonify({"students": [dict(r) for r in rows]})
+
     elif request.method == 'POST':
-        payload = request.get_json(silent=True) or {}
+        payload      = request.get_json(silent=True) or {}
         classroom_id = payload.get("classroom_id")
-        student_id = payload.get("student_id")
-        
+        student_id   = payload.get("student_id")
+
         if not classroom_id or not student_id:
             return jsonify({"error": "Missing parameters"}), 400
-            
-        with get_db() as connection:
-            dup = connection.execute("SELECT id FROM enrollments WHERE classroom_id = %s AND student_id = %s", (classroom_id, student_id)).fetchone()
-            if not dup:
-                connection.execute(
-                    "INSERT INTO enrollments(classroom_id, student_id, enrolled_at) VALUES (%s, %s, %s)",
-                    (classroom_id, student_id, now_iso())
-                )
-        return jsonify({"ok": True})
-        
-    elif request.method == 'DELETE':
-        classroom_id = request.args.get("classroom_id")
-        student_id = request.args.get("student_id")
-        
-        if not classroom_id or not student_id:
-            return jsonify({"error": "Missing parameters"}), 400
-            
-        with get_db() as connection:
-            connection.execute("DELETE FROM enrollments WHERE classroom_id = %s AND student_id = %s", (classroom_id, student_id))
+
+        with get_db() as conn:
+            conn.execute(
+                "INSERT IGNORE INTO enrollments(classroom_id, student_id, enrolled_at) VALUES (%s, %s, NOW())",
+                (classroom_id, student_id)
+            )
         return jsonify({"ok": True})
 
+    elif request.method == 'DELETE':
+        classroom_id = request.args.get("classroom_id")
+        student_id   = request.args.get("student_id")
+
+        if not classroom_id or not student_id:
+            return jsonify({"error": "Missing parameters"}), 400
+
+        with get_db() as conn:
+            conn.execute(
+                "DELETE FROM enrollments WHERE classroom_id = %s AND student_id = %s",
+                (classroom_id, student_id)
+            )
+        return jsonify({"ok": True})
+
+
+# ============================================================
+# API — ASSIGNMENTS
+# ============================================================
 
 @app.route('/api/assignments', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def api_assignments():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
-        
+
     if request.method == 'GET':
         classroom_id = request.args.get("classroom_id")
-        with get_db() as connection:
+        with get_db() as conn:
             if classroom_id:
-                rows = connection.execute(
+                rows = conn.execute(
                     """
-                    SELECT a.*, c.name as classroom_name, ch.title as chapter_title, l.name as lab_name, 
-                           (SELECT COUNT(*) FROM submissions WHERE assignment_id = a.id) as submission_count 
-                    FROM assignments a 
-                    JOIN classrooms c ON a.classroom_id = c.id 
-                    LEFT JOIN chapters ch ON a.chapter_id = ch.id 
-                    LEFT JOIN labs l ON a.lab_id = l.id 
+                    SELECT a.*,
+                           c.name AS classroom_name,
+                           (SELECT COUNT(*) FROM submissions WHERE assignment_id = a.id) AS submission_count
+                    FROM assignments a
+                    JOIN classrooms c ON a.classroom_id = c.id
                     WHERE a.classroom_id = %s
                     """,
                     (classroom_id,)
                 ).fetchall()
+            elif user['role'] == 'teacher':
+                rows = conn.execute(
+                    """
+                    SELECT a.*, c.name AS classroom_name,
+                           (SELECT COUNT(*) FROM submissions WHERE assignment_id = a.id) AS submission_count
+                    FROM assignments a
+                    JOIN classrooms c ON a.classroom_id = c.id
+                    WHERE c.teacher_id = %s
+                    """,
+                    (user['id'],)
+                ).fetchall()
+            elif user['role'] == 'admin':
+                rows = conn.execute(
+                    """
+                    SELECT a.*, c.name AS classroom_name,
+                           (SELECT COUNT(*) FROM submissions WHERE assignment_id = a.id) AS submission_count
+                    FROM assignments a
+                    JOIN classrooms c ON a.classroom_id = c.id
+                    """
+                ).fetchall()
             else:
-                if user['role'] == 'teacher':
-                    rows = connection.execute(
-                        """
-                        SELECT a.*, c.name as classroom_name, ch.title as chapter_title, l.name as lab_name,
-                               (SELECT COUNT(*) FROM submissions WHERE assignment_id = a.id) as submission_count
-                        FROM assignments a 
-                        JOIN classrooms c ON a.classroom_id = c.id 
-                        LEFT JOIN chapters ch ON a.chapter_id = ch.id 
-                        LEFT JOIN labs l ON a.lab_id = l.id 
-                        WHERE c.teacher_id = %s
-                        """,
-                        (user['id'],)
-                    ).fetchall()
-                elif user['role'] == 'admin':
-                    rows = connection.execute(
-                        """
-                        SELECT a.*, c.name as classroom_name, ch.title as chapter_title, l.name as lab_name,
-                               (SELECT COUNT(*) FROM submissions WHERE assignment_id = a.id) as submission_count
-                        FROM assignments a 
-                        JOIN classrooms c ON a.classroom_id = c.id 
-                        LEFT JOIN chapters ch ON a.chapter_id = ch.id 
-                        LEFT JOIN labs l ON a.lab_id = l.id
-                        """
-                    ).fetchall()
-                else:
-                    rows = connection.execute(
-                        """
-                        SELECT a.*, c.name as classroom_name, ch.title as chapter_title, l.name as lab_name,
-                               s.status as submission_status, s.marks_obtained, s.feedback
-                        FROM assignments a 
-                        JOIN classrooms c ON a.classroom_id = c.id 
-                        JOIN enrollments e ON c.id = e.classroom_id
-                        LEFT JOIN chapters ch ON a.chapter_id = ch.id 
-                        LEFT JOIN labs l ON a.lab_id = l.id 
-                        LEFT JOIN submissions s ON a.id = s.assignment_id AND s.student_id = %s
-                        WHERE e.student_id = %s AND a.status = 'published'
-                        """,
-                        (user['id'], user['id'])
-                    ).fetchall()
-        return jsonify({"assignments": rows})
-        
+                rows = conn.execute(
+                    """
+                    SELECT a.*, c.name AS classroom_name,
+                           s.status AS submission_status, s.marks_obtained, s.feedback
+                    FROM assignments a
+                    JOIN classrooms c ON a.classroom_id = c.id
+                    JOIN enrollments e ON c.id = e.classroom_id
+                    LEFT JOIN submissions s ON a.id = s.assignment_id AND s.student_id = %s
+                    WHERE e.student_id = %s AND a.status = 'published'
+                    """,
+                    (user['id'], user['id'])
+                ).fetchall()
+
+        # Enrich chapter/lab names from static content
+        chapters = {c['id']: c for c in all_chapters()}
+        labs     = {l['id']: l for l in all_labs()}
+        result   = []
+        for r in rows:
+            d = dict(r)
+            ch = chapters.get(d.get('chapter_id'))
+            lb = labs.get(d.get('lab_id'))
+            d['chapter_title'] = ch['title'] if ch else None
+            d['lab_name']      = lb['title'] if lb else None
+            result.append(d)
+
+        return jsonify({"assignments": result})
+
     elif request.method == 'POST':
-        payload = request.get_json(silent=True) or {}
-        title = payload.get("title")
-        description = payload.get("description")
+        payload      = request.get_json(silent=True) or {}
+        title        = payload.get("title")
         classroom_id = payload.get("classroom_id")
-        chapter_id = payload.get("chapter_id")
-        lab_id = payload.get("lab_id")
-        marks = payload.get("marks") or 100
-        due_date = payload.get("due_date")
-        instructions = payload.get("instructions")
-        status = payload.get("status") or "draft"
-        
+
         if not title or not classroom_id:
             return jsonify({"error": "Missing title or classroom_id"}), 400
-            
-        with get_db() as connection:
-            connection.execute(
+
+        with get_db() as conn:
+            conn.execute(
                 """
                 INSERT INTO assignments(title, description, classroom_id, chapter_id, lab_id, marks, due_date, instructions, status, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
                 """,
-                (title, description, classroom_id, chapter_id if chapter_id else None, lab_id if lab_id else None, marks, due_date, instructions, status, now_iso())
+                (
+                    title,
+                    payload.get("description"),
+                    classroom_id,
+                    payload.get("chapter_id") or None,
+                    payload.get("lab_id")     or None,
+                    payload.get("marks") or 100,
+                    payload.get("due_date"),
+                    payload.get("instructions"),
+                    payload.get("status") or "draft",
+                )
             )
         return jsonify({"ok": True})
-        
+
     elif request.method == 'PUT':
         payload = request.get_json(silent=True) or {}
-        aid = payload.get("id")
-        status = payload.get("status")
-        
+        aid     = payload.get("id")
+        status  = payload.get("status")
+
         if not aid or not status:
             return jsonify({"error": "Missing parameters"}), 400
-            
-        with get_db() as connection:
-            connection.execute("UPDATE assignments SET status = %s WHERE id = %s", (status, aid))
+
+        with get_db() as conn:
+            conn.execute("UPDATE assignments SET status = %s WHERE id = %s", (status, aid))
         return jsonify({"ok": True})
-        
+
     elif request.method == 'DELETE':
         aid = request.args.get("id")
         if not aid:
             return jsonify({"error": "Missing assignment id"}), 400
-        with get_db() as connection:
-            connection.execute("DELETE FROM assignments WHERE id = %s", (aid,))
+        with get_db() as conn:
+            conn.execute("DELETE FROM assignments WHERE id = %s", (aid,))
         return jsonify({"ok": True})
 
+
+# ============================================================
+# API — SUBMISSIONS
+# ============================================================
 
 @app.route('/api/submissions', methods=['GET', 'POST', 'PUT'])
 def api_submissions():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
-        
+
     if request.method == 'GET':
         assignment_id = request.args.get("assignment_id")
-        with get_db() as connection:
+        with get_db() as conn:
             if user['role'] in ('teacher', 'admin'):
                 if assignment_id:
-                    rows = connection.execute(
-                        "SELECT s.*, u.name as student_name, u.email as student_email FROM submissions s JOIN users u ON s.student_id = u.id WHERE s.assignment_id = %s",
+                    rows = conn.execute(
+                        "SELECT s.*, u.name AS student_name, u.email AS student_email FROM submissions s JOIN users u ON s.student_id = u.id WHERE s.assignment_id = %s",
                         (assignment_id,)
                     ).fetchall()
                 else:
-                    rows = connection.execute(
-                        "SELECT s.*, u.name as student_name, a.title as assignment_title FROM submissions s JOIN users u ON s.student_id = u.id JOIN assignments a ON s.assignment_id = a.id"
+                    rows = conn.execute(
+                        "SELECT s.*, u.name AS student_name, a.title AS assignment_title FROM submissions s JOIN users u ON s.student_id = u.id JOIN assignments a ON s.assignment_id = a.id"
                     ).fetchall()
             else:
-                rows = connection.execute(
-                    "SELECT s.*, a.title as assignment_title FROM submissions s JOIN assignments a ON s.assignment_id = a.id WHERE s.student_id = %s",
+                rows = conn.execute(
+                    "SELECT s.*, a.title AS assignment_title FROM submissions s JOIN assignments a ON s.assignment_id = a.id WHERE s.student_id = %s",
                     (user['id'],)
                 ).fetchall()
-        return jsonify({"submissions": rows})
-        
+        return jsonify({"submissions": [dict(r) for r in rows]})
+
     elif request.method == 'POST':
-        payload = request.get_json(silent=True) or {}
+        payload       = request.get_json(silent=True) or {}
         assignment_id = payload.get("assignment_id")
-        file_data = payload.get("file_data") or ""
-        
+        file_data     = payload.get("file_data") or ""
+
         if not assignment_id:
             return jsonify({"error": "Missing assignment_id"}), 400
-            
-        with get_db() as connection:
-            existing = connection.execute("SELECT id FROM submissions WHERE assignment_id = %s AND student_id = %s", (assignment_id, user['id'])).fetchone()
-            if existing:
-                connection.execute(
-                    "UPDATE submissions SET file_data = %s, submitted_at = %s, status = 'pending' WHERE id = %s",
-                    (file_data, now_iso(), existing["id"])
-                )
-            else:
-                connection.execute(
-                    "INSERT INTO submissions(assignment_id, student_id, submitted_at, file_data, status) VALUES (%s, %s, %s, %s, 'pending')",
-                    (assignment_id, user['id'], now_iso(), file_data)
-                )
+
+        with get_db() as conn:
+            conn.execute(
+                """
+                INSERT INTO submissions(assignment_id, student_id, submitted_at, file_data, status)
+                VALUES (%s, %s, NOW(), %s, 'pending')
+                ON DUPLICATE KEY UPDATE file_data = %s, submitted_at = NOW(), status = 'pending'
+                """,
+                (assignment_id, user['id'], file_data, file_data)
+            )
         add_history(user['id'], "assignment_submission", f"assignment_id={assignment_id}")
         return jsonify({"ok": True})
-        
+
     elif request.method == 'PUT':
-        payload = request.get_json(silent=True) or {}
-        sid = payload.get("id")
+        payload        = request.get_json(silent=True) or {}
+        sid            = payload.get("id")
         marks_obtained = payload.get("marks_obtained")
-        feedback = payload.get("feedback")
-        status = payload.get("status") or "graded"
-        
+        feedback       = payload.get("feedback")
+        status         = payload.get("status") or "graded"
+
         if not sid or marks_obtained is None:
             return jsonify({"error": "Missing parameters"}), 400
-            
-        student_id_to_award = None
-        with get_db() as connection:
-            connection.execute(
+
+        with get_db() as conn:
+            conn.execute(
                 "UPDATE submissions SET marks_obtained = %s, feedback = %s, status = %s WHERE id = %s",
                 (marks_obtained, feedback, status, sid)
             )
             if status == 'approved':
-                row = connection.execute("SELECT student_id FROM submissions WHERE id = %s", (sid,)).fetchone()
+                row = conn.execute("SELECT student_id FROM submissions WHERE id = %s", (sid,)).fetchone()
                 if row:
-                    student_id_to_award = row["student_id"]
-                    connection.execute("UPDATE student_profiles SET current_xp = current_xp + 50 WHERE user_id = %s", (student_id_to_award,))
-        if student_id_to_award is not None:
-            add_history(student_id_to_award, "badge_unlocked", "XP Awarded for Assignment Approval")
+                    conn.execute(
+                        "UPDATE student_profiles SET current_xp = current_xp + 50 WHERE user_id = %s",
+                        (row["student_id"],)
+                    )
+                    add_history(row["student_id"], "badge_unlocked", "XP Awarded for Assignment Approval")
+
         return jsonify({"ok": True})
 
+
+# ============================================================
+# API — TESTS
+# ============================================================
 
 @app.route('/api/tests', methods=['GET', 'POST', 'DELETE'])
 def api_tests():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
-        
+
     if request.method == 'GET':
         test_id = request.args.get("id")
-        with get_db() as connection:
+        with get_db() as conn:
             if test_id:
-                test = connection.execute("SELECT * FROM tests WHERE id = %s", (test_id,)).fetchone()
-                questions = connection.execute("SELECT * FROM test_questions WHERE test_id = %s", (test_id,)).fetchall()
-                attempts = connection.execute(
-                    "SELECT ta.*, u.name as student_name FROM test_attempts ta JOIN users u ON ta.student_id = u.id WHERE ta.test_id = %s",
+                test     = conn.execute("SELECT * FROM tests WHERE id = %s", (test_id,)).fetchone()
+                attempts = conn.execute(
+                    "SELECT ta.*, u.name AS student_name FROM test_attempts ta JOIN users u ON ta.student_id = u.id WHERE ta.test_id = %s",
                     (test_id,)
                 ).fetchall()
-                return jsonify({"test": test, "questions": questions, "attempts": attempts})
-                
+                # Questions come from the JSON file
+                quiz_data = get_quiz(test.get("chapter_id")) if test else None
+                return jsonify({
+                    "test":      dict(test) if test else None,
+                    "questions": quiz_data.get("questions", []) if quiz_data else [],
+                    "attempts":  [dict(r) for r in attempts],
+                })
+
             if user['role'] == 'teacher':
-                rows = connection.execute(
-                    "SELECT t.*, c.name as classroom_name FROM tests t JOIN classrooms c ON t.classroom_id = c.id WHERE c.teacher_id = %s",
+                rows = conn.execute(
+                    "SELECT t.*, c.name AS classroom_name FROM tests t JOIN classrooms c ON t.classroom_id = c.id WHERE c.teacher_id = %s",
                     (user['id'],)
                 ).fetchall()
             elif user['role'] == 'admin':
-                rows = connection.execute("SELECT t.*, c.name as classroom_name FROM tests t JOIN classrooms c ON t.classroom_id = c.id").fetchall()
+                rows = conn.execute(
+                    "SELECT t.*, c.name AS classroom_name FROM tests t JOIN classrooms c ON t.classroom_id = c.id"
+                ).fetchall()
             else:
-                rows = connection.execute(
+                rows = conn.execute(
                     """
-                    SELECT t.*, c.name as classroom_name, ta.score, ta.status as attempt_status 
-                    FROM tests t 
-                    JOIN classrooms c ON t.classroom_id = c.id 
-                    JOIN enrollments e ON c.id = e.classroom_id 
+                    SELECT t.*, c.name AS classroom_name, ta.score, ta.status AS attempt_status
+                    FROM tests t
+                    JOIN classrooms c ON t.classroom_id = c.id
+                    JOIN enrollments e ON c.id = e.classroom_id
                     LEFT JOIN test_attempts ta ON t.id = ta.test_id AND ta.student_id = %s
                     WHERE e.student_id = %s
                     """,
                     (user['id'], user['id'])
                 ).fetchall()
-        return jsonify({"tests": rows})
-        
+
+        return jsonify({"tests": [dict(r) for r in rows]})
+
     elif request.method == 'POST':
-        payload = request.get_json(silent=True) or {}
-        title = payload.get("title")
+        payload      = request.get_json(silent=True) or {}
+        title        = payload.get("title")
         classroom_id = payload.get("classroom_id")
-        chapter_id = payload.get("chapter_id")
-        duration = payload.get("duration") or 30
-        total_marks = payload.get("total_marks") or 100
-        start_date = payload.get("start_date")
-        end_date = payload.get("end_date")
-        difficulty = payload.get("difficulty") or "medium"
-        questions = payload.get("questions") or []
-        
+
         if not title or not classroom_id:
             return jsonify({"error": "Missing title or classroom_id"}), 400
-            
-        with get_db() as connection:
-            cursor = connection.execute(
+
+        with get_db() as conn:
+            cursor = conn.execute(
                 """
-                INSERT INTO tests (title, classroom_id, chapter_id, duration_minutes, total_marks, start_date, end_date, difficulty, status, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'scheduled', %s)
-                RETURNING id
+                INSERT INTO tests(title, classroom_id, chapter_id, quiz_content_id, duration_minutes,
+                                  total_marks, start_date, end_date, difficulty, status, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'scheduled', NOW())
                 """,
-                (title, classroom_id, chapter_id if chapter_id else None, duration, total_marks, start_date, end_date, difficulty, now_iso())
-            )
-            test_id = cursor.fetchone()["id"]
-            
-            for q in questions:
-                connection.execute(
-                    """
-                    INSERT INTO test_questions (test_id, type, question_text, options_json, correct_answer, marks)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    """,
-                    (test_id, q.get("type"), q.get("question_text"), json.dumps(q.get("options")), q.get("correct_answer"), q.get("marks") or 1)
+                (
+                    title,
+                    classroom_id,
+                    payload.get("chapter_id")    or None,
+                    payload.get("chapter_id")    or None,  # quiz_content_id mirrors chapter_id
+                    payload.get("duration") or 30,
+                    payload.get("total_marks") or 100,
+                    payload.get("start_date"),
+                    payload.get("end_date"),
+                    payload.get("difficulty") or "medium",
                 )
+            )
+            test_id = cursor.lastrowid
         return jsonify({"ok": True, "test_id": test_id})
-        
+
     elif request.method == 'DELETE':
         tid = request.args.get("id")
         if not tid:
             return jsonify({"error": "Missing test id"}), 400
-        with get_db() as connection:
-            connection.execute("DELETE FROM tests WHERE id = %s", (tid,))
+        with get_db() as conn:
+            conn.execute("DELETE FROM tests WHERE id = %s", (tid,))
         return jsonify({"ok": True})
 
+
+# ============================================================
+# API — ADMIN
+# ============================================================
 
 @app.route('/api/admin/users', methods=['GET', 'PUT'])
 @admin_required
 def api_admin_users():
     if request.method == 'GET':
-        with get_db() as connection:
-            rows = connection.execute("SELECT id, name, email, role, institution, class_level, status, created_at FROM users").fetchall()
-        return jsonify({"users": rows})
-        
-    elif request.method == 'PUT':
-        payload = request.get_json(silent=True) or {}
-        uid = payload.get("id")
-        name = payload.get("name")
-        role = payload.get("role")
-        status = payload.get("status")
-        
-        if not uid:
-            return jsonify({"error": "Missing user id"}), 400
-            
-        with get_db() as connection:
-            target_user = connection.execute("SELECT role FROM users WHERE id = %s", (uid,)).fetchone()
-            if not target_user:
-                return jsonify({"error": "User not found"}), 404
-            if target_user["role"] == "admin":
-                return jsonify({"error": "Cannot promote, demote, or suspend administrator accounts"}), 403
+        with get_db() as conn:
+            rows = conn.execute(
+                "SELECT id, name, email, role, institution, class_level, status, created_at FROM users ORDER BY created_at DESC"
+            ).fetchall()
+        return jsonify({"users": [dict(r) for r in rows]})
 
-            connection.execute(
-                "UPDATE users SET name = %s, role = %s, status = %s, updated_at = %s WHERE id = %s",
-                (name, role, status, now_iso(), uid)
-            )
-        return jsonify({"ok": True})
+    payload = request.get_json(silent=True) or {}
+    uid     = payload.get("id")
+    name    = payload.get("name")
+    role    = payload.get("role")
+    status  = payload.get("status")
 
+    if not uid:
+        return jsonify({"error": "Missing user id"}), 400
 
-@app.route('/api/theme_preference', methods=['GET', 'PUT'])
-def api_theme_preference():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Unauthorized"}), 401
-        
-    if request.method == 'GET':
-        with get_db() as connection:
-            row = connection.execute("SELECT theme FROM theme_preferences WHERE user_id = %s", (user['id'],)).fetchone()
-        return jsonify({"theme": row["theme"] if row else "system"})
-        
-    elif request.method == 'PUT':
-        payload = request.get_json(silent=True) or {}
-        theme = payload.get("theme") or "system"
-        with get_db() as connection:
-            existing = connection.execute("SELECT user_id FROM theme_preferences WHERE user_id = %s", (user['id'],)).fetchone()
-            if existing:
-                connection.execute("UPDATE theme_preferences SET theme = %s, updated_at = %s WHERE user_id = %s", (theme, now_iso(), user['id']))
-            else:
-                connection.execute("INSERT INTO theme_preferences (user_id, theme, updated_at) VALUES (%s, %s, %s)", (user['id'], theme, now_iso()))
-        return jsonify({"ok": True})
+    with get_db() as conn:
+        target = conn.execute("SELECT role FROM users WHERE id = %s", (uid,)).fetchone()
+        if not target:
+            return jsonify({"error": "User not found"}), 404
+        if target["role"] == "admin":
+            return jsonify({"error": "Cannot modify administrator accounts"}), 403
+
+        conn.execute(
+            "UPDATE users SET name = %s, role = %s, status = %s, updated_at = NOW() WHERE id = %s",
+            (name, role, status, uid)
+        )
+    return jsonify({"ok": True})
 
 
 @app.route('/api/admin/analytics', methods=['GET'])
 @admin_required
 def api_admin_analytics():
-    with get_db() as connection:
-        total_students = connection.execute("SELECT COUNT(*) as count FROM users WHERE role = 'student'").fetchone()["count"]
-        total_teachers = connection.execute("SELECT COUNT(*) as count FROM users WHERE role = 'teacher'").fetchone()["count"]
-        total_classes = connection.execute("SELECT COUNT(*) as count FROM classrooms").fetchone()["count"]
-        total_labs = connection.execute("SELECT COUNT(*) as count FROM labs").fetchone()["count"]
-        total_tests = connection.execute("SELECT COUNT(*) as count FROM tests").fetchone()["count"]
-        
-        logins = connection.execute("SELECT COUNT(*) as count FROM user_history WHERE event_type = 'login_success'").fetchone()["count"]
-        signups = connection.execute("SELECT COUNT(*) as count FROM user_history WHERE event_type = 'signup_success'").fetchone()["count"]
-        
-        lab_usage = connection.execute(
-            "SELECT event_type, COUNT(*) as count FROM user_history WHERE event_type IN ('reaction_success', 'titration_complete') GROUP BY event_type"
+    with get_db() as conn:
+        total_students = conn.execute("SELECT COUNT(*) AS count FROM users WHERE role = 'student'").fetchone()["count"]
+        total_teachers = conn.execute("SELECT COUNT(*) AS count FROM users WHERE role = 'teacher'").fetchone()["count"]
+        total_classes  = conn.execute("SELECT COUNT(*) AS count FROM classrooms").fetchone()["count"]
+        total_tests    = conn.execute("SELECT COUNT(*) AS count FROM tests").fetchone()["count"]
+
+        logins  = conn.execute("SELECT COUNT(*) AS count FROM user_history WHERE event_type = 'login_success'").fetchone()["count"]
+        signups = conn.execute("SELECT COUNT(*) AS count FROM user_history WHERE event_type = 'signup_success'").fetchone()["count"]
+
+        # Live leaderboard — no separate table needed
+        leaderboard = conn.execute(
+            """
+            SELECT u.name, sp.current_xp
+            FROM student_profiles sp
+            JOIN users u ON sp.user_id = u.id
+            ORDER BY sp.current_xp DESC
+            LIMIT 10
+            """
         ).fetchall()
-        
-        xp_dist = connection.execute(
-            "SELECT u.name, sp.current_xp FROM users u JOIN student_profiles sp ON u.id = sp.user_id ORDER BY sp.current_xp DESC LIMIT 10"
-        ).fetchall()
-        
+
     return jsonify({
         "stats": {
             "total_students": total_students,
             "total_teachers": total_teachers,
-            "total_classes": total_classes,
-            "total_labs": total_labs,
-            "total_tests": total_tests,
-            "active_users": total_students + total_teachers,
-            "daily_logins": logins,
-            "signups": signups
+            "total_classes":  total_classes,
+            "total_labs":     len(all_labs()),
+            "total_tests":    total_tests,
+            "active_users":   total_students + total_teachers,
+            "daily_logins":   logins,
+            "signups":        signups,
         },
-        "lab_usage": lab_usage,
-        "leaderboard": xp_dist
+        "leaderboard": [dict(r) for r in leaderboard],
     })
 
 
-@app.route('/api/chapters', methods=['GET'])
+# ============================================================
+# API — STATIC CONTENT (served from JSON files)
+# ============================================================
+
+@app.route('/api/chapters')
 def api_chapters():
-    with get_db() as connection:
-        rows = connection.execute("SELECT * FROM chapters").fetchall()
-    return jsonify({"chapters": rows})
+    return jsonify({"chapters": all_chapters()})
 
 
-@app.route('/api/labs_list', methods=['GET'])
+@app.route('/api/labs_list')
 def api_labs_list():
-    with get_db() as connection:
-        rows = connection.execute("SELECT * FROM labs").fetchall()
-    return jsonify({"labs": rows})
+    return jsonify({"labs": all_labs()})
+
+
+@app.route('/api/badges')
+def api_badges():
+    return jsonify({"badges": all_badges()})
+
+
+@app.route('/api/quizzes')
+def api_quizzes():
+    return jsonify({"quizzes": all_quizzes()})
+
+
+# ============================================================
+# API — USER BADGES
+# ============================================================
+
+@app.route('/api/user_badges', methods=['GET', 'POST'])
+def api_user_badges():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if request.method == 'GET':
+        target_id = request.args.get("user_id") or user["id"]
+        with get_db() as conn:
+            rows = conn.execute(
+                "SELECT badge_id, unlocked_at FROM user_badges WHERE user_id = %s ORDER BY unlocked_at DESC",
+                (target_id,)
+            ).fetchall()
+        badges = []
+        for r in rows:
+            meta = get_badge(r["badge_id"])
+            if meta:
+                badges.append({**meta, "unlocked_at": str(r["unlocked_at"])})
+        return jsonify({"badges": badges})
+
+    # POST — award a badge
+    payload  = request.get_json(silent=True) or {}
+    badge_id = payload.get("badge_id")
+    user_id  = payload.get("user_id") or user["id"]
+
+    if not badge_id:
+        return jsonify({"error": "Missing badge_id"}), 400
+
+    badge = get_badge(badge_id)
+    if not badge:
+        return jsonify({"error": "Badge not found in content/badges.json"}), 404
+
+    with get_db() as conn:
+        conn.execute(
+            "INSERT IGNORE INTO user_badges(user_id, badge_id, unlocked_at) VALUES (%s, %s, NOW())",
+            (user_id, badge_id)
+        )
+        # Award XP from badge definition
+        xp = badge.get("xp_reward", 0)
+        if xp > 0:
+            conn.execute(
+                "UPDATE student_profiles SET current_xp = current_xp + %s WHERE user_id = %s",
+                (xp, user_id)
+            )
+    add_history(user_id, "badge_unlocked", f"badge_id={badge_id}")
+    return jsonify({"ok": True})
+
+
+# ============================================================
+# API — ANNOUNCEMENTS
+# ============================================================
+
+@app.route('/api/announcements', methods=['GET', 'POST', 'DELETE'])
+def api_announcements():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if request.method == 'GET':
+        classroom_id = request.args.get("classroom_id")
+        with get_db() as conn:
+            if classroom_id:
+                rows = conn.execute(
+                    "SELECT a.*, u.name AS author_name FROM announcements a JOIN users u ON a.author_id = u.id WHERE a.classroom_id = %s ORDER BY a.is_pinned DESC, a.created_at DESC",
+                    (classroom_id,)
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT a.*, u.name AS author_name FROM announcements a JOIN users u ON a.author_id = u.id ORDER BY a.is_pinned DESC, a.created_at DESC LIMIT 50"
+                ).fetchall()
+        return jsonify({"announcements": [dict(r) for r in rows]})
+
+    elif request.method == 'POST':
+        if user['role'] not in ('teacher', 'admin'):
+            return jsonify({"error": "Forbidden"}), 403
+
+        payload      = request.get_json(silent=True) or {}
+        title        = payload.get("title")
+        content      = payload.get("content")
+        classroom_id = payload.get("classroom_id")
+        target_role  = payload.get("target_role")
+        is_pinned    = payload.get("is_pinned", False)
+
+        if not title or not content:
+            return jsonify({"error": "Missing title or content"}), 400
+
+        with get_db() as conn:
+            conn.execute(
+                "INSERT INTO announcements(title, content, author_id, classroom_id, target_role, is_pinned, created_at) VALUES (%s, %s, %s, %s, %s, %s, NOW())",
+                (title, content, user["id"], classroom_id, target_role, is_pinned)
+            )
+        return jsonify({"ok": True})
+
+    elif request.method == 'DELETE':
+        aid = request.args.get("id")
+        if not aid:
+            return jsonify({"error": "Missing announcement id"}), 400
+        with get_db() as conn:
+            conn.execute("DELETE FROM announcements WHERE id = %s", (aid,))
+        return jsonify({"ok": True})
+
+
+# ============================================================
+# API — ATTENDANCE
+# ============================================================
+
+@app.route('/api/attendance', methods=['GET', 'POST'])
+def api_attendance():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if request.method == 'GET':
+        classroom_id = request.args.get("classroom_id")
+        date         = request.args.get("date")
+        if not classroom_id:
+            return jsonify({"error": "Missing classroom_id"}), 400
+
+        with get_db() as conn:
+            if date:
+                rows = conn.execute(
+                    "SELECT a.*, u.name AS student_name FROM attendance a JOIN users u ON a.student_id = u.id WHERE a.classroom_id = %s AND a.date = %s",
+                    (classroom_id, date)
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT a.*, u.name AS student_name FROM attendance a JOIN users u ON a.student_id = u.id WHERE a.classroom_id = %s ORDER BY a.date DESC",
+                    (classroom_id,)
+                ).fetchall()
+        return jsonify({"attendance": [dict(r) for r in rows]})
+
+    elif request.method == 'POST':
+        if user['role'] not in ('teacher', 'admin'):
+            return jsonify({"error": "Forbidden"}), 403
+
+        payload  = request.get_json(silent=True) or {}
+        records  = payload.get("records", [])  # list of {classroom_id, student_id, date, status}
+
+        if not records:
+            return jsonify({"error": "No records provided"}), 400
+
+        with get_db() as conn:
+            for rec in records:
+                conn.execute(
+                    """
+                    INSERT INTO attendance(classroom_id, student_id, date, status)
+                    VALUES (%s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE status = %s
+                    """,
+                    (rec.get("classroom_id"), rec.get("student_id"), rec.get("date"), rec.get("status"), rec.get("status"))
+                )
+        return jsonify({"ok": True})
+
+
+# ============================================================
+# API — LEADERBOARD (live query, no table)
+# ============================================================
+
+@app.route('/api/leaderboard')
+def api_leaderboard():
+    limit = min(int(request.args.get("limit", 100)), 200)
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT u.name, u.institution, sp.current_xp, sp.level,
+                   RANK() OVER (ORDER BY sp.current_xp DESC) AS rank
+            FROM student_profiles sp
+            JOIN users u ON sp.user_id = u.id
+            ORDER BY sp.current_xp DESC
+            LIMIT %s
+            """,
+            (limit,)
+        ).fetchall()
+    return jsonify({"leaderboard": [dict(r) for r in rows]})
 
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True, port=5000)
