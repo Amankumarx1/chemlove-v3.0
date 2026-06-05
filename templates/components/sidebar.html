@@ -153,8 +153,16 @@
 
         {% elif current_user.role == 'admin' %}
             <!-- Admin Portal Sidebar Items -->
-            <div>
-                <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">System Admin</div>
+             <div>
+                <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3"></div>
+                <div class="space-y-1">
+                    <a href="/profile" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'profile' or request.path == '/profile' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
+                        <span class="material-symbols-outlined text-base">person</span>
+                        Profile Settings
+                    </a>
+                </div>
+
+                <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3"></div>
                 <div class="space-y-1">
                     <a href="/admin/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'dashboard' or request.path == '/admin/dashboard' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
                         <span class="material-symbols-outlined text-base">dashboard</span>
@@ -173,20 +181,8 @@
                         Analytics
                     </a>
                 </div>
-            </div>
 
-            <div>
-                <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">User Profile</div>
-                <div class="space-y-1">
-                    <a href="/profile" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'profile' or request.path == '/profile' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                        <span class="material-symbols-outlined text-base">person</span>
-                        Profile Settings
-                    </a>
-                </div>
-            </div>
-
-            <div>
-                <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">Ecosystem</div>
+                <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3"></div>
                 <div class="space-y-1">
                     <a href="/about" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if request.path == '/about' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
                         <span class="material-symbols-outlined text-base">info</span>
