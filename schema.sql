@@ -53,7 +53,7 @@ CREATE TABLE users (
     status        VARCHAR(50)  NOT NULL DEFAULT 'active',
     created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT chk_role CHECK (role IN ('student', 'teacher', 'admin', 'superadmin')),
+    CONSTRAINT chk_role CHECK (role IN ('student', 'teacher', 'admin')),
     CONSTRAINT chk_status CHECK (status IN ('active', 'suspended'))
 );
 

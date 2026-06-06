@@ -441,34 +441,15 @@ def check_permission(permission_key):
     user = get_current_user()
     if not user:
         return False
-    # Super Admin has unrestricted access to everything
-    if user['role'] == 'superadmin':
-        return True
+    # Combined Admin has unrestricted access to everything
     if user['role'] == 'admin':
-        with get_db() as conn:
-            row = conn.execute(
-                "SELECT is_granted FROM permissions WHERE role = 'admin' AND permission_key = %s",
-                (permission_key,)
-            ).fetchone()
-            return bool(row['is_granted']) if row else False
+        return True
     return False
 
 app.jinja_env.globals.update(check_permission=check_permission)
 
 
 # ── Role decorators ────────────────────────────────────────────────────────
-def superadmin_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        user = get_current_user()
-        if not user:
-            flash('Please login first.', 'error')
-            return redirect(url_for('login'))
-        if user['role'] != 'superadmin':
-            flash('Unauthorized access. Super Admin role required.', 'error')
-            return redirect(url_for('profile_page'))
-        return f(*args, **kwargs)
-    return decorated
 
 
 def student_required(f):
@@ -478,7 +459,7 @@ def student_required(f):
         if not user:
             flash('Please login first.', 'error')
             return redirect(url_for('login'))
-        if user['role'] not in ('student', 'superadmin'):
+        if user['role'] not in ('student', 'admin'):
             flash('Unauthorized access.', 'error')
             return redirect(url_for('home'))
         return f(*args, **kwargs)
@@ -492,7 +473,7 @@ def teacher_required(f):
         if not user:
             flash('Please login first.', 'error')
             return redirect(url_for('login'))
-        if user['role'] not in ('teacher', 'superadmin'):
+        if user['role'] not in ('teacher', 'admin'):
             flash('Unauthorized access. Teacher role required.', 'error')
             return redirect(url_for('profile_page'))
         return f(*args, **kwargs)
@@ -506,7 +487,7 @@ def admin_required(f):
         if not user:
             flash('Please login first.', 'error')
             return redirect(url_for('login'))
-        if user['role'] not in ('admin', 'superadmin'):
+        if user['role'] != 'admin':
             flash('Unauthorized access. Admin role required.', 'error')
             return redirect(url_for('profile_page'))
         return f(*args, **kwargs)
@@ -514,14 +495,12 @@ def admin_required(f):
 
 
 def redirect_by_role(user):
-    if user['role'] == 'superadmin':
-        return redirect(url_for('superadmin_dashboard'))
+    if user['role'] == 'admin':
+        return redirect(url_for('admin_dashboard'))
     elif user['role'] == 'student':
         return redirect(url_for('student_dashboard'))
     elif user['role'] == 'teacher':
         return redirect(url_for('teacher_dashboard'))
-    elif user['role'] == 'admin':
-        return redirect(url_for('admin_dashboard'))
     return redirect(url_for('home'))
 
 
@@ -690,25 +669,25 @@ def logout():
     return redirect(url_for('home'))
 
 
-@app.route('/superadmin/impersonate/<int:target_uid>')
-@superadmin_required
-def superadmin_impersonate(target_uid):
+@app.route('/admin/impersonate/<int:target_uid>')
+@admin_required
+def admin_impersonate(target_uid):
     with get_db() as conn:
         target_user = conn.execute("SELECT * FROM users WHERE id = %s", (target_uid,)).fetchone()
     
     if not target_user:
         flash("Target user not found.", "error")
-        return redirect(url_for('superadmin_dashboard'))
+        return redirect(url_for('admin_dashboard'))
     
-    if target_user["role"] == "superadmin":
-        flash("Cannot impersonate another Super Admin account.", "error")
-        return redirect(url_for('superadmin_dashboard'))
+    if target_user["role"] == "admin":
+        flash("Cannot impersonate another Admin account.", "error")
+        return redirect(url_for('admin_dashboard'))
 
     admin_id = session.get("user_id")
     session["impersonator_user_id"] = admin_id
     session["user_id"] = target_uid
 
-    log_audit("impersonate_user", f"Super Admin impersonating {target_user['name']} (ID: {target_uid})")
+    log_audit("impersonate_user", f"Admin impersonating {target_user['name']} (ID: {target_uid})")
     flash(f"Now impersonating {target_user['name']} ({target_user['role']})", "success")
     return redirect_by_role(target_user)
 
@@ -724,8 +703,8 @@ def stop_impersonation():
     session.pop("impersonator_user_id", None)
 
     log_audit("stop_impersonate_user", "Stopped impersonation")
-    flash("Stopped impersonation. Returned to Super Admin.", "success")
-    return redirect(url_for('superadmin_dashboard'))
+    flash("Stopped impersonation. Returned to Admin.", "success")
+    return redirect(url_for('admin_dashboard'))
 
 
 # ── Profile ────────────────────────────────────────────────────────────────
@@ -966,12 +945,12 @@ def teacher_content():
 
 
 # ============================================================
-# SUPER ADMIN PORTAL & MONITORING
+# ADMIN PORTAL & MONITORING
 # ============================================================
 
-@app.route('/superadmin/dashboard')
-@superadmin_required
-def superadmin_dashboard():
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
     stats = {}
     try:
         with get_db() as conn:
@@ -997,7 +976,7 @@ def superadmin_dashboard():
             """, (db_config.get('database'),)).fetchone()
             stats['db_size'] = db_size_row['size'] if db_size_row and db_size_row['size'] else 1.24
     except Exception as e:
-        print(f"Error getting superadmin stats: {e}")
+        print(f"Error getting admin stats: {e}")
         stats = {
             'total_users': 0, 'total_students': 0, 'total_teachers': 0,
             'total_courses': 0, 'total_chapters': 0, 'total_certificates': 0,
@@ -1015,10 +994,7 @@ def superadmin_dashboard():
                 LIMIT 50
             """).fetchall()
             for r in rows:
-                log_item = dict(r)
-                if isinstance(log_item.get('created_at'), datetime):
-                    log_item['created_at'] = log_item['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-                audit_logs.append(log_item)
+                audit_logs.append(dict(r))
     except Exception as e:
         print(f"Error getting audit logs: {e}")
 
@@ -1026,38 +1002,35 @@ def superadmin_dashboard():
     try:
         with get_db() as conn:
             rows = conn.execute("""
-                SELECT DATE(created_at) as date, COUNT(*) as count
-                FROM users
-                WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                SELECT DATE(created_at) as d, COUNT(*) as c 
+                FROM users 
+                WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                 GROUP BY DATE(created_at)
-                ORDER BY DATE(created_at) ASC
+                ORDER BY d ASC
             """).fetchall()
             for r in rows:
-                date_str = str(r['date'])
-                if isinstance(r['date'], (datetime, date)):
-                    date_str = r['date'].strftime('%b %d')
                 chart_data.append({
-                    'date': date_str,
-                    'count': r['count']
+                    'date': r['d'].strftime('%b %d') if hasattr(r['d'], 'strftime') else str(r['d']),
+                    'count': r['c']
                 })
     except Exception as e:
         print(f"Error getting chart data: {e}")
-    
+
     if not chart_data:
         chart_data = [
-            {'date': 'June 1', 'count': 2},
-            {'date': 'June 2', 'count': 4},
+            {'date': 'June 1', 'count': 1},
+            {'date': 'June 2', 'count': 2},
             {'date': 'June 3', 'count': 3},
             {'date': 'June 4', 'count': 5},
             {'date': 'June 5', 'count': 8}
         ]
 
-    return render_template('superadmin/dashboard.html', current_user=get_current_user(), stats=stats, audit_logs=audit_logs, chart_data=chart_data, active_tab='dashboard')
+    return render_template('admin/dashboard.html', current_user=get_current_user(), stats=stats, audit_logs=audit_logs, chart_data=chart_data, active_tab='dashboard')
 
 
-@app.route('/superadmin/erp-stub')
-@superadmin_required
-def superadmin_erp_stub():
+@app.route('/admin/erp-stub')
+@admin_required
+def admin_erp_stub():
     module = request.args.get('module', 'System Administration')
     metrics = {
         'Academies': [
@@ -1101,12 +1074,12 @@ def superadmin_erp_stub():
         {'title': 'System Integration', 'val': 'Connected', 'desc': 'Operational'},
         {'title': 'Status', 'val': 'Optimal', 'desc': 'All services live'}
     ])
-    return render_template('superadmin/erp_stub.html', current_user=get_current_user(), module=module, metrics=selected_metrics, active_tab=module.lower())
+    return render_template('admin/erp_stub.html', current_user=get_current_user(), module=module, metrics=selected_metrics, active_tab=module.lower())
 
 
-@app.route('/superadmin/control-center', methods=['GET', 'POST'])
-@superadmin_required
-def superadmin_control_center():
+@app.route('/admin/control-center', methods=['GET', 'POST'])
+@admin_required
+def admin_control_center():
     user = get_current_user()
     if request.method == 'POST':
         action = request.form.get('action')
@@ -1120,7 +1093,7 @@ def superadmin_control_center():
             
             if not (name and email and password and institution and role):
                 flash("Missing required fields for user creation.", "error")
-                return redirect(url_for('superadmin_control_center'))
+                return redirect(url_for('admin_control_center'))
             
             pwd_hash = generate_password_hash(password)
             try:
@@ -1128,7 +1101,7 @@ def superadmin_control_center():
                     existing = conn.execute("SELECT id FROM users WHERE email = %s", (email,)).fetchone()
                     if existing:
                         flash("A user with this email registry already exists.", "error")
-                        return redirect(url_for('superadmin_control_center'))
+                        return redirect(url_for('admin_control_center'))
                     
                     cursor = conn.execute(
                         "INSERT INTO users (name, email, password_hash, institution, role, class_level, status) VALUES (%s, %s, %s, %s, %s, %s, 'active')",
@@ -1160,7 +1133,7 @@ def superadmin_control_center():
             
             if not (uid and name and institution and role and status):
                 flash("Missing required fields for user edit.", "error")
-                return redirect(url_for('superadmin_control_center'))
+                return redirect(url_for('admin_control_center'))
             
             try:
                 with get_db() as conn:
@@ -1181,7 +1154,7 @@ def superadmin_control_center():
             uid = request.form.get('id')
             if not uid:
                 flash("User ID missing for deletion.", "error")
-                return redirect(url_for('superadmin_control_center'))
+                return redirect(url_for('admin_control_center'))
             try:
                 with get_db() as conn:
                     target = conn.execute("SELECT name, email, role FROM users WHERE id = %s", (uid,)).fetchone()
@@ -1199,7 +1172,7 @@ def superadmin_control_center():
             password = request.form.get('password')
             if not (uid and password):
                 flash("Missing ID or new password.", "error")
-                return redirect(url_for('superadmin_control_center'))
+                return redirect(url_for('admin_control_center'))
             pwd_hash = generate_password_hash(password)
             try:
                 with get_db() as conn:
@@ -1213,7 +1186,7 @@ def superadmin_control_center():
             except Exception as e:
                 flash(f"Error resetting credentials: {e}", "error")
 
-        return redirect(url_for('superadmin_control_center'))
+        return redirect(url_for('admin_control_center'))
 
     search_query = request.args.get('search', '').strip()
     selected_role = request.args.get('role', 'all').strip()
@@ -1249,7 +1222,7 @@ def superadmin_control_center():
         print(f"Error fetching users: {e}")
         
     return render_template(
-        'superadmin/control_center.html', 
+        'admin/control_center.html', 
         current_user=user, 
         users=users, 
         search_query=search_query, 
@@ -1258,15 +1231,15 @@ def superadmin_control_center():
     )
 
 
-@app.route('/superadmin/student-monitoring/<int:user_id>', methods=['GET', 'POST'])
-@superadmin_required
-def superadmin_student_monitoring(user_id):
+@app.route('/admin/student-monitoring/<int:user_id>', methods=['GET', 'POST'])
+@admin_required
+def admin_student_monitoring(user_id):
     with get_db() as conn:
         student_row = conn.execute("SELECT * FROM users WHERE id = %s AND role = 'student'", (user_id,)).fetchone()
         
     if not student_row:
         flash("Student profile not found.", "error")
-        return redirect(url_for('superadmin_control_center'))
+        return redirect(url_for('admin_control_center'))
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -1310,7 +1283,7 @@ def superadmin_student_monitoring(user_id):
             except Exception as e:
                 flash(f"Error toggling status: {e}", "error")
                 
-        return redirect(url_for('superadmin_student_monitoring', user_id=user_id))
+        return redirect(url_for('admin_student_monitoring', user_id=user_id))
 
     student = dict(student_row)
     student["classLevel"] = student_row["class_level"]
@@ -1380,7 +1353,7 @@ def superadmin_student_monitoring(user_id):
         print(f"Error fetching student monitoring telemetry: {e}")
 
     return render_template(
-        'superadmin/student_monitoring.html', 
+        'admin/student_monitoring.html', 
         current_user=get_current_user(), 
         student=student, 
         courses=courses,
@@ -1392,15 +1365,15 @@ def superadmin_student_monitoring(user_id):
     )
 
 
-@app.route('/superadmin/teacher-monitoring/<int:user_id>', methods=['GET', 'POST'])
-@superadmin_required
-def superadmin_teacher_monitoring(user_id):
+@app.route('/admin/teacher-monitoring/<int:user_id>', methods=['GET', 'POST'])
+@admin_required
+def admin_teacher_monitoring(user_id):
     with get_db() as conn:
         teacher_row = conn.execute("SELECT * FROM users WHERE id = %s AND role = 'teacher'", (user_id,)).fetchone()
         
     if not teacher_row:
         flash("Teacher profile not found.", "error")
-        return redirect(url_for('superadmin_control_center'))
+        return redirect(url_for('admin_control_center'))
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -1451,7 +1424,7 @@ def superadmin_teacher_monitoring(user_id):
             except Exception as e:
                 flash(f"Error toggling status: {e}", "error")
                 
-        return redirect(url_for('superadmin_teacher_monitoring', user_id=user_id))
+        return redirect(url_for('admin_teacher_monitoring', user_id=user_id))
 
     teacher = dict(teacher_row)
     
@@ -1493,7 +1466,7 @@ def superadmin_teacher_monitoring(user_id):
         print(f"Error fetching teacher monitoring telemetry: {e}")
 
     return render_template(
-        'superadmin/teacher_monitoring.html', 
+        'admin/teacher_monitoring.html', 
         current_user=get_current_user(), 
         teacher=teacher, 
         all_courses=all_courses,
@@ -1512,7 +1485,7 @@ def superadmin_teacher_monitoring(user_id):
 @admin_required
 def admin_permissions():
     user = get_current_user()
-    if user['role'] != 'superadmin' and not check_permission('manage_users'):
+    if user['role'] != 'admin' and not check_permission('manage_users'):
         flash("Unauthorized. You do not have permission to manage permissions.", "error")
         return redirect(url_for('profile_page'))
         
@@ -1662,7 +1635,7 @@ def student_certificates():
 @app.route('/api/categories', methods=['GET', 'POST', 'DELETE'])
 def api_categories():
     user = get_current_user()
-    if not user or user['role'] not in ('admin', 'teacher', 'superadmin'):
+    if not user or user['role'] not in ('admin', 'teacher'):
         return jsonify({"error": "Forbidden"}), 403
         
     if request.method == 'GET':
@@ -1703,7 +1676,7 @@ def api_categories():
 @app.route('/api/admin/courses', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def api_admin_courses():
     user = get_current_user()
-    if not user or user['role'] not in ('admin', 'teacher', 'superadmin'):
+    if not user or user['role'] not in ('admin', 'teacher'):
         return jsonify({"error": "Forbidden"}), 403
         
     if request.method == 'GET':
@@ -1808,7 +1781,7 @@ def api_admin_courses():
 @app.route('/api/admin/modules', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def api_admin_modules():
     user = get_current_user()
-    if not user or user['role'] not in ('admin', 'teacher', 'superadmin'):
+    if not user or user['role'] not in ('admin', 'teacher'):
         return jsonify({"error": "Forbidden"}), 403
         
     if request.method == 'GET':
@@ -1902,7 +1875,7 @@ def api_admin_modules():
 @app.route('/api/admin/lessons', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def api_admin_lessons():
     user = get_current_user()
-    if not user or user['role'] not in ('admin', 'teacher', 'superadmin'):
+    if not user or user['role'] not in ('admin', 'teacher'):
         return jsonify({"error": "Forbidden"}), 403
         
     if request.method == 'GET':
@@ -2001,7 +1974,7 @@ def api_admin_lessons():
 @app.route('/api/admin/resources', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def api_admin_resources():
     user = get_current_user()
-    if not user or user['role'] not in ('admin', 'teacher', 'superadmin'):
+    if not user or user['role'] not in ('admin', 'teacher'):
         return jsonify({"error": "Forbidden"}), 403
         
     if request.method == 'GET':
@@ -2100,7 +2073,7 @@ def api_admin_resources():
 @app.route('/api/admin/certificates', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def api_admin_certificates():
     user = get_current_user()
-    if not user or user['role'] not in ('admin', 'superadmin'):
+    if not user or user['role'] != 'admin':
         return jsonify({"error": "Forbidden"}), 403
         
     if request.method == 'GET':
@@ -2263,28 +2236,10 @@ def teacher_content():
 # ADMIN PORTAL
 # ============================================================
 
-@app.route('/admin/dashboard')
-@admin_required
-def admin_dashboard():
-    return render_template('admin/dashboard.html', current_user=get_current_user(), active_tab='dashboard')
-
-
-@app.route('/admin/users')
-@admin_required
-def admin_users():
-    return render_template('admin/users.html', current_user=get_current_user(), active_tab='users')
-
-
 @app.route('/admin/content')
 @admin_required
 def admin_content():
     return render_template('admin/content.html', current_user=get_current_user(), active_tab='content')
-
-
-@app.route('/admin/analytics')
-@admin_required
-def admin_analytics():
-    return render_template('admin/analytics.html', current_user=get_current_user(), active_tab='analytics')
 
 
 # ============================================================

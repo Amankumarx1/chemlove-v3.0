@@ -36,7 +36,7 @@ def main():
         print(f"  Note: Failed to DROP CONSTRAINT chk_role: {e}")
 
     try:
-        cursor.execute("ALTER TABLE users ADD CONSTRAINT chk_role CHECK (role IN ('student', 'teacher', 'admin', 'superadmin'))")
+        cursor.execute("ALTER TABLE users ADD CONSTRAINT chk_role CHECK (role IN ('student', 'teacher', 'admin'))")
         print("  Successfully updated users check constraint.")
     except Exception as e:
         print(f"  Warning: Failed to add updated users check constraint: {e}")
@@ -206,20 +206,20 @@ def main():
         except Exception as e:
             print(f"  Note: Failed to seed admin permission {key}: {e}")
 
-    # Seed default Super Admin user
-    print("Seeding Super Admin user...")
+    # Seed default Admin user
+    print("Seeding Admin user...")
     try:
-        cursor.execute("SELECT id FROM users WHERE email = 'superadmin@chemlove.com'")
+        cursor.execute("SELECT id FROM users WHERE email = 'admin@chemlove.com'")
         if not cursor.fetchone():
             cursor.execute(
                 "INSERT INTO users (name, email, password_hash, institution, role, status) VALUES (%s, %s, %s, %s, %s, %s)",
-                ("Super Admin", "superadmin@chemlove.com", generate_password_hash("superadmin123"), "ChemLove HQ", "superadmin", "active")
+                ("Admin", "admin@chemlove.com", generate_password_hash("admin123"), "ChemLove HQ", "admin", "active")
             )
-            print("  Created superadmin@chemlove.com with password 'superadmin123'")
+            print("  Created admin@chemlove.com with password 'admin123'")
         else:
-            print("  Super Admin user already exists.")
+            print("  Admin user already exists.")
     except Exception as e:
-        print(f"  Warning: Failed to seed Super Admin user: {e}")
+        print(f"  Warning: Failed to seed Admin user: {e}")
 
     # Seed default courses for each grade level
     print("Seeding default courses and modules...")

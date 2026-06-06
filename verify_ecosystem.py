@@ -133,6 +133,7 @@ def db_cleanup():
         if user_ids:
             placeholders = ",".join("%s" for _ in user_ids)
             cursor.execute(f"DELETE FROM users WHERE id IN ({placeholders})", user_ids)
+        cursor.execute("UPDATE permissions SET is_granted = TRUE WHERE role = 'admin'")
         conn.commit()
         cursor.close()
         conn.close()
@@ -492,38 +493,38 @@ def run_tests():
     print("SUCCESS: Student session restored successfully")
 
     superadmin = ChemLoveClient()
-    # Login as Super Admin
+    # Login as seeded default Admin
     status, url, _, _, _ = superadmin.request(
         "POST", "/login",
-        {"email": "superadmin@chemlove.com", "password": "superadmin123"},
+        {"email": "admin@chemlove.com", "password": "admin123"},
         is_json=False,
         follow_redirects=False
     )
-    assert status == 302 or status == 200, f"Super Admin login failed: {status}"
-    print("SUCCESS: Super Admin login successful")
+    assert status == 302 or status == 200, f"Admin login failed: {status}"
+    print("SUCCESS: Admin login successful")
 
-    # Access /superadmin/dashboard
-    status, _, _, body, _ = superadmin.request("GET", "/superadmin/dashboard")
-    assert status == 200, f"Super Admin dashboard returned {status}"
-    assert "System Control" in body or "Executive Dashboard" in body or "Executive Overview" in body or "Audit Log" in body, "Expected dashboard content not found"
-    print("SUCCESS: Super Admin executive dashboard verified")
+    # Access /admin/dashboard
+    status, _, _, body, _ = superadmin.request("GET", "/admin/dashboard")
+    assert status == 200, f"Admin dashboard returned {status}"
+    assert "System Control" in body or "Executive Dashboard" in body or "Executive Overview" in body or "Audit Log" in body or "Platform Summary" in body, "Expected dashboard content not found"
+    print("SUCCESS: Admin executive dashboard verified")
 
-    # Access /superadmin/control-center
-    status, _, _, body, _ = superadmin.request("GET", "/superadmin/control-center")
-    assert status == 200, f"Super Admin control center returned {status}"
+    # Access /admin/control-center
+    status, _, _, body, _ = superadmin.request("GET", "/admin/control-center")
+    assert status == 200, f"Admin control center returned {status}"
     assert "User Control Center" in body or "Registered Nodes" in body or "users" in body or "Create User" in body, "Expected control center content not found"
-    print("SUCCESS: Super Admin control center verified")
+    print("SUCCESS: Admin control center verified")
 
 
-    print("\n--- STEP 15: Super Admin Impersonation ---")
+    print("\n--- STEP 15: Admin Impersonation Center ---")
     # Impersonate student using already retrieved student_id from step 5
     
     # Do impersonation GET request
-    status, _, headers, _, _ = superadmin.request("GET", f"/superadmin/impersonate/{student_id}", follow_redirects=False)
+    status, _, headers, _, _ = superadmin.request("GET", f"/admin/impersonate/{student_id}", follow_redirects=False)
     assert status == 302, f"Impersonation did not redirect: {status}"
     print("SUCCESS: Impersonation redirect code verified")
 
-    # Fetch profile using superadmin client (who is impersonating the student)
+    # Fetch profile using admin client (who is impersonating the student)
     status, _, _, _, resp_json = superadmin.request("GET", "/api/profile")
     assert status == 200, "Failed to fetch profile under impersonation"
     profile = resp_json.get("profile", {})
@@ -535,12 +536,12 @@ def run_tests():
     status, _, headers, _, _ = superadmin.request("GET", "/auth/stop-impersonation", follow_redirects=False)
     assert status == 302, f"Stop impersonation did not redirect: {status}"
     
-    # Fetch profile again as superadmin client (should be back to superadmin)
+    # Fetch profile again as admin client (should be back to original admin)
     status, _, _, _, resp_json = superadmin.request("GET", "/api/profile")
     assert status == 200, "Failed to fetch profile after stopping impersonation"
     profile = resp_json.get("profile", {})
-    assert profile.get("email") == "superadmin@chemlove.com", f"Stop impersonation failed: expected superadmin email, got {profile.get('email')}"
-    print("SUCCESS: Super Admin returned to original session successfully")
+    assert profile.get("email") == "admin@chemlove.com", f"Stop impersonation failed: expected admin email, got {profile.get('email')}"
+    print("SUCCESS: Admin returned to original session successfully")
 
 
     print("\n--- STEP 16: Admin Permissions Matrix (RBAC) ---")

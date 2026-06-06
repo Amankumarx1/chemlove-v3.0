@@ -1492,7 +1492,14 @@
 
     // Load initial tab content
     document.addEventListener('DOMContentLoaded', () => {
-        loadTabContent('chapters');
+        const urlParams = new URLSearchParams(window.location.search);
+        let tab = urlParams.get('tab') || window.location.hash.substring(1);
+        const validTabs = ['chapters', 'experiments', 'reactions', 'quizzes', 'courses', 'modules', 'lessons', 'resources', 'certificates'];
+        if (validTabs.includes(tab)) {
+            switchAdminTab(tab);
+        } else {
+            loadTabContent('chapters');
+        }
     });
 </script>
 {% endblock %}

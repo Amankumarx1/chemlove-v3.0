@@ -11,8 +11,6 @@
                     Student
                     {% elif current_user.role == 'teacher' %}
                     Teacher
-                    {% elif current_user.role == 'superadmin' %}
-                    Super Admin
                     {% else %}
                     Admin
                     {% endif %}
@@ -189,120 +187,705 @@
             </div>
         </div>
 
-        {% elif current_user.role == 'superadmin' %}
-        <!-- Super Admin Portal Sidebar Items -->
-        <div>
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">System Control</div>
-            <div class="space-y-1">
-                <a href="/profile"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'profile' or request.path == '/profile' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">person</span>
-                    Profile Settings
-                </a>
-            </div>
-
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-6 mb-2 px-3">Executive Console</div>
-            <div class="space-y-1">
-                <a href="/superadmin/dashboard"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'dashboard' or request.path == '/superadmin/dashboard' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">dashboard</span>
-                    Executive Dashboard
-                </a>
-                <a href="/superadmin/control-center"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'users' or request.path == '/superadmin/control-center' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">manage_accounts</span>
-                    User Control Center
-                </a>
-                <a href="/admin/content"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'content' or request.path == '/admin/content' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">article</span>
-                    Global CMS
-                </a>
-                <a href="/admin/permissions"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'permissions' or request.path == '/admin/permissions' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">rule</span>
-                    Permissions Panel
-                </a>
-            </div>
-
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-6 mb-2 px-3">Ecosystem</div>
-            <div class="space-y-1">
-                <a href="/about"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if request.path == '/about' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">info</span>
-                    About
-                </a>
-                <a href="/contact"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if request.path == '/contact' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">contact_support</span>
-                    Contact
-                </a>
-            </div>
-        </div>
-
         {% elif current_user.role == 'admin' %}
-        <!-- Admin Portal Sidebar Items -->
-        <div>
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">Admin Settings</div>
-            <div class="space-y-1">
-                <a href="/profile"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'profile' or request.path == '/profile' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">person</span>
-                    Profile Settings
-                </a>
+        <!-- Super Admin Enterprise ERP/LMS Portal Sidebar Items -->
+        <div class="space-y-4" id="admin-sidebar-container">
+            
+            <!-- Category 1: Dashboard -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-dashboard')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">dashboard</span>
+                        Dashboard
+                    </span>
+                    <span id="arrow-group-dashboard" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-dashboard" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Overview</div>
+                        <div class="space-y-1">
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/dashboard">Dashboard Home</a>
+                            <a href="/admin/dashboard#platform-summary" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Platform Summary</a>
+                            <a href="/admin/dashboard#quick-actions" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Quick Actions</a>
+                            <a href="/admin/dashboard#recent-activity" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Recent Activity</a>
+                            <a href="/admin/erp-stub?module=Communications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/erp-stub?module=Communications">Notifications</a>
+                            <a href="/admin/dashboard#system-health" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">System Health</a>
+                            <a href="/admin/dashboard#performance-metrics" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Performance Metrics</a>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-6 mb-2 px-3">Management</div>
-            <div class="space-y-1">
-                <a href="/admin/dashboard"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'dashboard' or request.path == '/admin/dashboard' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">dashboard</span>
-                    Dashboard
-                </a>
-                {% if check_permission('manage_users') %}
-                <a href="/admin/users"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'users' or request.path == '/admin/users' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">manage_accounts</span>
-                    Users
-                </a>
-                {% endif %}
-                {% if check_permission('manage_content') %}
-                <a href="/admin/content"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'content' or request.path == '/admin/content' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">article</span>
-                    Content CMS
-                </a>
-                {% endif %}
-                {% if check_permission('view_reports') %}
-                <a href="/admin/analytics"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'analytics' or request.path == '/admin/analytics' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">analytics</span>
-                    Analytics
-                </a>
-                {% endif %}
-                {% if check_permission('manage_users') %}
-                <a href="/admin/permissions"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if active_tab == 'permissions' or request.path == '/admin/permissions' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">rule</span>
-                    Permissions Panel
-                </a>
-                {% endif %}
+            <!-- Category 2: User Management -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-usermgmt')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">group</span>
+                        User Management
+                    </span>
+                    <span id="arrow-group-usermgmt" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-usermgmt" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Users</div>
+                        <div class="space-y-1">
+                            <a href="/admin/control-center?role=all" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/control-center?role=all">All Users</a>
+                            <a href="/admin/control-center?role=student" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/control-center?role=student">Students</a>
+                            <a href="/admin/control-center?role=teacher" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/control-center?role=teacher">Teachers</a>
+                            <a href="/admin/control-center?role=admin" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/control-center?role=admin">Admins</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Access Control</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Roles</a>
+                            <a href="/admin/permissions" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/permissions">Permissions</a>
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">User Groups</a>
+                            <a href="/admin/control-center" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/control-center">Batch Management</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">User Actions</div>
+                        <div class="space-y-1">
+                            <a href="/admin/control-center" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Create User</a>
+                            <a href="/admin/control-center" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Import Users</a>
+                            <a href="/admin/control-center" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Suspend Users</a>
+                            <a href="/admin/control-center" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Password Reset</a>
+                            <a href="/admin/erp-stub?module=System" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Login Monitoring</a>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-6 mb-2 px-3">Ecosystem</div>
-            <div class="space-y-1">
-                <a href="/about"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if request.path == '/about' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">info</span>
-                    About
-                </a>
-                <a href="/contact"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all {% if request.path == '/contact' %}bg-emerald-950/20 text-emerald-400 border border-emerald-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">contact_support</span>
-                    Contact
-                </a>
+            <!-- Category 3: Academies & Schools -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-academies')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">school</span>
+                        Academies & Schools
+                    </span>
+                    <span id="arrow-group-academies" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-academies" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Institution Management</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/erp-stub?module=Academies">All Schools</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Partner Academies</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Branches</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">School Coordinators</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Analytics</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Institution Performance</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Student Distribution</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Enrollment Statistics</a>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- Category 4: Learning Management -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-learning')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">menu_book</span>
+                        Learning Management
+                    </span>
+                    <span id="arrow-group-learning" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-learning" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Courses</div>
+                        <div class="space-y-1">
+                            <a href="/admin/content?tab=courses" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/content?tab=courses">All Courses</a>
+                            <a href="/admin/content?tab=courses" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Create Course</a>
+                            <a href="/admin/content?tab=courses" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Course Categories</a>
+                            <a href="/admin/content?tab=courses" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Learning Tracks</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Modules</div>
+                        <div class="space-y-1">
+                            <a href="/admin/content?tab=modules" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/content?tab=modules">Manage Modules</a>
+                            <a href="/admin/content?tab=modules" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Module Ordering</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Chapters</div>
+                        <div class="space-y-1">
+                            <a href="/admin/content?tab=chapters" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/content?tab=chapters">All Chapters</a>
+                            <a href="/admin/content?tab=chapters" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Create Chapter</a>
+                            <a href="/admin/content?tab=chapters" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Chapter Builder</a>
+                            <a href="/admin/content?tab=chapters" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Chapter Sequencing</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Lessons</div>
+                        <div class="space-y-1">
+                            <a href="/admin/content?tab=lessons" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/content?tab=lessons">Lessons Library</a>
+                            <a href="/admin/content?tab=lessons" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Lesson Builder</a>
+                            <a href="/admin/content?tab=lessons" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Draft Lessons</a>
+                            <a href="/admin/content?tab=lessons" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Published Lessons</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 5: Content Management -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-content')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">article</span>
+                        Content Management
+                    </span>
+                    <span id="arrow-group-content" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-content" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Study Materials</div>
+                        <div class="space-y-1">
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/content?tab=resources">PDFs</a>
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Videos</a>
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">PPTs</a>
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Images</a>
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Documents</a>
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">ZIP Resources</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Media Library</div>
+                        <div class="space-y-1">
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Uploaded Files</a>
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Resource Categories</a>
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Resource Version History</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Publishing</div>
+                        <div class="space-y-1">
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Draft Content</a>
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Scheduled Content</a>
+                            <a href="/admin/content?tab=resources" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Published Content</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 6: Assessment Center -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-assessment')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">quiz</span>
+                        Assessment Center
+                    </span>
+                    <span id="arrow-group-assessment" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-assessment" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Quizzes</div>
+                        <div class="space-y-1">
+                            <a href="/admin/content?tab=quizzes" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/content?tab=quizzes">Create Quiz</a>
+                            <a href="/admin/content?tab=quizzes" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Quiz Bank</a>
+                            <a href="/admin/content?tab=quizzes" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Quiz Analytics</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Assignments</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Assessments" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Create Assignment</a>
+                            <a href="/admin/erp-stub?module=Assessments" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Assignment Tracking</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Coding Challenges</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Assessments" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Challenge Library</a>
+                            <a href="/admin/erp-stub?module=Assessments" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Submissions</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Results</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Assessments" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Assessment Results</a>
+                            <a href="/admin/erp-stub?module=Assessments" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Rankings</a>
+                            <a href="/admin/erp-stub?module=Assessments" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Performance Reports</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 7: Student Monitoring -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-studentmonitoring')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">trending_up</span>
+                        Student Monitoring
+                    </span>
+                    <span id="arrow-group-studentmonitoring" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-studentmonitoring" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Progress Tracking</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Student Progress</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Course Completion</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Chapter Completion</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Engagement</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Learning Activity</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Time Spent Learning</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Attendance</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Performance</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Quiz Scores</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Assignment Scores</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Skill Analytics</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Certificates</div>
+                        <div class="space-y-1">
+                            <a href="/admin/content?tab=certificates" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Issued Certificates</a>
+                            <a href="/admin/content?tab=certificates" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Pending Certificates</a>
+                            <a href="/admin/content?tab=certificates" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Certificate Verification</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 8: Teacher Management -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-teachermgmt')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">badge</span>
+                        Teacher Management
+                    </span>
+                    <span id="arrow-group-teachermgmt" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-teachermgmt" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Teachers</div>
+                        <div class="space-y-1">
+                            <a href="/admin/control-center?role=teacher" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">All Teachers</a>
+                            <a href="/admin/control-center?role=teacher" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Assign Teachers</a>
+                            <a href="/admin/control-center?role=teacher" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Teacher Profiles</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Teaching Analytics</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Course Performance</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Student Engagement</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Teacher Contributions</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Teacher Activities</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Content Uploads</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Assessment Creation</a>
+                            <a href="/admin/erp-stub?module=Academies" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Activity Logs</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 9: Certification Center -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-certifications')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">workspace_premium</span>
+                        Certification Center
+                    </span>
+                    <span id="arrow-group-certifications" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-certifications" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Certificates</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Certifications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/erp-stub?module=Certifications">Certificate Templates</a>
+                            <a href="/admin/content?tab=certificates" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Issue Certificate</a>
+                            <a href="/admin/content?tab=certificates" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Revoke Certificate</a>
+                            <a href="/admin/content?tab=certificates" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Verification System</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Achievements</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Certifications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Badges</a>
+                            <a href="/admin/erp-stub?module=Certifications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Rewards</a>
+                            <a href="/admin/erp-stub?module=Certifications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Milestones</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 10: Communication Center -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-communication')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">forum</span>
+                        Communication Center
+                    </span>
+                    <span id="arrow-group-communication" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-communication" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Notifications</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Communications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Send Notifications</a>
+                            <a href="/admin/erp-stub?module=Communications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Scheduled Notifications</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Announcements</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Communications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Platform Announcements</a>
+                            <a href="/admin/erp-stub?module=Communications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Course Announcements</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Email Center</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Communications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Email Campaigns</a>
+                            <a href="/admin/erp-stub?module=Communications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Bulk Emails</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Messaging</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Communications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Student Messages</a>
+                            <a href="/admin/erp-stub?module=Communications" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Teacher Messages</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 11: Analytics & Reports -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-analytics')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">analytics</span>
+                        Analytics & Reports
+                    </span>
+                    <span id="arrow-group-analytics" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-analytics" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Platform Analytics</div>
+                        <div class="space-y-1">
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">User Growth</a>
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Active Users</a>
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Learning Trends</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Student Reports</div>
+                        <div class="space-y-1">
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Progress Reports</a>
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Completion Reports</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Teacher Reports</div>
+                        <div class="space-y-1">
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Performance Reports</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Course Reports</div>
+                        <div class="space-y-1">
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Course Analytics</a>
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Content Analytics</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Exports</div>
+                        <div class="space-y-1">
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Export Reports</a>
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Download Analytics</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 12: Activity Logs -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-logs')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">history_toggle_off</span>
+                        Activity Logs
+                    </span>
+                    <span id="arrow-group-logs" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-logs" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Audit Logs</div>
+                        <div class="space-y-1">
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">User Activity</a>
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Content Activity</a>
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Assessment Activity</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Security Logs</div>
+                        <div class="space-y-1">
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Login Logs</a>
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Failed Logins</a>
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Permission Changes</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">System Logs</div>
+                        <div class="space-y-1">
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Platform Events</a>
+                            <a href="/admin/dashboard" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Database Events</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 13: Platform Settings -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-settings')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">settings</span>
+                        Platform Settings
+                    </span>
+                    <span id="arrow-group-settings" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-settings" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">General Settings</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/erp-stub?module=Settings">Platform Name</a>
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Branding</a>
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Themes</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Authentication</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Login Settings</a>
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Security Policies</a>
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">MFA Settings</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Email Settings</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">SMTP Configuration</a>
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Email Templates</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Storage</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">File Storage</a>
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Resource Limits</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">API & Integrations</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Third-Party Integrations</a>
+                            <a href="/admin/erp-stub?module=Settings" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">API Keys</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 14: AI Management -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-aimgmt')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">psychology</span>
+                        AI Management
+                    </span>
+                    <span id="arrow-group-aimgmt" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-aimgmt" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">AI Assistant</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=AI" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/erp-stub?module=AI">AI Settings</a>
+                            <a href="/admin/erp-stub?module=AI" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Prompt Library</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">AI Analytics</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=AI" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">AI Usage Reports</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">AI Content Tools</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=AI" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">AI Content Generation</a>
+                            <a href="/admin/erp-stub?module=AI" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">AI Quiz Generation</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 15: System Administration -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-sysadmin')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">dns</span>
+                        System Administration
+                    </span>
+                    <span id="arrow-group-sysadmin" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-sysadmin" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Database</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=System" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/admin/erp-stub?module=System">Database Health</a>
+                            <a href="/admin/erp-stub?module=System" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Backup Management</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Maintenance</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=System" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Scheduled Maintenance</a>
+                            <a href="/admin/erp-stub?module=System" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">System Monitoring</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Security</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=System" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Security Dashboard</a>
+                            <a href="/admin/erp-stub?module=System" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Threat Monitoring</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Backups</div>
+                        <div class="space-y-1">
+                            <a href="/admin/erp-stub?module=System" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Backup History</a>
+                            <a href="/admin/erp-stub?module=System" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Restore System</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 16: Profile & Account -->
+            <div class="admin-group-container">
+                <button type="button" onclick="toggleSidebarGroup('group-profile')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-emerald-950/20 hover:text-emerald-400 transition-all">
+                    <span class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-base">person</span>
+                        Profile & Account
+                    </span>
+                    <span id="arrow-group-profile" class="material-symbols-outlined text-sm transition-transform duration-200">expand_more</span>
+                </button>
+                <div id="group-profile" class="hidden pl-6 mt-1.5 space-y-3 border-l border-white/5 ml-5">
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">My Profile</div>
+                        <div class="space-y-1">
+                            <a href="/profile" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors" data-active-match="/profile">Personal Details</a>
+                            <a href="/profile" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Security Settings</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Preferences</div>
+                        <div class="space-y-1">
+                            <a href="/profile" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Theme Settings</a>
+                            <a href="/profile" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Notification Preferences</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1">Account</div>
+                        <div class="space-y-1">
+                            <a href="/profile" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Change Password</a>
+                            <a href="/profile" class="sidebar-link block text-[11px] font-semibold text-slate-400 hover:text-emerald-400 py-1 transition-colors">Active Sessions</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
+
+        <script>
+            function toggleSidebarGroup(groupId, forceState = null) {
+                const groupEl = document.getElementById(groupId);
+                const arrowEl = document.getElementById('arrow-' + groupId);
+                if (!groupEl) return;
+                
+                let isExpanded = forceState !== null ? forceState : groupEl.classList.contains('hidden');
+                
+                if (isExpanded) {
+                    groupEl.classList.remove('hidden');
+                    if (arrowEl) arrowEl.classList.add('rotate-180');
+                    localStorage.setItem('sidebar_' + groupId, 'expanded');
+                } else {
+                    groupEl.classList.add('hidden');
+                    if (arrowEl) arrowEl.classList.remove('rotate-180');
+                    localStorage.setItem('sidebar_' + groupId, 'collapsed');
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const currentPath = window.location.pathname;
+                const currentSearch = window.location.search;
+                const currentFull = currentPath + currentSearch;
+
+                let activeLinkFound = false;
+                const links = document.querySelectorAll('#admin-sidebar-container .sidebar-link');
+                
+                let matchedLink = null;
+                for (let link of links) {
+                    const matchAttr = link.getAttribute('data-active-match');
+                    if (matchAttr) {
+                        if (currentFull === matchAttr || currentPath === matchAttr) {
+                            matchedLink = link;
+                            break;
+                        }
+                    } else {
+                        const href = link.getAttribute('href');
+                        if (currentFull === href || currentPath === href) {
+                            matchedLink = link;
+                            break;
+                        }
+                    }
+                }
+
+                if (matchedLink) {
+                    matchedLink.classList.remove('text-slate-400');
+                    matchedLink.classList.add('text-emerald-400', 'font-black');
+                    
+                    let parent = matchedLink.parentElement;
+                    while (parent && parent.id !== 'admin-sidebar-container') {
+                        if (parent.id && parent.id.startsWith('group-')) {
+                            toggleSidebarGroup(parent.id, true);
+                            activeLinkFound = true;
+                        }
+                        parent = parent.parentElement;
+                    }
+                }
+
+                const groups = document.querySelectorAll('#admin-sidebar-container [id^="group-"]');
+                groups.forEach(group => {
+                    const storedState = localStorage.getItem('sidebar_' + group.id);
+                    if (storedState === 'expanded') {
+                        toggleSidebarGroup(group.id, true);
+                    } else if (storedState === 'collapsed') {
+                        toggleSidebarGroup(group.id, false);
+                    } else if (!activeLinkFound && group.id === 'group-dashboard') {
+                        toggleSidebarGroup(group.id, true);
+                    }
+                });
+            });
+        </script>
+
         {% endif %}
     </div>
 
