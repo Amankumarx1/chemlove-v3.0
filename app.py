@@ -347,6 +347,157 @@ def get_quiz(chapter_id):
 
 
 
+# ── Level Progression & Gamification Details ────────────────────────────────
+def get_level_info(xp):
+    levels = [
+        {"level": 1, "title": "Beginner", "min_xp": 0, "max_xp": 500},
+        {"level": 2, "title": "Explorer", "min_xp": 501, "max_xp": 1200},
+        {"level": 3, "title": "Achiever", "min_xp": 1201, "max_xp": 2200},
+        {"level": 4, "title": "Innovator", "min_xp": 2201, "max_xp": 3500},
+        {"level": 5, "title": "Expert", "min_xp": 3501, "max_xp": 5000},
+        {"level": 6, "title": "Master", "min_xp": 5001, "max_xp": 999999}
+    ]
+    for i, lvl in enumerate(levels):
+        if lvl["min_xp"] <= xp <= lvl["max_xp"]:
+            if i == len(levels) - 1:
+                percent = 100
+                next_xp = xp
+            else:
+                range_xp = lvl["max_xp"] - lvl["min_xp"]
+                earned_in_level = xp - lvl["min_xp"]
+                percent = min(100, max(0, int((earned_in_level / range_xp) * 100)))
+                next_xp = lvl["max_xp"] + 1
+            return {
+                "level": lvl["level"],
+                "title": lvl["title"],
+                "percent": percent,
+                "next_xp": next_xp,
+                "current_level_min": lvl["min_xp"],
+                "current_level_max": lvl["max_xp"]
+            }
+    return {"level": 1, "title": "Beginner", "percent": 0, "next_xp": 501}
+
+
+def check_and_update_streak(user_id, conn):
+    today = date.today()
+    sp = conn.execute(
+        "SELECT current_xp, streak_count, last_active_date FROM student_profiles WHERE user_id = %s",
+        (user_id,)
+    ).fetchone()
+    if not sp:
+        return
+    
+    current_xp = sp["current_xp"]
+    streak = sp.get("streak_count", 0)
+    last_date = sp.get("last_active_date")
+    
+    if isinstance(last_date, str):
+        try:
+            last_date = datetime.strptime(last_date, "%Y-%m-%d").date()
+        except:
+            last_date = None
+    elif isinstance(last_date, datetime):
+        last_date = last_date.date()
+            
+    # If last_active_date is today, do nothing
+    if last_date == today:
+        return
+        
+    xp_gained = 0
+    new_streak = streak
+    
+    if last_date is None:
+        new_streak = 1
+        xp_gained = 10  # Daily login XP
+    elif (today - last_date).days == 1:
+        new_streak = streak + 1
+        xp_gained = 10  # Daily login XP
+        # Milestone check
+        if new_streak >= 7:
+            # Check if badge already unlocked
+            existing_badge = conn.execute(
+                "SELECT id FROM user_badges WHERE user_id = %s AND badge_id = 2",
+                (user_id,)
+            ).fetchone()
+            if not existing_badge:
+                conn.execute(
+                    "INSERT IGNORE INTO user_badges (user_id, badge_id, unlocked_at) VALUES (%s, 2, NOW())",
+                    (user_id,)
+                )
+                xp_gained += 100  # Consistency Champion reward
+    else:
+        new_streak = 1
+        xp_gained = 10  # Daily login XP
+        
+    # Calculate new level
+    new_xp = current_xp + xp_gained
+    lvl_info = get_level_info(new_xp)
+    new_lvl = lvl_info["level"]
+    
+    conn.execute(
+        """
+        UPDATE student_profiles 
+        SET current_xp = %s, level = %s, streak_count = %s, last_active_date = %s 
+        WHERE user_id = %s
+        """,
+        (new_xp, new_lvl, new_streak, today, user_id)
+    )
+    if xp_gained > 0:
+        conn.execute(
+            "INSERT INTO user_history(user_id, event_type, event_data, created_at) VALUES (%s, 'daily_login', %s, NOW())",
+            (user_id, f"xp_gained={xp_gained}, streak={new_streak}")
+        )
+
+
+def check_and_award_badges(user_id, conn):
+    # Check Top Performer: rank #1
+    u_row = conn.execute("SELECT class_level FROM users WHERE id = %s", (user_id,)).fetchone()
+    if u_row and u_row["class_level"]:
+        top_student = conn.execute(
+            """
+            SELECT sp.user_id
+            FROM student_profiles sp
+            JOIN users u ON sp.user_id = u.id
+            WHERE u.class_level = %s
+            ORDER BY sp.current_xp DESC LIMIT 1
+            """,
+            (u_row["class_level"],)
+        ).fetchone()
+        if top_student and top_student["user_id"] == user_id:
+            conn.execute("INSERT IGNORE INTO user_badges (user_id, badge_id, unlocked_at) VALUES (%s, 1, NOW())", (user_id,))
+            
+    # Check Fast Learner: got 100% on a quiz
+    fast_learner = conn.execute(
+        """
+        SELECT ta.id FROM test_attempts ta
+        JOIN tests t ON ta.test_id = t.id
+        WHERE ta.student_id = %s AND ta.score = t.total_marks
+        """,
+        (user_id,)
+    ).fetchone()
+    if fast_learner:
+        conn.execute("INSERT IGNORE INTO user_badges (user_id, badge_id, unlocked_at) VALUES (%s, 3, NOW())", (user_id,))
+        
+    # Check Assessment Master: completed 5 quizzes
+    completed_quizzes = conn.execute(
+        "SELECT COUNT(*) as c FROM test_attempts WHERE student_id = %s AND score IS NOT NULL",
+        (user_id,)
+    ).fetchone()
+    if completed_quizzes and completed_quizzes["c"] >= 5:
+        conn.execute("INSERT IGNORE INTO user_badges (user_id, badge_id, unlocked_at) VALUES (%s, 4, NOW())", (user_id,))
+        
+    # Check Lab Expert: completed 3 experiments
+    completed_labs = conn.execute(
+        """
+        SELECT COUNT(DISTINCT event_data) as c FROM user_history
+        WHERE user_id = %s AND event_type IN ('titration_complete', 'reaction_success')
+        """,
+        (user_id,)
+    ).fetchone()
+    if completed_labs and completed_labs["c"] >= 3:
+        conn.execute("INSERT IGNORE INTO user_badges (user_id, badge_id, unlocked_at) VALUES (%s, 5, NOW())", (user_id,))
+
+
 # ── User helpers ───────────────────────────────────────────────────────────
 def user_from_row(row):
     return {
@@ -354,9 +505,12 @@ def user_from_row(row):
         "name":        row["name"],
         "email":       row["email"],
         "institution": row["institution"],
+        "school":      row["institution"],
         "role":        row["role"],
         "status":      row.get("status", "active"),
         "classLevel":  row.get("class_level"),
+        "student_class": row.get("class_level"),
+        "mobile":      row.get("mobile"),
         "createdAt":   str(row["created_at"]),
         "updatedAt":   str(row["updated_at"]),
     }
@@ -378,12 +532,45 @@ def get_current_user():
         user_dict = user_from_row(row)
 
         if user_dict["role"] == "student":
+            check_and_update_streak(user_id, conn)
+            check_and_award_badges(user_id, conn)
+            
             sp = conn.execute(
-                "SELECT current_xp, level FROM student_profiles WHERE user_id = %s",
+                """
+                SELECT current_xp, level, streak_count, last_active_date, 
+                       last_chapter_id, last_experiment_id, last_assessment_id 
+                FROM student_profiles WHERE user_id = %s
+                """,
                 (user_id,)
             ).fetchone()
+            
             user_dict["current_xp"] = sp["current_xp"] if sp else 100
             user_dict["level"]      = sp["level"]      if sp else 1
+            user_dict["streak_count"] = sp["streak_count"] if sp else 0
+            user_dict["last_active_date"] = str(sp["last_active_date"]) if sp and sp["last_active_date"] else None
+            user_dict["last_chapter_id"] = sp["last_chapter_id"] if sp else None
+            user_dict["last_experiment_id"] = sp["last_experiment_id"] if sp else None
+            user_dict["last_assessment_id"] = sp["last_assessment_id"] if sp else None
+            
+            # Dynamically calculate class-specific rank
+            rank_row = conn.execute(
+                """
+                SELECT rnk FROM (
+                    SELECT user_id, RANK() OVER (ORDER BY current_xp DESC) as rnk
+                    FROM student_profiles sp
+                    JOIN users u ON sp.user_id = u.id
+                    WHERE u.class_level = %s
+                ) ranks WHERE user_id = %s
+                """,
+                (user_dict["classLevel"], user_id)
+            ).fetchone()
+            user_dict["rank"] = rank_row["rnk"] if rank_row else 1
+            
+            # Calculate Level details
+            lvl_info = get_level_info(user_dict["current_xp"])
+            user_dict["achievement_level"] = lvl_info["title"]
+            user_dict["level_progress"] = lvl_info["percent"]
+            user_dict["next_level_xp"] = lvl_info["next_xp"]
 
         # Check for active impersonation session
         impersonator_id = session.get("impersonator_user_id")
@@ -715,7 +902,75 @@ def profile_page():
     if not user:
         flash('Please login first.', 'error')
         return redirect(url_for('login'))
-    return render_template('student/profile.html', current_user=user, active_tab='profile')
+        
+    badges = []
+    certs = []
+    enrollments = []
+    history = []
+    
+    try:
+        with get_db() as conn:
+            # 1. Fetch user badges
+            badge_rows = conn.execute(
+                "SELECT badge_id, unlocked_at FROM user_badges WHERE user_id = %s ORDER BY unlocked_at DESC",
+                (user['id'],)
+            ).fetchall()
+            for r in badge_rows:
+                meta = get_badge(r["badge_id"])
+                if meta:
+                    badges.append({**meta, "unlocked_at": str(r["unlocked_at"])})
+                    
+            # 2. Fetch user certificates
+            cert_rows = conn.execute(
+                """
+                SELECT c.*, cr.title as course_title, cr.description
+                FROM certificates c
+                JOIN courses cr ON c.course_id = cr.id
+                WHERE c.student_id = %s AND c.status = 'issued'
+                ORDER BY c.issued_at DESC
+                """,
+                (user['id'],)
+            ).fetchall()
+            for r in cert_rows:
+                c_dict = dict(r)
+                if isinstance(c_dict.get('issued_at'), datetime):
+                    c_dict['issued_at'] = c_dict['issued_at'].strftime('%B %d, %Y')
+                certs.append(c_dict)
+                
+            # 3. Fetch course enrollments
+            enroll_rows = conn.execute(
+                """
+                SELECT ce.*, c.title as course_title, c.category
+                FROM course_enrollments ce
+                JOIN courses c ON ce.course_id = c.id
+                WHERE ce.student_id = %s
+                """,
+                (user['id'],)
+            ).fetchall()
+            enrollments = [dict(e) for e in enroll_rows]
+            
+            # 4. Fetch activity timeline
+            hist_rows = conn.execute(
+                "SELECT event_type, event_data, created_at FROM user_history WHERE user_id = %s ORDER BY id DESC LIMIT 50",
+                (user['id'],)
+            ).fetchall()
+            for r in hist_rows:
+                h_dict = dict(r)
+                if isinstance(h_dict.get('created_at'), datetime):
+                    h_dict['created_at'] = h_dict['created_at'].strftime('%b %d, %Y %I:%M %p')
+                history.append(h_dict)
+    except Exception as e:
+        print(f"Error compiling profile page context: {e}")
+        
+    return render_template(
+        'student/profile.html', 
+        current_user=user, 
+        badges=badges, 
+        certificates=certs, 
+        enrollments=enrollments, 
+        history=history, 
+        active_tab='profile'
+    )
 
 
 @app.route('/api/profile', methods=['GET', 'PUT'])
@@ -731,11 +986,12 @@ def profile_api():
     name        = (payload.get("name") or user["name"]).strip()
     institution = (payload.get("institution") or user["institution"]).strip()
     class_level = payload.get("classLevel") if user["role"] == "student" else None
+    mobile      = payload.get("mobile")
 
     with get_db() as conn:
         conn.execute(
-            "UPDATE users SET name = %s, institution = %s, class_level = %s, updated_at = NOW() WHERE id = %s",
-            (name, institution, class_level, user["id"]),
+            "UPDATE users SET name = %s, institution = %s, class_level = %s, mobile = %s, updated_at = NOW() WHERE id = %s",
+            (name, institution, class_level, mobile, user["id"]),
         )
     add_history(user["id"], "profile_updated")
     return jsonify({"ok": True})
@@ -770,132 +1026,558 @@ def dashboard_page():
 @app.route('/student/dashboard')
 @student_required
 def student_dashboard():
-    return render_template('student/dashboard.html', current_user=get_current_user(), active_tab='dashboard')
+    user = get_current_user()
+    class_level = user['classLevel']
+    
+    # 1. Fetch continue learning targets
+    last_chapter = get_chapter(user['last_chapter_id']) if user.get('last_chapter_id') else None
+    last_experiment = get_experiment(user['last_experiment_id']) if user.get('last_experiment_id') else None
+    
+    last_assessment = None
+    if user.get('last_assessment_id'):
+        try:
+            with get_db() as conn:
+                q_row = conn.execute("SELECT id, title, chapter_id FROM quizzes WHERE id = %s", (user['last_assessment_id'],)).fetchone()
+                if q_row:
+                    last_assessment = dict(q_row)
+        except Exception as e:
+            print(f"Error loading last assessment: {e}")
+            
+    # 2. Fetch Class Roadmap (modules -> chapters -> lessons -> quizzes)
+    roadmap = []
+    try:
+        with get_db() as conn:
+            courses = conn.execute("SELECT id FROM courses WHERE class_level = %s AND status = 'active'", (class_level,)).fetchall()
+            for crs in courses:
+                mods = conn.execute("SELECT id, title FROM modules WHERE course_id = %s ORDER BY order_index ASC", (crs['id'],)).fetchall()
+                for m in mods:
+                    chaps = conn.execute("SELECT id, title, chapter_number FROM chapters WHERE module_id = %s ORDER BY chapter_number ASC", (m['id'],)).fetchall()
+                    for ch in chaps:
+                        lessons = conn.execute("SELECT id, title FROM lessons WHERE chapter_id = %s AND status = 'published' ORDER BY order_index ASC", (ch['id'],)).fetchall()
+                        qz = conn.execute("SELECT id, title FROM quizzes WHERE chapter_id = %s", (ch['id'],)).fetchone()
+                        
+                        comp_lessons_count = 0
+                        enriched_lessons = []
+                        for ls in lessons:
+                            read_event = conn.execute(
+                                "SELECT id FROM user_history WHERE user_id = %s AND event_type = 'read_notes' AND event_data LIKE %s",
+                                (user['id'], f"%lesson_id={ls['id']}%")
+                            ).fetchone()
+                            completed = read_event is not None
+                            if completed:
+                                comp_lessons_count += 1
+                            enriched_lessons.append({**ls, "completed": completed})
+                            
+                        quiz_completed = False
+                        quiz_score = None
+                        if qz:
+                            attempt = conn.execute(
+                                "SELECT score FROM test_attempts ta JOIN tests t ON ta.test_id = t.id WHERE ta.student_id = %s AND t.chapter_id = %s",
+                                (user['id'], ch['id'])
+                            ).fetchone()
+                            if attempt:
+                                quiz_completed = True
+                                quiz_score = attempt['score']
+                                
+                        ch_completed = (len(lessons) > 0 and comp_lessons_count == len(lessons))
+                        roadmap.append({
+                            "chapter_id": ch['id'],
+                            "chapter_title": ch['title'],
+                            "chapter_number": ch['chapter_number'],
+                            "lessons": enriched_lessons,
+                            "quiz": dict(qz) if qz else None,
+                            "quiz_completed": quiz_completed,
+                            "quiz_score": quiz_score,
+                            "completed": ch_completed
+                        })
+    except Exception as e:
+        print(f"Error compiling roadmap: {e}")
+        
+    return render_template(
+        'student/dashboard.html', 
+        current_user=user, 
+        last_chapter=last_chapter,
+        last_experiment=last_experiment,
+        last_assessment=last_assessment,
+        roadmap=roadmap,
+        active_tab='dashboard'
+    )
 
 
 @app.route('/student/chapters')
 @student_required
 def student_chapters():
     user = get_current_user()
-    class_level = request.args.get('class_level', user.get('classLevel') or '11')
+    class_level = user['classLevel']
     with get_db() as conn:
-        if class_level == 'all':
-            rows = conn.execute("SELECT * FROM chapters ORDER BY class_level ASC, chapter_number ASC").fetchall()
-        else:
-            rows = conn.execute("SELECT * FROM chapters WHERE class_level = %s ORDER BY chapter_number ASC", (class_level,)).fetchall()
+        rows = conn.execute("SELECT * FROM chapters WHERE class_level = %s ORDER BY chapter_number ASC", (class_level,)).fetchall()
     chapters = [parse_chapter_json_fields(row) for row in rows]
+    
+    # Lock/Unlock logic: lock next chapters if previous chapter has not been completed
+    for i, ch in enumerate(chapters):
+        if i == 0:
+            ch["locked"] = False
+        else:
+            prev_ch = chapters[i-1]
+            with get_db() as conn:
+                lessons = conn.execute("SELECT id FROM lessons WHERE chapter_id = %s", (prev_ch["id"],)).fetchall()
+                comp_count = 0
+                for ls in lessons:
+                    read_event = conn.execute(
+                        "SELECT id FROM user_history WHERE user_id = %s AND event_type = 'read_notes' AND event_data LIKE %s",
+                        (user['id'], f"%lesson_id={ls['id']}%")
+                    ).fetchone()
+                    if read_event:
+                        comp_count += 1
+                prev_completed = (len(lessons) > 0 and comp_count == len(lessons))
+                ch["locked"] = not prev_completed
+                
     return render_template('student/chapters.html', current_user=user, chapters=chapters, selected_class=class_level, active_tab='chapters')
 
 
 @app.route('/student/chapter/<int:chapter_id>')
 @student_required
 def student_chapter_view(chapter_id):
+    user = get_current_user()
     chapter_data = get_chapter(chapter_id)
-    if not chapter_data:
-        flash('Chapter content not found.', 'error')
+    if not chapter_data or chapter_data['class_level'] != user['classLevel']:
+        flash('Unauthorized chapter access.', 'error')
         return redirect(url_for('student_chapters'))
-    return render_template('student/chapter_view.html', current_user=get_current_user(), chapter_data=chapter_data, active_tab='chapters')
+        
+    # Update last opened chapter
+    try:
+        with get_db() as conn:
+            conn.execute("UPDATE student_profiles SET last_chapter_id = %s WHERE user_id = %s", (chapter_id, user['id']))
+    except Exception as e:
+        print(f"Error updating last chapter tracking: {e}")
+        
+    return render_template('student/chapter_view.html', current_user=user, chapter_data=chapter_data, active_tab='chapters')
 
 
 @app.route('/student/reactions')
 @student_required
 def student_reactions():
     user = get_current_user()
-    class_level = request.args.get('class_level', user.get('classLevel') or '11')
-    return render_template('student/reactions.html', current_user=user, selected_class=class_level, active_tab='reactions')
+    class_level = user['classLevel']
+    
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM reactions WHERE class_level = %s ORDER BY id ASC", (class_level,)).fetchall()
+    reactions = [parse_reaction_json_fields(r) for r in rows]
+    
+    # Check reaction success event completion
+    for rx in reactions:
+        try:
+            with get_db() as conn:
+                event = conn.execute(
+                    "SELECT id FROM user_history WHERE user_id = %s AND event_type = 'reaction_success' AND event_data LIKE %s",
+                    (user['id'], f"%reaction_id={rx['id']}%")
+                ).fetchone()
+                rx["completed"] = event is not None
+        except Exception as e:
+            print(f"Error checking reaction completion: {e}")
+            rx["completed"] = False
+            
+    return render_template('student/reactions.html', current_user=user, reactions=reactions, selected_class=class_level, active_tab='reactions')
 
 
 @app.route('/student/experiments')
 @student_required
 def student_experiments():
     user = get_current_user()
-    class_level = request.args.get('class_level', user.get('classLevel') or '11')
-    with get_db() as conn:
-        if class_level == 'all':
-            rows = conn.execute("SELECT e.*, c.class_level FROM experiments e LEFT JOIN chapters c ON e.chapter_id = c.id ORDER BY e.id ASC").fetchall()
-        else:
+    class_level = user['classLevel']
+    
+    try:
+        with get_db() as conn:
             rows = conn.execute("""
                 SELECT e.*, c.class_level FROM experiments e
-                LEFT JOIN chapters c ON e.chapter_id = c.id
-                WHERE c.class_level = %s OR (c.class_level IS NULL AND %s = '11')
+                JOIN chapters c ON e.chapter_id = c.id
+                WHERE c.class_level = %s
                 ORDER BY e.id ASC
-            """, (class_level, class_level)).fetchall()
+            """, (class_level,)).fetchall()
+    except Exception as e:
+        print(f"Error querying experiments: {e}")
+        rows = []
+        
     experiments = [parse_experiment_json_fields(row) for row in rows]
+    
+    # Check experiment titration/reaction logs
+    for exp in experiments:
+        try:
+            with get_db() as conn:
+                event = conn.execute(
+                    "SELECT id FROM user_history WHERE user_id = %s AND event_type = 'titration_complete' AND event_data LIKE %s",
+                    (user['id'], f"%experiment_id={exp['id']}%")
+                ).fetchone()
+                exp["completed"] = event is not None
+        except Exception as e:
+            print(f"Error checking experiment completion: {e}")
+            exp["completed"] = False
+            
     return render_template('student/experiments.html', current_user=user, experiments=experiments, selected_class=class_level, active_tab='experiments')
 
 
 @app.route('/student/experiment/<int:experiment_id>')
 @student_required
 def student_experiment_view(experiment_id):
+    user = get_current_user()
     exp = get_experiment(experiment_id)
     if not exp:
         flash('Experiment content not found.', 'error')
         return redirect(url_for('student_experiments'))
-    return render_template('student/experiment_view.html', current_user=get_current_user(), experiment=exp, active_tab='experiments')
+        
+    # Check class boundaries
+    try:
+        with get_db() as conn:
+            ch = conn.execute("SELECT class_level FROM chapters WHERE id = %s", (exp['chapter_id'],)).fetchone()
+            if not ch or ch['class_level'] != user['classLevel']:
+                flash('Unauthorized experiment access.', 'error')
+                return redirect(url_for('student_experiments'))
+                
+            conn.execute("UPDATE student_profiles SET last_experiment_id = %s WHERE user_id = %s", (experiment_id, user['id']))
+    except Exception as e:
+        print(f"Error checking boundary or updating tracking: {e}")
+        flash('Error accessing experiment content.', 'error')
+        return redirect(url_for('student_experiments'))
+        
+    return render_template('student/experiment_view.html', current_user=user, experiment=exp, active_tab='experiments')
 
 
 @app.route('/student/quizzes')
 @student_required
 def student_quizzes():
     user = get_current_user()
-    class_level = request.args.get('class_level', user.get('classLevel') or '11')
+    class_level = user['classLevel']
     quizzes = []
-    with get_db() as conn:
-        if class_level == 'all':
-            quiz_rows = conn.execute("SELECT q.*, c.class_level FROM quizzes q LEFT JOIN chapters c ON q.chapter_id = c.id ORDER BY q.id ASC").fetchall()
-        else:
+    
+    try:
+        with get_db() as conn:
             quiz_rows = conn.execute("""
                 SELECT q.*, c.class_level FROM quizzes q
-                LEFT JOIN chapters c ON q.chapter_id = c.id
+                JOIN chapters c ON q.chapter_id = c.id
                 WHERE c.class_level = %s
                 ORDER BY q.id ASC
             """, (class_level,)).fetchall()
-    for q_row in quiz_rows:
-        q_dict = dict(q_row)
-        with get_db() as conn:
-            questions = conn.execute("SELECT * FROM quiz_questions WHERE quiz_id = %s ORDER BY id ASC", (q_dict['id'],)).fetchall()
-        enriched_questions = []
-        for ques in questions:
-            q_info = dict(ques)
-            opts = [q_info['option_a'], q_info['option_b'], q_info['option_c'], q_info['option_d']]
-            q_info['options'] = [o for o in opts if o]
-            letter_idx = ord(q_info['correct_answer'].upper()) - 65
-            if 0 <= letter_idx < len(q_info['options']):
-                q_info['answer'] = q_info['options'][letter_idx]
-            else:
-                q_info['answer'] = q_info['option_a']
-            enriched_questions.append(q_info)
-        q_dict['questions'] = enriched_questions
-        quizzes.append(q_dict)
+            
+        for q_row in quiz_rows:
+            q_dict = dict(q_row)
+            with get_db() as conn:
+                questions = conn.execute("SELECT * FROM quiz_questions WHERE quiz_id = %s ORDER BY id ASC", (q_dict['id'],)).fetchall()
+                attempt = conn.execute(
+                    "SELECT score FROM test_attempts ta JOIN tests t ON ta.test_id = t.id WHERE ta.student_id = %s AND t.chapter_id = %s",
+                    (user['id'], q_dict['chapter_id'])
+                ).fetchone()
+                q_dict["completed_score"] = attempt["score"] if attempt else None
+                q_dict["completed"] = attempt is not None
+                
+            enriched_questions = []
+            for ques in questions:
+                q_info = dict(ques)
+                opts = [q_info['option_a'], q_info['option_b'], q_info['option_c'], q_info['option_d']]
+                q_info['options'] = [o for o in opts if o]
+                letter_idx = ord(q_info['correct_answer'].upper()) - 65
+                if 0 <= letter_idx < len(q_info['options']):
+                    q_info['answer'] = q_info['options'][letter_idx]
+                else:
+                    q_info['answer'] = q_info['option_a']
+                enriched_questions.append(q_info)
+            q_dict['questions'] = enriched_questions
+            quizzes.append(q_dict)
+    except Exception as e:
+        print(f"Error fetching student quizzes: {e}")
+        
     return render_template('student/quizzes.html', current_user=user, quizzes=quizzes, selected_class=class_level, active_tab='quizzes')
 
 
 @app.route('/student/quiz/<int:chapter_id>')
 @student_required
 def student_quiz_view(chapter_id):
+    user = get_current_user()
     quiz_data = get_quiz(chapter_id)
     if not quiz_data:
         flash('Quiz not found.', 'error')
         return redirect(url_for('student_quizzes'))
-    return render_template('student/quiz_view.html', current_user=get_current_user(), quiz=quiz_data, active_tab='quizzes')
+        
+    # Check boundaries
+    try:
+        with get_db() as conn:
+            ch = conn.execute("SELECT class_level FROM chapters WHERE id = %s", (chapter_id,)).fetchone()
+            if not ch or ch['class_level'] != user['classLevel']:
+                flash('Unauthorized quiz access.', 'error')
+                return redirect(url_for('student_quizzes'))
+                
+            conn.execute("UPDATE student_profiles SET last_assessment_id = %s WHERE user_id = %s", (quiz_data['id'], user['id']))
+    except Exception as e:
+        print(f"Error checking boundary or updating tracking: {e}")
+        flash('Error loading quiz content.', 'error')
+        return redirect(url_for('student_quizzes'))
+        
+    return render_template('student/quiz_view.html', current_user=user, quiz=quiz_data, active_tab='quizzes')
 
 
 @app.route('/student/virtual-lab')
 @student_required
 def student_virtual_lab():
-    return render_template('student/virtual_lab.html', current_user=get_current_user(), active_tab='virtual-lab')
+    user = get_current_user()
+    return render_template('student/virtual_lab.html', current_user=user, active_tab='virtual-lab')
 
 
 @app.route('/student/assignments')
 @student_required
 def student_assignments():
-    return render_template('student/assignments.html', current_user=get_current_user(), active_tab='assignments')
+    user = get_current_user()
+    class_level = user['classLevel']
+    assignments = []
+    
+    try:
+        with get_db() as conn:
+            rows = conn.execute(
+                """
+                SELECT a.*, c.name AS classroom_name,
+                       s.status AS submission_status, s.marks_obtained, s.feedback
+                FROM assignments a
+                JOIN classrooms c ON a.classroom_id = c.id
+                JOIN enrollments e ON c.id = e.classroom_id
+                LEFT JOIN submissions s ON a.id = s.assignment_id AND s.student_id = %s
+                WHERE e.student_id = %s AND a.status = 'published' AND c.grade = %s
+                """,
+                (user['id'], user['id'], class_level)
+            ).fetchall()
+            
+        chapters = {c['id']: c for c in all_chapters()}
+        labs     = {l['id']: l for l in all_labs()}
+        
+        for r in rows:
+            d = dict(r)
+            ch = chapters.get(d.get('chapter_id'))
+            lb = labs.get(d.get('lab_id'))
+            d['chapter_title'] = ch['title'] if ch else None
+            d['lab_name']      = lb['title'] if lb else None
+            assignments.append(d)
+    except Exception as e:
+        print(f"Error querying student assignments: {e}")
+        
+    pending = [a for a in assignments if not a['submission_status']]
+    submitted = [a for a in assignments if a['submission_status'] == 'pending']
+    graded = [a for a in assignments if a['submission_status'] in ('graded', 'approved')]
+    
+    return render_template('student/assignments.html', current_user=user, pending=pending, submitted=submitted, graded=graded, active_tab='assignments')
 
 
 @app.route('/student/profile')
 @student_required
 def student_profile():
     return redirect(url_for('profile_page'))
+
+
+# ── Smart Recommendation & Student Analytics API Endpoints ───────────────────
+@app.route('/api/student/recommendations')
+@student_required
+def api_student_recommendations():
+    user = get_current_user()
+    class_level = user['classLevel']
+    
+    recommendations = {
+        "next_chapter": None,
+        "suggested_experiment": None,
+        "practice_quiz": None,
+        "revision_material": None
+    }
+    
+    try:
+        with get_db() as conn:
+            ch_rows = conn.execute("SELECT * FROM chapters WHERE class_level = %s ORDER BY chapter_number ASC", (class_level,)).fetchall()
+            chapters = [parse_chapter_json_fields(row) for row in ch_rows]
+            
+            first_incomplete = None
+            completed_chapters = []
+            for ch in chapters:
+                lessons = conn.execute("SELECT id FROM lessons WHERE chapter_id = %s", (ch['id'],)).fetchall()
+                comp_count = 0
+                for ls in lessons:
+                    read_event = conn.execute(
+                        "SELECT id FROM user_history WHERE user_id = %s AND event_type = 'read_notes' AND event_data LIKE %s",
+                        (user['id'], f"%lesson_id={ls['id']}%")
+                    ).fetchone()
+                    if read_event:
+                        comp_count += 1
+                is_completed = (len(lessons) > 0 and comp_count == len(lessons))
+                if is_completed:
+                    completed_chapters.append(ch)
+                elif not first_incomplete:
+                    first_incomplete = ch
+                    
+            if first_incomplete:
+                recommendations["next_chapter"] = {
+                    "id": first_incomplete["id"],
+                    "title": first_incomplete["title"],
+                    "chapter_number": first_incomplete["chapter_number"],
+                    "description": first_incomplete["description"]
+                }
+                exp_row = conn.execute("SELECT * FROM experiments WHERE chapter_id = %s LIMIT 1", (first_incomplete["id"],)).fetchone()
+                if exp_row:
+                    recommendations["suggested_experiment"] = {
+                        "id": exp_row["id"],
+                        "title": exp_row["title"],
+                        "aim": exp_row["aim"]
+                    }
+                quiz_row = conn.execute("SELECT * FROM quizzes WHERE chapter_id = %s LIMIT 1", (first_incomplete["id"],)).fetchone()
+                if quiz_row:
+                    recommendations["practice_quiz"] = {
+                        "id": quiz_row["id"],
+                        "chapter_id": first_incomplete["id"],
+                        "title": quiz_row["title"]
+                    }
+            else:
+                if completed_chapters:
+                    rev = completed_chapters[0]
+                    recommendations["next_chapter"] = {
+                        "id": rev["id"],
+                        "title": f"Revise: {rev['title']}",
+                        "chapter_number": rev["chapter_number"],
+                        "description": "You have completed this chapter! Time for revision."
+                    }
+                    
+            if completed_chapters:
+                rev_chap = completed_chapters[-1]
+                les_row = conn.execute("SELECT * FROM lessons WHERE chapter_id = %s LIMIT 1", (rev_chap["id"],)).fetchone()
+                if les_row:
+                    recommendations["revision_material"] = {
+                        "id": les_row["id"],
+                        "chapter_id": rev_chap["id"],
+                        "title": f"Review {les_row['title']}",
+                        "chapter_title": rev_chap["title"]
+                    }
+    except Exception as e:
+        print(f"Error compiling recommendations: {e}")
+        
+    return jsonify(recommendations)
+
+
+@app.route('/api/student/analytics')
+@student_required
+def api_student_analytics():
+    user = get_current_user()
+    user_id = user['id']
+    
+    weekly_progress = []
+    monthly_progress = []
+    learning_hours = []
+    assessment_perf = []
+    skill_growth = {
+        "organic": 0,
+        "inorganic": 0,
+        "kinetics": 0,
+        "titration": 0,
+        "general": 0
+    }
+    
+    try:
+        with get_db() as conn:
+            # Weekly: last 7 days
+            for i in range(6, -1, -1):
+                day_str = conn.execute(
+                    "SELECT DATE(DATE_SUB(NOW(), INTERVAL %s DAY)) as d", (i,)
+                ).fetchone()['d']
+                
+                events = conn.execute(
+                    "SELECT event_type, event_data FROM user_history WHERE user_id = %s AND DATE(created_at) = %s",
+                    (user_id, day_str)
+                ).fetchall()
+                daily_xp = 0
+                for ev in events:
+                    if ev['event_type'] == 'daily_login':
+                        daily_xp += 10
+                    elif ev['event_type'] == 'quiz_passed':
+                        daily_xp += 30
+                    elif ev['event_type'] == 'titration_complete':
+                        daily_xp += 25
+                    elif ev['event_type'] == 'reaction_success':
+                        daily_xp += 15
+                    elif ev['event_type'] == 'badge_unlocked' and 'XP Awarded' in (ev['event_data'] or ''):
+                        daily_xp += 50
+                
+                day_label = day_str.strftime('%a') if hasattr(day_str, 'strftime') else str(day_str)
+                weekly_progress.append({"day": day_label, "xp": daily_xp})
+                
+            # Monthly: last 4 weeks
+            for i in range(3, -1, -1):
+                events = conn.execute(
+                    """
+                    SELECT event_type, event_data FROM user_history 
+                    WHERE user_id = %s 
+                      AND created_at >= DATE_SUB(NOW(), INTERVAL %s WEEK)
+                      AND created_at < DATE_SUB(NOW(), INTERVAL %s WEEK)
+                    """,
+                    (user_id, i+1, i)
+                ).fetchall()
+                weekly_xp = 0
+                for ev in events:
+                    if ev['event_type'] == 'daily_login':
+                        weekly_xp += 10
+                    elif ev['event_type'] == 'quiz_passed':
+                        weekly_xp += 30
+                    elif ev['event_type'] == 'titration_complete':
+                        weekly_xp += 25
+                    elif ev['event_type'] == 'reaction_success':
+                        weekly_xp += 15
+                    elif ev['event_type'] == 'badge_unlocked' and 'XP Awarded' in (ev['event_data'] or ''):
+                        weekly_xp += 50
+                monthly_progress.append({"week": f"Week {4-i}", "xp": weekly_xp})
+                
+            # Learning hours: notes read * 0.25 + titration * 0.5
+            for i in range(6, -1, -1):
+                day_str = conn.execute(
+                    "SELECT DATE(DATE_SUB(NOW(), INTERVAL %s DAY)) as d", (i,)
+                ).fetchone()['d']
+                notes_read = conn.execute(
+                    "SELECT COUNT(*) as c FROM user_history WHERE user_id = %s AND event_type = 'read_notes' AND DATE(created_at) = %s",
+                    (user_id, day_str)
+                ).fetchone()['c']
+                labs_done = conn.execute(
+                    "SELECT COUNT(*) as c FROM user_history WHERE user_id = %s AND event_type = 'titration_complete' AND DATE(created_at) = %s",
+                    (user_id, day_str)
+                ).fetchone()['c']
+                hours = round(notes_read * 0.25 + labs_done * 0.5, 2)
+                day_label = day_str.strftime('%a') if hasattr(day_str, 'strftime') else str(day_str)
+                learning_hours.append({"day": day_label, "hours": hours})
+                
+            # Recent Quiz attempts
+            quiz_attempts = conn.execute(
+                """
+                SELECT ta.score, t.title 
+                FROM test_attempts ta
+                JOIN tests t ON ta.test_id = t.id
+                WHERE ta.student_id = %s
+                ORDER BY ta.completed_at ASC
+                LIMIT 5
+                """,
+                (user_id,)
+            ).fetchall()
+            for qa in quiz_attempts:
+                assessment_perf.append({"quiz": qa['title'][:10] + '...', "score": qa['score']})
+                
+            # Skill growth estimates
+            org_events = conn.execute("SELECT COUNT(*) as c FROM user_history WHERE user_id = %s AND (event_type = 'reaction_success' OR event_data LIKE '%organic%')", (user_id,)).fetchone()['c']
+            inorg_events = conn.execute("SELECT COUNT(*) as c FROM user_history WHERE user_id = %s AND event_data LIKE '%inorganic%'", (user_id,)).fetchone()['c']
+            kinetics_events = conn.execute("SELECT COUNT(*) as c FROM user_history WHERE user_id = %s AND event_data LIKE '%kinetics%'", (user_id,)).fetchone()['c']
+            titration_events = conn.execute("SELECT COUNT(*) as c FROM user_history WHERE user_id = %s AND event_type = 'titration_complete'", (user_id,)).fetchone()['c']
+            general_events = conn.execute("SELECT COUNT(*) as c FROM user_history WHERE user_id = %s AND event_type = 'quiz_passed'", (user_id,)).fetchone()['c']
+            
+            skill_growth["organic"] = min(100, org_events * 20 + 20)
+            skill_growth["inorganic"] = min(100, inorg_events * 25 + 15)
+            skill_growth["kinetics"] = min(100, kinetics_events * 30 + 10)
+            skill_growth["titration"] = min(100, titration_events * 35 + 25)
+            skill_growth["general"] = min(100, general_events * 15 + 30)
+    except Exception as e:
+        print(f"Error compiling student analytics: {e}")
+        
+    return jsonify({
+        "weekly_progress": weekly_progress,
+        "monthly_progress": monthly_progress,
+        "learning_hours": learning_hours,
+        "assessment_performance": assessment_perf,
+        "skill_growth": skill_growth
+    })
 
 
 # ============================================================
@@ -1545,11 +2227,11 @@ def student_courses():
     try:
         with get_db() as conn:
             rows = conn.execute("""
-                SELECT ce.*, c.title as course_title, c.description, c.category
+                SELECT ce.*, c.title as course_title, c.description, c.category, c.class_level
                 FROM course_enrollments ce
                 JOIN courses c ON ce.course_id = c.id
-                WHERE ce.student_id = %s
-            """, (user["id"],)).fetchall()
+                WHERE ce.student_id = %s AND c.class_level = %s
+            """, (user["id"], user["classLevel"])).fetchall()
             enrollments = [dict(r) for r in rows]
     except Exception as e:
         print(f"Error fetching enrollments: {e}")
@@ -1563,8 +2245,8 @@ def student_course_view(course_id):
     try:
         with get_db() as conn:
             course = conn.execute("SELECT * FROM courses WHERE id = %s", (course_id,)).fetchone()
-            if not course:
-                flash("Course not found.", "error")
+            if not course or course['class_level'] != user['classLevel']:
+                flash("Course not found or unauthorized.", "error")
                 return redirect(url_for('student_courses'))
                 
             enrollment = conn.execute("SELECT * FROM course_enrollments WHERE course_id = %s AND student_id = %s", (course_id, user["id"])).fetchone()
@@ -1615,9 +2297,9 @@ def student_certificates():
                 SELECT c.*, cr.title as course_title, cr.description
                 FROM certificates c
                 JOIN courses cr ON c.course_id = cr.id
-                WHERE c.student_id = %s AND c.status = 'issued'
+                WHERE c.student_id = %s AND cr.class_level = %s AND c.status = 'issued'
                 ORDER BY c.issued_at DESC
-            """, (user["id"],)).fetchall()
+            """, (user["id"], user["classLevel"])).fetchall()
             for r in rows:
                 c_dict = dict(r)
                 if isinstance(c_dict.get('issued_at'), datetime):
@@ -2442,6 +3124,12 @@ def api_assignments():
 
     if request.method == 'GET':
         classroom_id = request.args.get("classroom_id")
+        if user['role'] == 'student' and classroom_id:
+            with get_db() as conn:
+                enrollment = conn.execute("SELECT 1 FROM enrollments WHERE classroom_id = %s AND student_id = %s", (classroom_id, user['id'])).fetchone()
+                if not enrollment:
+                    return jsonify({"error": "Forbidden - not enrolled in this classroom"}), 403
+                    
         with get_db() as conn:
             if classroom_id:
                 rows = conn.execute(
@@ -2820,7 +3508,11 @@ def api_quizzes():
 
 @app.route('/api/reactions')
 def api_reactions():
+    user = get_current_user()
     class_level = request.args.get('class_level')
+    if user and user.get('role') == 'student':
+        class_level = user.get('classLevel')
+        
     try:
         with get_db() as conn:
             if class_level and class_level != 'all':
@@ -3427,18 +4119,39 @@ def api_attendance():
 @app.route('/api/leaderboard')
 def api_leaderboard():
     limit = min(int(request.args.get("limit", 100)), 200)
+    user = get_current_user()
+    class_level = request.args.get("class_level")
+    
+    # Default to user's own class if student
+    if not class_level and user and user.get('role') == 'student':
+        class_level = user.get('classLevel')
+        
     with get_db() as conn:
-        rows = conn.execute(
-            """
-            SELECT u.name, u.institution, sp.current_xp, sp.level,
-                   RANK() OVER (ORDER BY sp.current_xp DESC) AS rank
-            FROM student_profiles sp
-            JOIN users u ON sp.user_id = u.id
-            ORDER BY sp.current_xp DESC
-            LIMIT %s
-            """,
-            (limit,)
-        ).fetchall()
+        if class_level and class_level != 'all':
+            rows = conn.execute(
+                """
+                SELECT u.name, u.institution, sp.current_xp, sp.level,
+                       RANK() OVER (ORDER BY sp.current_xp DESC) AS rank
+                FROM student_profiles sp
+                JOIN users u ON sp.user_id = u.id
+                WHERE u.class_level = %s
+                ORDER BY sp.current_xp DESC
+                LIMIT %s
+                """,
+                (class_level, limit)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT u.name, u.institution, sp.current_xp, sp.level,
+                       RANK() OVER (ORDER BY sp.current_xp DESC) AS rank
+                FROM student_profiles sp
+                JOIN users u ON sp.user_id = u.id
+                ORDER BY sp.current_xp DESC
+                LIMIT %s
+                """,
+                (limit,)
+            ).fetchall()
     return jsonify({"leaderboard": [dict(r) for r in rows]})
 
 

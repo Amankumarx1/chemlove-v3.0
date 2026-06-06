@@ -188,7 +188,7 @@ CREATE TABLE classrooms (
     FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- ── 5. ENROLLMENTS ─────────────────────────────────────────
+-- ── 5. ENROLLMENTS
 CREATE TABLE enrollments (
     id           INT AUTO_INCREMENT PRIMARY KEY,
     classroom_id INT NOT NULL,

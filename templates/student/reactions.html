@@ -27,35 +27,7 @@
                 </div>
                 <div class="flex gap-4">
                     <!-- Hidden input for class filter value compatibility with script.js -->
-                    <input type="hidden" id="class-filter" value="all">
-
-                    <!-- Custom Class Filter Dropdown -->
-                    <div class="relative inline-block text-left" id="class-dropdown-container">
-                        <button id="class-dropdown-btn" type="button" class="flex items-center justify-between gap-2 bg-[#171d1e]/40 text-on-surface border border-white/10 px-6 py-3.5 text-xs font-bold uppercase rounded-xl hover:bg-slate-800/40 hover:scale-105 transition-all duration-300 shadow-xl min-w-[150px]">
-                            <span id="selected-class-label">All Classes</span>
-                            <span id="class-dropdown-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
-                        </button>
-                        <!-- Dropdown Menu -->
-                        <div id="class-dropdown-menu" class="hidden absolute right-0 mt-2.5 w-44 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
-                            <div class="space-y-1">
-                                <button type="button" onclick="selectClassFilter('all', 'All Classes')" class="class-option-btn active w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-950/20 transition-all text-left">
-                                    <span class="material-symbols-outlined text-sm">school</span> All Classes
-                                </button>
-                                <button type="button" onclick="selectClassFilter('9', 'Class 9')" class="class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
-                                    <span class="material-symbols-outlined text-sm">filter_9</span> Class 9
-                                </button>
-                                <button type="button" onclick="selectClassFilter('10', 'Class 10')" class="class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
-                                    <span class="material-symbols-outlined text-sm">filter_10</span> Class 10
-                                </button>
-                                <button type="button" onclick="selectClassFilter('11', 'Class 11')" class="class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
-                                    <span class="material-symbols-outlined text-sm">looks_one</span> Class 11
-                                </button>
-                                <button type="button" onclick="selectClassFilter('12', 'Class 12')" class="class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
-                                    <span class="material-symbols-outlined text-sm">looks_two</span> Class 12
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <input type="hidden" id="class-filter" value="{{ current_user.classLevel }}">
 
                     <!-- Custom Type Filter Dropdown (Showdown Layer Button) -->
                     <div class="relative inline-block text-left" id="type-dropdown-container">

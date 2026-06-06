@@ -3,547 +3,481 @@
 {% block title %}ChemLove | Student Dashboard{% endblock %}
 
 {% block dashboard_content %}
-    <!-- Welcome Header -->
-    <div class="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-            <div class="inline-flex items-center gap-2 bg-primary-container/20 text-primary px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
-                <span class="w-2 h-2 rounded-full bg-primary live-pulse"></span>
-                Learning Terminal
-            </div>
-            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Welcome back, @{{ current_user.name.split(' ')[0]|lower }}</h1>
-            <p class="text-slate-400 mt-2 text-sm">Deploying interactive labs and real-time concept tracking for Class {{ current_user.classLevel or '9-12' }}.</p>
-        </div>
+    <!-- 1. Gamified Welcome Header -->
+    <div class="mb-10 p-6 md:p-8 glass-morphism rounded-3xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div class="absolute -right-24 -top-24 w-60 h-60 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-24 -bottom-24 w-60 h-60 bg-tertiary/10 rounded-full blur-3xl pointer-events-none"></div>
         
-        <!-- Quick stats summary badge -->
-        <div class="flex items-center gap-4 bg-slate-900/40 border border-white/5 px-6 py-3.5 rounded-2xl backdrop-blur-md">
-            <div class="relative w-12 h-12 flex items-center justify-center">
-                <span class="material-symbols-outlined text-3xl text-cyan-400">verified</span>
+        <div class="flex items-center gap-5 relative z-10">
+            <!-- Neon Stylized Avatar -->
+            <div class="relative w-20 h-20 rounded-2xl bg-[#171d1e] border border-primary/30 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.15)] overflow-hidden">
+                <span class="material-symbols-outlined text-5xl text-primary animate-pulse">chemistry</span>
             </div>
             <div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Institution</div>
-                <div class="text-sm font-black text-white">{{ current_user.institution }}</div>
+                <div class="inline-flex items-center gap-1.5 bg-primary-light text-primary px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase mb-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary live-pulse"></span>
+                    Class {{ current_user.student_class }} student
+                </div>
+                <h1 class="text-3xl md:text-4xl font-black tracking-tight leading-none uppercase text-white">{{ current_user.name }}</h1>
+                <p class="text-slate-400 mt-1.5 text-xs font-semibold uppercase tracking-wider">{{ current_user.school }}</p>
+            </div>
+        </div>
+        
+        <!-- Gamification Badges Widget -->
+        <div class="flex flex-wrap items-center gap-3 relative z-10">
+            <div class="flex items-center gap-2 bg-[#171d1e]/80 border border-white/5 px-4 py-2.5 rounded-xl">
+                <span class="material-symbols-outlined text-amber-500 text-xl animate-bounce">local_fire_department</span>
+                <div>
+                    <div class="text-[8px] font-bold uppercase tracking-wider text-slate-500">Streak</div>
+                    <div class="text-xs font-black text-white">🔥 {{ current_user.streak_count }} Days</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 bg-[#171d1e]/80 border border-white/5 px-4 py-2.5 rounded-xl">
+                <span class="material-symbols-outlined text-primary text-xl">star</span>
+                <div>
+                    <div class="text-[8px] font-bold uppercase tracking-wider text-slate-500">Class Rank</div>
+                    <div class="text-xs font-black text-white">⭐ #{{ current_user.rank }}</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 bg-[#171d1e]/80 border border-white/5 px-4 py-2.5 rounded-xl">
+                <span class="material-symbols-outlined text-tertiary text-xl">workspace_premium</span>
+                <div>
+                    <div class="text-[8px] font-bold uppercase tracking-wider text-slate-500">XP Points</div>
+                    <div class="text-xs font-black text-white">🏆 {{ current_user.current_xp }} XP</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 bg-[#171d1e]/80 border border-white/5 px-4 py-2.5 rounded-xl">
+                <span class="material-symbols-outlined text-pink-400 text-xl">military_tech</span>
+                <div>
+                    <div class="text-[8px] font-bold uppercase tracking-wider text-slate-500">Level</div>
+                    <div class="text-xs font-black text-white">{{ current_user.level }} ({{ current_user.achievement_level }})</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Dashboard Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <!-- 2. Dashboard Overview Cards Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
+        <!-- Card 1: Learning Progress -->
+        <div class="glass-morphism p-5 rounded-2xl flex flex-col justify-between border-l-4 border-l-primary relative overflow-hidden group hover:border-white/10 transition-all">
+            <div>
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Learning Progress</span>
+                    <span class="material-symbols-outlined text-primary text-lg">donut_large</span>
+                </div>
+                <div class="text-xl font-black text-white mt-1">45%</div>
+            </div>
+            <div class="mt-3">
+                <div class="w-full bg-[#0e1416]/50 h-1 rounded-full overflow-hidden mb-1">
+                    <div class="h-full bg-primary" style="width: 45%"></div>
+                </div>
+                <div class="text-[9px] text-slate-400">Chapters Completed: 2</div>
+            </div>
+        </div>
         
-        <!-- Left Column: Rank Progression & Mastery -->
-        <div class="lg:col-span-1 space-y-8">
+        <!-- Card 2: Active Courses -->
+        <div class="glass-morphism p-5 rounded-2xl flex flex-col justify-between border-l-4 border-l-emerald-500 relative overflow-hidden group hover:border-white/10 transition-all">
+            <div>
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Courses</span>
+                    <span class="material-symbols-outlined text-emerald-400 text-lg">school</span>
+                </div>
+                <div class="text-xl font-black text-white mt-1">1 Enrolled</div>
+            </div>
+            <div class="text-[9px] text-slate-400 mt-3">In Progress: 1 | Done: 0</div>
+        </div>
+        
+        <!-- Card 3: XP & Rank Progress -->
+        <div class="glass-morphism p-5 rounded-2xl flex flex-col justify-between border-l-4 border-l-amber-500 relative overflow-hidden group hover:border-white/10 transition-all">
+            <div>
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">XP & Level</span>
+                    <span class="material-symbols-outlined text-amber-400 text-lg">trending_up</span>
+                </div>
+                <div class="text-xl font-black text-white mt-1">{{ current_user.current_xp }} XP</div>
+            </div>
+            <div class="mt-3">
+                <div class="w-full bg-[#0e1416]/50 h-1 rounded-full overflow-hidden mb-1">
+                    <div class="h-full bg-amber-500" style="width: {{ current_user.level_progress }}%"></div>
+                </div>
+                <div class="text-[9px] text-slate-400">Next Level: {{ current_user.next_level_xp }} XP</div>
+            </div>
+        </div>
+        
+        <!-- Card 4: Attendance -->
+        <div class="glass-morphism p-5 rounded-2xl flex flex-col justify-between border-l-4 border-l-tertiary relative overflow-hidden group hover:border-white/10 transition-all">
+            <div>
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Attendance</span>
+                    <span class="material-symbols-outlined text-tertiary text-lg">calendar_today</span>
+                </div>
+                <div class="text-xl font-black text-white mt-1">92%</div>
+            </div>
+            <div class="text-[9px] text-slate-400 mt-3">12 Sessions Attended</div>
+        </div>
+        
+        <!-- Card 5: Certificates -->
+        <div class="glass-morphism p-5 rounded-2xl flex flex-col justify-between border-l-4 border-l-purple-500 relative overflow-hidden group hover:border-white/10 transition-all">
+            <div>
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Certificates</span>
+                    <span class="material-symbols-outlined text-purple-400 text-lg">workspace_premium</span>
+                </div>
+                <div class="text-xl font-black text-white mt-1">0 Earned</div>
+            </div>
+            <div class="text-[9px] text-slate-400 mt-3">1 Certification Pending</div>
+        </div>
+    </div>
+
+    <!-- 3. Learning Journey Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-10">
+        
+        <!-- Left Section: Continue Learning & Roadmap -->
+        <div class="lg:col-span-2 space-y-8">
             
-            <!-- Rank & XP Progression -->
-            <div class="glass-morphism p-8 rounded-3xl relative overflow-hidden flex flex-col items-center">
-                <div class="absolute -right-16 -top-16 w-36 h-36 bg-primary/5 rounded-full blur-2xl"></div>
-                <div class="absolute -left-16 -bottom-16 w-36 h-36 bg-tertiary/5 rounded-full blur-2xl"></div>
-                
-                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-6 w-full text-center">Rank Progression</h3>
-                
-                <!-- SVG XP Ring -->
-                <div class="relative w-36 h-36 flex items-center justify-center mb-6">
-                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.05)" stroke-width="7" fill="transparent" />
-                        <circle id="xp-dial" cx="50" cy="50" r="40" stroke="url(#cyan-magenta-grad)" stroke-width="7" fill="transparent"
-                            stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" class="transition-all duration-1000 ease-out" />
-                        <defs>
-                            <linearGradient id="cyan-magenta-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#4cd7f6" />
-                                <stop offset="100%" stop-color="#ec4899" />
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                    <div class="absolute flex flex-col items-center">
-                        <span id="xp-text" class="text-3xl font-black tracking-tight text-white">{{ current_user.current_xp or 100 }}</span>
-                        <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">XP TOTAL</span>
-                    </div>
-                </div>
-                
-                <!-- Rank Description -->
-                <div class="text-center space-y-1">
-                    <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Current Title</div>
-                    <div id="rank-title" class="text-lg font-black uppercase text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary">Apprentice Chemist</div>
-                    <p id="rank-next" class="text-xs text-slate-400 pt-2 font-medium">Complete more lab quests to level up.</p>
-                </div>
-            </div>
-
-            <!-- Concept Mastery -->
-            <div class="glass-morphism p-8 rounded-3xl">
-                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-cyan-400" style="font-variation-settings: 'FILL' 1;">analytics</span>
-                    Concept Telemetry
+            <!-- Continue Learning Section -->
+            <div class="glass-morphism p-6 md:p-8 rounded-3xl">
+                <h3 class="text-lg font-bold flex items-center gap-2 mb-6">
+                    <span class="material-symbols-outlined text-primary">play_circle</span>
+                    Continue Learning
                 </h3>
-                <div class="space-y-6">
-                    <div>
-                        <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
-                            <span class="text-slate-400">Organic Chemistry</span>
-                            <span class="text-cyan-400">85%</span>
-                        </div>
-                        <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
-                            <div class="h-full bg-gradient-to-r from-primary to-cyan-500 rounded-full" style="width: 85%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
-                            <span class="text-slate-400">Inorganic Reactions</span>
-                            <span class="text-tertiary">60%</span>
-                        </div>
-                        <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
-                            <div class="h-full bg-gradient-to-r from-tertiary to-pink-500 rounded-full" style="width: 60%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
-                            <span class="text-slate-400">Acid-Base Titration</span>
-                            <span class="text-cyan-400">75%</span>
-                        </div>
-                        <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
-                            <div class="h-full bg-gradient-to-r from-primary to-cyan-500 rounded-full" style="width: 75%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
-                            <span class="text-slate-400">Virtual Lab Practice</span>
-                            <span class="text-tertiary">95%</span>
-                        </div>
-                        <div class="w-full bg-[#0e1416] h-2.5 rounded-full overflow-hidden border border-white/5">
-                            <div class="h-full bg-gradient-to-r from-tertiary to-pink-500 rounded-full" style="width: 95%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Academy Stats (Streak, Attendance, Certificates) -->
-            <div class="glass-morphism p-8 rounded-3xl space-y-6">
-                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
-                    Academy Telemetry
-                </h3>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <!-- Streak -->
-                    <div class="bg-black/10 border border-white/5 p-4 rounded-2xl flex flex-col justify-between">
-                        <span class="material-symbols-outlined text-amber-500 text-2xl mb-2">local_fire_department</span>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Last Chapter -->
+                    <div class="bg-[#171d1e]/60 border border-white/5 p-5 rounded-2xl flex flex-col justify-between gap-4">
                         <div>
-                            <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Learning Streak</div>
-                            <div class="text-lg font-black text-white mt-1">{{ streak }} Days</div>
+                            <div class="flex items-center gap-2 text-[9px] font-bold uppercase text-slate-500">
+                                <span class="material-symbols-outlined text-primary text-sm">menu_book</span>
+                                Last Chapter
+                            </div>
+                            <div class="text-sm font-black text-white mt-2">
+                                {% if last_chapter %}
+                                    CH {{ last_chapter.chapter_number }}: {{ last_chapter.title }}
+                                {% else %}
+                                    None Opened Yet
+                                {% endif %}
+                            </div>
                         </div>
+                        {% if last_chapter %}
+                            <a href="/student/chapter/{{ last_chapter.id }}" class="btn-primary text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Continue</a>
+                        {% else %}
+                            <a href="/student/chapters" class="bg-white/5 border border-white/5 text-slate-400 text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Explore</a>
+                        {% endif %}
                     </div>
                     
-                    <!-- Attendance -->
-                    <div class="bg-black/10 border border-white/5 p-4 rounded-2xl flex flex-col justify-between">
-                        <span class="material-symbols-outlined text-emerald-400 text-2xl mb-2">calendar_month</span>
+                    <!-- Last Experiment -->
+                    <div class="bg-[#171d1e]/60 border border-white/5 p-5 rounded-2xl flex flex-col justify-between gap-4">
                         <div>
-                            <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Attendance Rate</div>
-                            <div class="text-lg font-black text-white mt-1">{{ attendance_rate }}%</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Enrolled Courses Quick List -->
-                <div class="border-t border-white/5 pt-4">
-                    <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Active Courses</div>
-                    <div class="space-y-3">
-                        {% for ec in enrolled_courses %}
-                            <div class="flex justify-between items-center bg-[#0e1416]/30 border border-white/5 p-3 rounded-xl">
-                                <div class="truncate">
-                                    <div class="text-xs font-bold text-white truncate">{{ ec.course_title }}</div>
-                                    <div class="text-[9px] text-slate-500 uppercase mt-0.5">{{ ec.category }}</div>
-                                </div>
-                                <div class="text-right shrink-0">
-                                    <span class="text-xs font-black text-cyan-400 font-mono">{{ ec.progress }}%</span>
-                                </div>
+                            <div class="flex items-center gap-2 text-[9px] font-bold uppercase text-slate-500">
+                                <span class="material-symbols-outlined text-tertiary text-sm">science</span>
+                                Last Experiment
                             </div>
+                            <div class="text-sm font-black text-white mt-2">
+                                {% if last_experiment %}
+                                    {{ last_experiment.title }}
+                                {% else %}
+                                    None Opened Yet
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if last_experiment %}
+                            <a href="/student/experiment/{{ last_experiment.id }}" class="btn-primary text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Continue</a>
                         {% else %}
-                            <div class="text-xs text-slate-500 text-center py-2">No courses enrolled.</div>
-                        {% endfor %}
+                            <a href="/student/experiments" class="bg-white/5 border border-white/5 text-slate-400 text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Explore</a>
+                        {% endif %}
                     </div>
-                </div>
-
-                <!-- Certificates Issued -->
-                <div class="border-t border-white/5 pt-4 flex justify-between items-center">
-                    <div>
-                        <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Credentials Earned</div>
-                        <div class="text-xs font-black text-white mt-1">{{ certs_count }} Certificates</div>
+                    
+                    <!-- Last Assessment -->
+                    <div class="bg-[#171d1e]/60 border border-white/5 p-5 rounded-2xl flex flex-col justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2 text-[9px] font-bold uppercase text-slate-500">
+                                <span class="material-symbols-outlined text-pink-400 text-sm">assignment_turned_in</span>
+                                Last Quiz
+                            </div>
+                            <div class="text-sm font-black text-white mt-2">
+                                {% if last_assessment %}
+                                    {{ last_assessment.title }}
+                                {% else %}
+                                    None Opened Yet
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if last_assessment %}
+                            <a href="/student/quiz/{{ last_assessment.chapter_id }}" class="btn-primary text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Continue</a>
+                        {% else %}
+                            <a href="/student/quizzes" class="bg-white/5 border border-white/5 text-slate-400 text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Explore</a>
+                        {% endif %}
                     </div>
-                    <a href="/student/certificates" class="text-tertiary text-[10px] font-bold uppercase tracking-widest hover:text-tertiary-container transition-colors">
-                        View all
-                    </a>
                 </div>
             </div>
 
-            <!-- Recent Activity Timeline -->
-            <div class="glass-morphism p-8 rounded-3xl">
-                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-pink-400">history</span>
-                    Recent Activity
+            <!-- Class Roadmap Section -->
+            <div class="glass-morphism p-6 md:p-8 rounded-3xl">
+                <h3 class="text-lg font-bold flex items-center gap-2 mb-6">
+                    <span class="material-symbols-outlined text-amber-500">map</span>
+                    Class {{ current_user.student_class }} Roadmap
                 </h3>
-                <div class="space-y-4">
-                    {% for item in recent_history %}
-                        <div class="flex items-start gap-3 text-xs border-l-2 border-slate-800 pl-4 py-1 relative">
-                            <span class="absolute w-2 h-2 rounded-full bg-cyan-400 -left-[5px] top-2"></span>
-                            <div class="flex-grow">
-                                <div class="font-bold text-white uppercase text-[9px] tracking-wider">{{ item.event_type }}</div>
-                                <span class="text-[9px] text-slate-500 font-medium">{{ item.created_at }}</span>
+                
+                <div class="relative pl-6 border-l-2 border-white/5 space-y-8">
+                    {% for node in roadmap %}
+                    <div class="relative">
+                        <!-- Connecting Indicator Node -->
+                        <span class="absolute w-5 h-5 rounded-full {% if node.completed %}bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]{% else %}bg-slate-800 border-2 border-slate-700{% endif %} -left-[37px] top-0.5 flex items-center justify-center">
+                            {% if node.completed %}
+                            <span class="material-symbols-outlined text-xs text-white font-bold">check</span>
+                            {% else %}
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+                            {% endif %}
+                        </span>
+                        
+                        <div class="bg-[#171d1e]/30 border border-white/5 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-white/10 transition-all">
+                            <div>
+                                <span class="text-[9px] font-black uppercase text-slate-500 tracking-wider">Chapter {{ node.chapter_number }}</span>
+                                <h4 class="text-base font-bold text-white uppercase mt-0.5">{{ node.chapter_title }}</h4>
+                                
+                                <!-- Lessons mini checklist -->
+                                <div class="flex flex-wrap gap-3 mt-3">
+                                    {% for ls in node.lessons %}
+                                    <div class="flex items-center gap-1.5 bg-[#0e1416]/60 px-2.5 py-1 rounded-lg border border-white/5">
+                                        <span class="w-1.5 h-1.5 rounded-full {% if ls.completed %}bg-emerald-400{% else %}bg-slate-600{% endif %}"></span>
+                                        <span class="text-[9px] font-bold text-slate-300">{{ ls.title }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div class="shrink-0 flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+                                {% if node.quiz %}
+                                <div class="flex flex-col text-right md:mr-3">
+                                    <span class="text-[8px] font-bold uppercase text-slate-500">Chapter Quiz</span>
+                                    {% if node.quiz_completed %}
+                                    <span class="text-[10px] font-bold text-emerald-400">{{ node.quiz_score }}% Score</span>
+                                    {% else %}
+                                    <span class="text-[10px] font-bold text-amber-500">Not Attempted</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                <a href="/student/chapter/{{ node.chapter_id }}" class="btn-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl">Open</a>
                             </div>
                         </div>
+                    </div>
                     {% else %}
-                        <div class="text-center text-xs text-slate-500 py-2">No history recorded.</div>
+                    <div class="text-slate-500 text-xs text-center py-4">No roadmap chapters mapped to your class grade.</div>
                     {% endfor %}
                 </div>
             </div>
-
         </div>
 
-        <!-- Right Column: Interactive Quest Board -->
-        <div class="lg:col-span-2 space-y-8">
+        <!-- Right Section: Leaderboard, Suggestions, Analytics -->
+        <div class="lg:col-span-1 space-y-8">
             
-            <!-- Quest Board Container -->
-            <div class="glass-morphism p-8 rounded-3xl">
+            <!-- Dynamic Suggestions -->
+            <div class="glass-morphism p-6 md:p-8 rounded-3xl relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 w-24 h-24 bg-primary/5 rounded-full blur-xl pointer-events-none"></div>
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">psychology</span>
+                    Recommended Next
+                </h3>
+                <div id="suggestions-container" class="space-y-4">
+                    <!-- Loading placeholder -->
+                    <div class="text-xs text-slate-500 text-center py-4 animate-pulse">Running telemetry recommendation algorithms...</div>
+                </div>
+            </div>
+
+            <!-- Class Leaderboard Widget -->
+            <div class="glass-morphism p-6 md:p-8 rounded-3xl relative">
                 <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <h3 class="text-xl font-bold flex items-center gap-2">
-                            <span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">assignment</span>
-                            Lab Quest Board
-                        </h3>
-                        <p class="text-slate-400 text-xs mt-1">Complete virtual objectives to secure experience tokens.</p>
-                    </div>
-                    <span id="quest-ratio" class="text-xs font-bold uppercase bg-slate-800 text-slate-300 border border-white/5 px-3 py-1 rounded-xl">0 / 3 Done</span>
+                    <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-amber-400">emoji_events</span>
+                        Grade Leaderboard
+                    </h3>
+                    <span class="text-[8px] font-bold uppercase tracking-widest text-primary bg-primary-light px-2.5 py-1 rounded-lg">Class {{ current_user.student_class }}</span>
                 </div>
-
-                <!-- Quest Cards Grid -->
-                <div class="space-y-5">
-                    {% if current_user.classLevel == '9' %}
-                    <!-- CLASS 9 QUESTS -->
-                    <!-- Quest 1 -->
-                    <div id="quest-1" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q1-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Particulate Study</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Open and read the Chapter 4 (Matter in Our Surroundings) study notes to secure early tokens.</p>
-                        </div>
-                        <a id="q1-btn" href="/student/chapter/4" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Open Notes</a>
-                    </div>
-
-                    <!-- Quest 2 -->
-                    <div id="quest-2" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q2-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Ice Melting Point Experiment</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Review the Melting Point of Ice experiment procedure, apparatus requirements, and results.</p>
-                        </div>
-                        <a id="q2-btn" href="/student/experiment/3" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">View Lab</a>
-                    </div>
-
-                    <!-- Quest 3 -->
-                    <div id="quest-3" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q3-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Matter Evaluation Challenge</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Score a passing result on the Matter in Our Surroundings practice evaluation module.</p>
-                        </div>
-                        <a id="q3-btn" href="/student/quiz/4" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Launch Quiz</a>
-                    </div>
-
-                    {% elif current_user.classLevel == '10' %}
-                    <!-- CLASS 10 QUESTS -->
-                    <!-- Quest 1 -->
-                    <div id="quest-1" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q1-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Acids & Bases Study</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Open and read the Chapter 5 (Acids, Bases and Salts) study notes to secure early tokens.</p>
-                        </div>
-                        <a id="q1-btn" href="/student/chapter/5" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Open Notes</a>
-                    </div>
-
-                    <!-- Quest 2 -->
-                    <div id="quest-2" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q2-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">pH Solution Testing</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Observe indicators and pH values of solutions in the pH determination lab.</p>
-                        </div>
-                        <a id="q2-btn" href="/student/experiment/4" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">View Lab</a>
-                    </div>
-
-                    <!-- Quest 3 -->
-                    <div id="quest-3" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q3-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Acids & Bases Evaluation</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Score a passing result on the Acids, Bases and Salts practice evaluation module.</p>
-                        </div>
-                        <a id="q3-btn" href="/student/quiz/5" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Launch Quiz</a>
-                    </div>
-
-                    {% elif current_user.classLevel == '12' %}
-                    <!-- CLASS 12 QUESTS -->
-                    <!-- Quest 1 -->
-                    <div id="quest-1" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q1-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Kinetics Theory Study</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Open and read the Chapter 6 (Chemical Kinetics) study notes to secure early tokens.</p>
-                        </div>
-                        <a id="q1-btn" href="/student/chapter/6" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Open Notes</a>
-                    </div>
-
-                    <!-- Quest 2 -->
-                    <div id="quest-2" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q2-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Reaction Rates Study</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Observe the effect of thiosulphate concentration in the kinetics laboratory experiment.</p>
-                        </div>
-                        <a id="q2-btn" href="/student/experiment/5" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">View Lab</a>
-                    </div>
-
-                    <!-- Quest 3 -->
-                    <div id="quest-3" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q3-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Kinetics Evaluation</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Score a passing result on the Chemical Kinetics practice evaluation module.</p>
-                        </div>
-                        <a id="q3-btn" href="/student/quiz/6" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Launch Quiz</a>
-                    </div>
-
-                    {% else %}
-                    <!-- CLASS 11 QUESTS (DEFAULT) -->
-                    <!-- Quest 1 -->
-                    <div id="quest-1" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q1-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Wurtz Alkane Synthesis</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Perform a Wurtz reaction in the Virtual Lab. Mix methyl chloride (<code class="text-cyan-400 font-mono">CH₃Cl</code>) and sodium metal (<code class="text-cyan-400 font-mono">Na</code>) in dry ether.</p>
-                        </div>
-                        <a id="q1-btn" href="/student/virtual-lab" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Launch Lab</a>
-                    </div>
-
-                    <!-- Quest 2 -->
-                    <div id="quest-2" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q2-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Acid-Base Neutralization</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Run a titration workbench simulation using phenolphthalein. Add titrant drop-wise to neutralize the analyte flask.</p>
-                        </div>
-                        <a id="q2-btn" href="/student/virtual-lab#titration" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Open Titrator</a>
-                    </div>
-
-                    <!-- Quest 3 -->
-                    <div id="quest-3" class="border border-white/5 bg-[#171d1e]/40 p-6 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-cyan-500/20">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5">
-                                <span id="q3-status-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-amber-500/20 bg-amber-500/10 text-amber-300 uppercase">In Progress</span>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight">Kolbe's Salicylic Synthesis</h4>
-                            </div>
-                            <p class="text-xs text-slate-400 max-w-md">Synthesize salicylic acid (<code class="text-cyan-400 font-mono">C₆H₄OHCOOH</code>) in the Virtual Lab. Mix phenol (<code class="text-cyan-400 font-mono">C₆H₅OH</code>), carbon dioxide (<code class="text-cyan-400 font-mono">CO₂</code>), and sodium hydroxide (<code class="text-cyan-400 font-mono">NaOH</code>) in the reaction flask.</p>
-                        </div>
-                        <a id="q3-btn" href="/student/virtual-lab" class="shrink-0 kinetic-gradient text-on-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all">Launch Lab</a>
-                    </div>
-                    {% endif %}
+                <div id="leaderboard-widget-list" class="space-y-3">
+                    <!-- Loading placeholder -->
+                    <div class="text-xs text-slate-500 text-center py-4 animate-pulse">Loading scoreboard data...</div>
                 </div>
             </div>
 
-            <!-- Quick Action Board -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Card 1 -->
-                <div class="bg-[#1b2122]/40 backdrop-blur-md border border-white/5 p-6 rounded-2xl hover:border-white/10 transition-all flex flex-col justify-between">
-                    <div>
-                        <span class="material-symbols-outlined text-cyan-400 text-3xl mb-3">explore</span>
-                        <h4 class="font-bold text-white mb-2 uppercase text-sm">Study Mechanisms</h4>
-                        <p class="text-xs text-slate-400 mb-4">Read reaction steps, carbocation rearrangements, and explanations for over 50 syllabus reactions.</p>
-                    </div>
-                    <a href="/student/reactions" class="text-cyan-400 text-[10px] font-bold uppercase tracking-widest hover:text-cyan-200 transition-colors mt-2">Catalog →</a>
-                </div>
-                <!-- Card 2 -->
-                <div class="bg-[#1b2122]/40 backdrop-blur-md border border-white/5 p-6 rounded-2xl hover:border-white/10 transition-all flex flex-col justify-between">
-                    <div>
-                        <span class="material-symbols-outlined text-tertiary text-3xl mb-3">account_circle</span>
-                        <h4 class="font-bold text-white mb-2 uppercase text-sm">Profile Logs</h4>
-                        <p class="text-xs text-slate-400 mb-4">View your connection telemetry registry and change your student information parameters.</p>
-                    </div>
-                    <a href="/student/profile" class="text-tertiary text-[10px] font-bold uppercase tracking-widest hover:text-tertiary-container transition-colors mt-2">Go to Profile →</a>
+            <!-- Learning Analytics Mini-Card -->
+            <div class="glass-morphism p-6 md:p-8 rounded-3xl">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-pink-400">bar_chart</span>
+                    Activity Overview
+                </h3>
+                <div class="relative w-full h-44">
+                    <canvas id="mini-analytics-chart"></canvas>
                 </div>
             </div>
-
+            
         </div>
     </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Sync quest completion using database event log telemetry
-    async function syncQuests() {
+    // 1. Fetch suggestions from engine
+    async function loadSuggestions() {
         try {
-            const res = await fetch('/api/history');
-            if (res.status === 401) return;
+            const res = await fetch('/api/student/recommendations');
+            if (!res.ok) return;
             const data = await res.json();
             
-            const history = data.history || [];
-            const userClassLevel = "{{ current_user.classLevel or '11' }}";
+            const container = document.getElementById('suggestions-container');
+            container.innerHTML = '';
             
-            // Check quest criteria based on class level
-            let q1Done = false;
-            let q2Done = false;
-            let q3Done = false;
+            let elements = [];
             
-            history.forEach(log => {
-                const eventType = log.event_type;
-                const eventData = log.event_data || '';
+            if (data.next_chapter) {
+                elements.push(`
+                    <div class="bg-[#171d1e]/50 border border-white/5 p-4 rounded-xl flex items-center justify-between gap-3">
+                        <div class="truncate">
+                            <span class="text-[8px] font-black uppercase text-primary tracking-wider">Next Chapter</span>
+                            <div class="text-xs font-bold text-white truncate mt-0.5">${data.next_chapter.title}</div>
+                        </div>
+                        <a href="/student/chapter/${data.next_chapter.id}" class="shrink-0 bg-primary/10 border border-primary/20 text-primary text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-all">Go</a>
+                    </div>
+                `);
+            }
+            if (data.suggested_experiment) {
+                elements.push(`
+                    <div class="bg-[#171d1e]/50 border border-white/5 p-4 rounded-xl flex items-center justify-between gap-3">
+                        <div class="truncate">
+                            <span class="text-[8px] font-black uppercase text-tertiary tracking-wider">Suggested Lab</span>
+                            <div class="text-xs font-bold text-white truncate mt-0.5">${data.suggested_experiment.title}</div>
+                        </div>
+                        <a href="/student/experiment/${data.suggested_experiment.id}" class="shrink-0 bg-tertiary/10 border border-tertiary/20 text-tertiary text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-tertiary/20 transition-all">Lab</a>
+                    </div>
+                `);
+            }
+            if (data.practice_quiz) {
+                elements.push(`
+                    <div class="bg-[#171d1e]/50 border border-white/5 p-4 rounded-xl flex items-center justify-between gap-3">
+                        <div class="truncate">
+                            <span class="text-[8px] font-black uppercase text-pink-400 tracking-wider">Practice Quiz</span>
+                            <div class="text-xs font-bold text-white truncate mt-0.5">${data.practice_quiz.title}</div>
+                        </div>
+                        <a href="/student/quiz/${data.practice_quiz.chapter_id}" class="shrink-0 bg-pink-500/10 border border-pink-500/20 text-pink-300 text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-pink-500/20 transition-all">Quiz</a>
+                    </div>
+                `);
+            }
+            if (data.revision_material) {
+                elements.push(`
+                    <div class="bg-[#171d1e]/50 border border-white/5 p-4 rounded-xl flex items-center justify-between gap-3">
+                        <div class="truncate">
+                            <span class="text-[8px] font-black uppercase text-amber-500 tracking-wider">Revision Material</span>
+                            <div class="text-xs font-bold text-white truncate mt-0.5">${data.revision_material.title}</div>
+                        </div>
+                        <a href="/student/chapter/${data.revision_material.chapter_id}" class="shrink-0 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-amber-500/20 transition-all">Review</a>
+                    </div>
+                `);
+            }
+            
+            if (elements.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-500 text-center py-4">All syllabus items completed! Excellent work.</div>`;
+            } else {
+                container.innerHTML = elements.join('');
+            }
+        } catch(e) {
+            console.error('Error loading recommendations:', e);
+        }
+    }
+
+    // 2. Fetch Leaderboard widget
+    async function loadLeaderboard() {
+        try {
+            const res = await fetch('/api/leaderboard');
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            const list = document.getElementById('leaderboard-widget-list');
+            list.innerHTML = '';
+            
+            const top5 = (data.leaderboard || []).slice(0, 5);
+            if (top5.length === 0) {
+                list.innerHTML = `<div class="text-xs text-slate-500 text-center py-4">No scoreboard registry found.</div>`;
+                return;
+            }
+            
+            top5.forEach((student, index) => {
+                const isMe = student.name === "{{ current_user.name }}";
+                let medal = '';
+                if (index === 0) medal = '🥇';
+                else if (index === 1) medal = '🥈';
+                else if (index === 2) medal = '🥉';
+                else medal = `<strong>#${index + 1}</strong>`;
                 
-                if (userClassLevel === '9') {
-                    // Quest 1: read_notes for chapter_id=4
-                    if (eventType === 'read_notes' && eventData.includes('chapter_id=4')) {
-                        q1Done = true;
-                    }
-                    // Quest 2: view_experiment for experiment_id=3
-                    if (eventType === 'view_experiment' && eventData.includes('experiment_id=3')) {
-                        q2Done = true;
-                    }
-                    // Quest 3: quiz_passed for chapter_id=4
-                    if (eventType === 'quiz_passed' && eventData.includes('chapter_id=4')) {
-                        q3Done = true;
-                    }
-                } else if (userClassLevel === '10') {
-                    // Quest 1: read_notes for chapter_id=5
-                    if (eventType === 'read_notes' && eventData.includes('chapter_id=5')) {
-                        q1Done = true;
-                    }
-                    // Quest 2: view_experiment for experiment_id=4
-                    if (eventType === 'view_experiment' && eventData.includes('experiment_id=4')) {
-                        q2Done = true;
-                    }
-                    // Quest 3: quiz_passed for chapter_id=5
-                    if (eventType === 'quiz_passed' && eventData.includes('chapter_id=5')) {
-                        q3Done = true;
-                    }
-                } else if (userClassLevel === '12') {
-                    // Quest 1: read_notes for chapter_id=6
-                    if (eventType === 'read_notes' && eventData.includes('chapter_id=6')) {
-                        q1Done = true;
-                    }
-                    // Quest 2: view_experiment for experiment_id=5
-                    if (eventType === 'view_experiment' && eventData.includes('experiment_id=5')) {
-                        q2Done = true;
-                    }
-                    // Quest 3: quiz_passed for chapter_id=6
-                    if (eventType === 'quiz_passed' && eventData.includes('chapter_id=6')) {
-                        q3Done = true;
-                    }
-                } else {
-                    // Class 11 (Default)
-                    // Quest 1: Wurtz Reaction in Virtual Lab
-                    if (eventType === 'reaction_success' && eventData.includes('Wurtz Reaction')) {
-                        q1Done = true;
-                    }
-                    // Quest 2: Titration Complete
-                    if (eventType === 'titration_complete') {
-                        q2Done = true;
-                    }
-                    // Quest 3: Kolbe's Reaction in Virtual Lab
-                    if (eventType === 'reaction_success' && eventData.includes("Kolbe's Reaction")) {
-                        q3Done = true;
+                list.innerHTML += `
+                    <div class="flex items-center justify-between bg-[#171d1e]/40 border ${isMe ? 'border-primary/40 shadow-[0_0_8px_rgba(6,182,212,0.1)]' : 'border-white/5'} p-3 rounded-xl">
+                        <div class="flex items-center gap-3 truncate">
+                            <span class="w-6 shrink-0 text-center text-xs">${medal}</span>
+                            <div class="truncate">
+                                <div class="text-xs font-bold ${isMe ? 'text-primary' : 'text-white'} truncate">${student.name}</div>
+                                <div class="text-[8px] text-slate-500 truncate mt-0.5">${student.institution}</div>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-xs font-black text-white font-mono">${student.current_xp}</span>
+                            <span class="text-[8px] font-bold text-slate-500 block">XP</span>
+                        </div>
+                    </div>
+                `;
+            });
+        } catch(e) {
+            console.error('Error loading leaderboard:', e);
+        }
+    }
+
+    // 3. Fetch analytics and load Chart.js
+    async function loadAnalytics() {
+        try {
+            const res = await fetch('/api/student/analytics');
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            // Build mini weekly progress chart
+            const ctx = document.getElementById('mini-analytics-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.weekly_progress.map(d => d.day),
+                    datasets: [{
+                        label: 'XP Gained',
+                        data: data.weekly_progress.map(d => d.xp),
+                        borderColor: '#4cd7f6',
+                        backgroundColor: 'rgba(76, 215, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, stepSize: 10 }
+                        }
                     }
                 }
             });
-            
-            // Render updates
-            let completedCount = 0;
-            
-            if (q1Done) {
-                completedCount++;
-                markQuestCompleted('quest-1', 'q1-status-badge', 'q1-btn');
-            }
-            if (q2Done) {
-                completedCount++;
-                markQuestCompleted('quest-2', 'q2-status-badge', 'q2-btn');
-            }
-            if (q3Done) {
-                completedCount++;
-                markQuestCompleted('quest-3', 'q3-status-badge', 'q3-btn');
-            }
-            
-            // Update counts & XP telemetry
-            document.getElementById('quest-ratio').textContent = `${completedCount} / 3 Done`;
-            
-            const totalXP = 100 + (completedCount * 100);
-            document.getElementById('xp-text').textContent = totalXP;
-            
-            // Update SVG XP progress dial
-            // Completed states map to total progress: 0 -> 25%, 1 -> 50%, 2 -> 75%, 3 -> 100%
-            const pct = (completedCount + 1) * 25;
-            const circumference = 251.2;
-            const offset = circumference - (pct / 100) * circumference;
-            document.getElementById('xp-dial').style.strokeDashoffset = offset;
-            
-            // Rank titles based on XP
-            const rankTitle = document.getElementById('rank-title');
-            const rankNext = document.getElementById('rank-next');
-            
-            if (completedCount === 0) {
-                rankTitle.textContent = 'Apprentice Chemist';
-                rankNext.textContent = 'Complete 1 quest to reach Molecular Navigator.';
-            } else if (completedCount === 1) {
-                rankTitle.textContent = 'Molecular Navigator';
-                rankNext.textContent = 'Complete 1 more quest to reach Reaction Engineer.';
-            } else if (completedCount === 2) {
-                rankTitle.textContent = 'Reaction Engineer';
-                rankNext.textContent = 'Complete 1 more quest to reach Vanguard Alchemist.';
-            } else if (completedCount === 3) {
-                rankTitle.textContent = 'Vanguard Alchemist';
-                rankNext.textContent = 'All core simulation quests completed! Master level.';
-            }
-            
-        } catch (err) {
-            console.error('Failed to sync quest telemetry', err);
+        } catch(e) {
+            console.error('Error loading analytics:', e);
         }
     }
 
-    function markQuestCompleted(cardId, badgeId, btnId) {
-        const card = document.getElementById(cardId);
-        const badge = document.getElementById(badgeId);
-        const btn = document.getElementById(btnId);
-        
-        if (card) {
-            card.classList.remove('hover:border-cyan-500/20');
-            card.classList.add('border-emerald-500/30', 'bg-emerald-950/10');
-        }
-        if (badge) {
-            badge.className = 'px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest border border-emerald-500/20 bg-emerald-500/20 text-emerald-300 uppercase shadow-[0_0_8px_rgba(16,185,129,0.3)] animate-pulse';
-            badge.textContent = 'Completed';
-        }
-        if (btn) {
-            btn.className = 'shrink-0 bg-slate-800 border border-white/5 text-slate-500 text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl cursor-default pointer-events-none';
-            btn.textContent = 'Complete';
-        }
-    }
-
-    // Boot
     document.addEventListener('DOMContentLoaded', () => {
-        syncQuests();
+        loadSuggestions();
+        loadLeaderboard();
+        loadAnalytics();
     });
 </script>
 {% endblock %}
