@@ -216,6 +216,55 @@ def parse_reaction_json_fields(rxn):
     return rxn
 
 
+
+def get_access_mode():
+    try:
+        with get_db() as conn:
+            row = conn.execute("SELECT access_mode FROM schools LIMIT 1").fetchone()
+            if row:
+                return row['access_mode']
+    except Exception:
+        pass
+    return 'STRICT'
+
+
+def check_in_version(content_type, content_id, title, content_data, user_id):
+    try:
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT COALESCE(MAX(version_number), 0) AS max_v FROM content_versions WHERE content_type = %s AND content_id = %s",
+                (content_type, content_id)
+            ).fetchone()
+            next_v = (row['max_v'] or 0) + 1
+            
+            conn.execute(
+                """
+                INSERT INTO content_versions (content_type, content_id, version_number, title, content_data, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (content_type, content_id, next_v, title, json.dumps(content_data), user_id)
+            )
+            
+            # Update current version in primary table
+            if content_type == 'course':
+                conn.execute("UPDATE courses SET version = %s WHERE id = %s", (next_v, content_id))
+            elif content_type == 'chapter':
+                conn.execute("UPDATE chapters SET version = %s WHERE id = %s", (next_v, content_id))
+            elif content_type == 'lesson':
+                conn.execute("UPDATE lessons SET version = %s WHERE id = %s", (next_v, content_id))
+        return next_v
+    except Exception as e:
+        import traceback
+        try:
+            with open("d:/Aman/Tools/Chemlove/v2/version_error.log", "a") as f:
+                f.write(f"Error checking in version (type={content_type}, id={content_id}, user_id={user_id}): {e}\n")
+                traceback.print_exc(file=f)
+        except Exception:
+            pass
+        print(f"Error checking in version: {e}")
+        return 1
+
+
 def all_chapters():
     try:
         with get_db() as conn:
@@ -1108,9 +1157,27 @@ def student_dashboard():
 @student_required
 def student_chapters():
     user = get_current_user()
-    class_level = user['classLevel']
+    user_class = user['classLevel']
+    
+    # Determine access mode
+    access_mode = get_access_mode()
+    
+    # Allow filtering by query parameter if access_mode is EXPLORE or OPEN
+    selected_class = request.args.get('class_level', user_class)
+    if access_mode == 'STRICT':
+        selected_class = user_class
+        
     with get_db() as conn:
-        rows = conn.execute("SELECT * FROM chapters WHERE class_level = %s ORDER BY chapter_number ASC", (class_level,)).fetchall()
+        rows = conn.execute(
+            """
+            SELECT * FROM chapters 
+            WHERE class_level = %s 
+              AND status = 'published' 
+              AND (publish_at IS NULL OR publish_at <= NOW())
+            ORDER BY chapter_number ASC
+            """,
+            (selected_class,)
+        ).fetchall()
     chapters = [parse_chapter_json_fields(row) for row in rows]
     
     # Lock/Unlock logic: lock next chapters if previous chapter has not been completed
@@ -1132,7 +1199,7 @@ def student_chapters():
                 prev_completed = (len(lessons) > 0 and comp_count == len(lessons))
                 ch["locked"] = not prev_completed
                 
-    return render_template('student/chapters.html', current_user=user, chapters=chapters, selected_class=class_level, active_tab='chapters')
+    return render_template('student/chapters.html', current_user=user, chapters=chapters, selected_class=selected_class, active_tab='chapters')
 
 
 @app.route('/student/chapter/<int:chapter_id>')
@@ -1140,7 +1207,27 @@ def student_chapters():
 def student_chapter_view(chapter_id):
     user = get_current_user()
     chapter_data = get_chapter(chapter_id)
-    if not chapter_data or chapter_data['class_level'] != user['classLevel']:
+    if not chapter_data:
+        flash('Chapter not found.', 'error')
+        return redirect(url_for('student_chapters'))
+        
+    # Check status and scheduling
+    is_published = chapter_data.get('status') == 'published'
+    publish_at_str = chapter_data.get('publish_at')
+    is_scheduled = False
+    if publish_at_str:
+        pub_time = datetime.fromisoformat(str(publish_at_str)) if isinstance(publish_at_str, str) else publish_at_str
+        if pub_time.tzinfo:
+            is_scheduled = pub_time > datetime.now(timezone.utc)
+        else:
+            is_scheduled = pub_time > datetime.now()
+            
+    if not is_published or is_scheduled:
+        flash('This chapter is not available yet.', 'error')
+        return redirect(url_for('student_chapters'))
+        
+    access_mode = get_access_mode()
+    if access_mode == 'STRICT' and chapter_data['class_level'] != user['classLevel']:
         flash('Unauthorized chapter access.', 'error')
         return redirect(url_for('student_chapters'))
         
@@ -1158,10 +1245,16 @@ def student_chapter_view(chapter_id):
 @student_required
 def student_reactions():
     user = get_current_user()
-    class_level = user['classLevel']
+    user_class = user['classLevel']
     
+    # Access mode check
+    access_mode = get_access_mode()
+    selected_class = request.args.get('class_level', user_class)
+    if access_mode == 'STRICT':
+        selected_class = user_class
+        
     with get_db() as conn:
-        rows = conn.execute("SELECT * FROM reactions WHERE class_level = %s ORDER BY id ASC", (class_level,)).fetchall()
+        rows = conn.execute("SELECT * FROM reactions WHERE class_level = %s ORDER BY id ASC", (selected_class,)).fetchall()
     reactions = [parse_reaction_json_fields(r) for r in rows]
     
     # Check reaction success event completion
@@ -1177,23 +1270,31 @@ def student_reactions():
             print(f"Error checking reaction completion: {e}")
             rx["completed"] = False
             
-    return render_template('student/reactions.html', current_user=user, reactions=reactions, selected_class=class_level, active_tab='reactions')
+    return render_template('student/reactions.html', current_user=user, reactions=reactions, selected_class=selected_class, active_tab='reactions')
 
 
 @app.route('/student/experiments')
 @student_required
 def student_experiments():
     user = get_current_user()
-    class_level = user['classLevel']
+    user_class = user['classLevel']
     
+    # Access mode check
+    access_mode = get_access_mode()
+    selected_class = request.args.get('class_level', user_class)
+    if access_mode == 'STRICT':
+        selected_class = user_class
+        
     try:
         with get_db() as conn:
             rows = conn.execute("""
                 SELECT e.*, c.class_level FROM experiments e
                 JOIN chapters c ON e.chapter_id = c.id
                 WHERE c.class_level = %s
+                  AND c.status = 'published'
+                  AND (c.publish_at IS NULL OR c.publish_at <= NOW())
                 ORDER BY e.id ASC
-            """, (class_level,)).fetchall()
+            """, (selected_class,)).fetchall()
     except Exception as e:
         print(f"Error querying experiments: {e}")
         rows = []
@@ -1213,7 +1314,7 @@ def student_experiments():
             print(f"Error checking experiment completion: {e}")
             exp["completed"] = False
             
-    return render_template('student/experiments.html', current_user=user, experiments=experiments, selected_class=class_level, active_tab='experiments')
+    return render_template('student/experiments.html', current_user=user, experiments=experiments, selected_class=selected_class, active_tab='experiments')
 
 
 @app.route('/student/experiment/<int:experiment_id>')
@@ -1225,11 +1326,31 @@ def student_experiment_view(experiment_id):
         flash('Experiment content not found.', 'error')
         return redirect(url_for('student_experiments'))
         
-    # Check class boundaries
+    # Check class boundaries and status
     try:
         with get_db() as conn:
-            ch = conn.execute("SELECT class_level FROM chapters WHERE id = %s", (exp['chapter_id'],)).fetchone()
-            if not ch or ch['class_level'] != user['classLevel']:
+            ch = conn.execute("SELECT class_level, status, publish_at FROM chapters WHERE id = %s", (exp['chapter_id'],)).fetchone()
+            if not ch:
+                flash('Unauthorized experiment access.', 'error')
+                return redirect(url_for('student_experiments'))
+                
+            # Check scheduling and publish status
+            is_published = ch.get('status') == 'published'
+            publish_at_str = ch.get('publish_at')
+            is_scheduled = False
+            if publish_at_str:
+                pub_time = datetime.fromisoformat(str(publish_at_str)) if isinstance(publish_at_str, str) else publish_at_str
+                if pub_time.tzinfo:
+                    is_scheduled = pub_time > datetime.now(timezone.utc)
+                else:
+                    is_scheduled = pub_time > datetime.now()
+                    
+            if not is_published or is_scheduled:
+                flash('This experiment is not available yet.', 'error')
+                return redirect(url_for('student_experiments'))
+                
+            access_mode = get_access_mode()
+            if access_mode == 'STRICT' and ch['class_level'] != user['classLevel']:
                 flash('Unauthorized experiment access.', 'error')
                 return redirect(url_for('student_experiments'))
                 
@@ -1246,7 +1367,14 @@ def student_experiment_view(experiment_id):
 @student_required
 def student_quizzes():
     user = get_current_user()
-    class_level = user['classLevel']
+    user_class = user['classLevel']
+    
+    # Access mode check
+    access_mode = get_access_mode()
+    selected_class = request.args.get('class_level', user_class)
+    if access_mode == 'STRICT':
+        selected_class = user_class
+        
     quizzes = []
     
     try:
@@ -1255,8 +1383,10 @@ def student_quizzes():
                 SELECT q.*, c.class_level FROM quizzes q
                 JOIN chapters c ON q.chapter_id = c.id
                 WHERE c.class_level = %s
+                  AND c.status = 'published'
+                  AND (c.publish_at IS NULL OR c.publish_at <= NOW())
                 ORDER BY q.id ASC
-            """, (class_level,)).fetchall()
+            """, (selected_class,)).fetchall()
             
         for q_row in quiz_rows:
             q_dict = dict(q_row)
@@ -1285,7 +1415,7 @@ def student_quizzes():
     except Exception as e:
         print(f"Error fetching student quizzes: {e}")
         
-    return render_template('student/quizzes.html', current_user=user, quizzes=quizzes, selected_class=class_level, active_tab='quizzes')
+    return render_template('student/quizzes.html', current_user=user, quizzes=quizzes, selected_class=selected_class, active_tab='quizzes')
 
 
 @app.route('/student/quiz/<int:chapter_id>')
@@ -1297,11 +1427,30 @@ def student_quiz_view(chapter_id):
         flash('Quiz not found.', 'error')
         return redirect(url_for('student_quizzes'))
         
-    # Check boundaries
+    # Check boundaries and scheduling
     try:
         with get_db() as conn:
-            ch = conn.execute("SELECT class_level FROM chapters WHERE id = %s", (chapter_id,)).fetchone()
-            if not ch or ch['class_level'] != user['classLevel']:
+            ch = conn.execute("SELECT class_level, status, publish_at FROM chapters WHERE id = %s", (chapter_id,)).fetchone()
+            if not ch:
+                flash('Unauthorized quiz access.', 'error')
+                return redirect(url_for('student_quizzes'))
+                
+            is_published = ch.get('status') == 'published'
+            publish_at_str = ch.get('publish_at')
+            is_scheduled = False
+            if publish_at_str:
+                pub_time = datetime.fromisoformat(str(publish_at_str)) if isinstance(publish_at_str, str) else publish_at_str
+                if pub_time.tzinfo:
+                    is_scheduled = pub_time > datetime.now(timezone.utc)
+                else:
+                    is_scheduled = pub_time > datetime.now()
+                    
+            if not is_published or is_scheduled:
+                flash('This quiz is not available yet.', 'error')
+                return redirect(url_for('student_quizzes'))
+                
+            access_mode = get_access_mode()
+            if access_mode == 'STRICT' and ch['class_level'] != user['classLevel']:
                 flash('Unauthorized quiz access.', 'error')
                 return redirect(url_for('student_quizzes'))
                 
@@ -2217,7 +2366,7 @@ def student_courses():
     if user.get("classLevel"):
         try:
             with get_db() as conn:
-                matching_courses = conn.execute("SELECT id FROM courses WHERE class_level = %s AND status = 'active'", (user["classLevel"],)).fetchall()
+                matching_courses = conn.execute("SELECT id FROM courses WHERE class_level = %s AND status IN ('active', 'published')", (user["classLevel"],)).fetchall()
                 for c in matching_courses:
                     conn.execute("INSERT IGNORE INTO course_enrollments (course_id, student_id, progress, status) VALUES (%s, %s, 0, 'active')", (c['id'], user['id']))
         except Exception as e:
@@ -2226,13 +2375,29 @@ def student_courses():
     enrollments = []
     try:
         with get_db() as conn:
-            rows = conn.execute("""
-                SELECT ce.*, c.title as course_title, c.description, c.category, c.class_level
-                FROM course_enrollments ce
-                JOIN courses c ON ce.course_id = c.id
-                WHERE ce.student_id = %s AND c.class_level = %s
-            """, (user["id"], user["classLevel"])).fetchall()
-            enrollments = [dict(r) for r in rows]
+            access_mode = get_access_mode()
+            if access_mode == 'STRICT':
+                rows = conn.execute("""
+                    SELECT ce.*, c.title as course_title, c.description, c.category, c.class_level
+                    FROM course_enrollments ce
+                    JOIN courses c ON ce.course_id = c.id
+                    WHERE ce.student_id = %s AND c.class_level = %s AND c.status IN ('active', 'published')
+                """, (user["id"], user["classLevel"])).fetchall()
+            else:
+                rows = conn.execute("""
+                    SELECT ce.id as enrollment_id, ce.progress, ce.status as enrollment_status, ce.enrolled_at,
+                           c.id as course_id, c.title as course_title, c.description, c.category, c.class_level
+                    FROM courses c
+                    LEFT JOIN course_enrollments ce ON ce.course_id = c.id AND ce.student_id = %s
+                    WHERE c.status IN ('active', 'published')
+                """, (user["id"],)).fetchall()
+                
+            enrollments = []
+            for r in rows:
+                r_dict = dict(r)
+                if 'course_id' not in r_dict:
+                    r_dict['course_id'] = r_dict.get('id')
+                enrollments.append(r_dict)
     except Exception as e:
         print(f"Error fetching enrollments: {e}")
     return render_template('student/courses.html', current_user=user, enrollments=enrollments, active_tab='courses')
@@ -2245,22 +2410,43 @@ def student_course_view(course_id):
     try:
         with get_db() as conn:
             course = conn.execute("SELECT * FROM courses WHERE id = %s", (course_id,)).fetchone()
-            if not course or course['class_level'] != user['classLevel']:
+            if not course or course['status'] not in ('active', 'published'):
+                flash("Course not found.", "error")
+                return redirect(url_for('student_courses'))
+                
+            access_mode = get_access_mode()
+            if access_mode == 'STRICT' and course['class_level'] != user['classLevel']:
                 flash("Course not found or unauthorized.", "error")
                 return redirect(url_for('student_courses'))
                 
+            # If EXPLORE or OPEN mode and they aren't enrolled yet, enroll them on-the-fly
             enrollment = conn.execute("SELECT * FROM course_enrollments WHERE course_id = %s AND student_id = %s", (course_id, user["id"])).fetchone()
+            if not enrollment:
+                conn.execute("INSERT IGNORE INTO course_enrollments (course_id, student_id, progress, status) VALUES (%s, %s, 0, 'active')", (course_id, user['id']))
+                enrollment = conn.execute("SELECT * FROM course_enrollments WHERE course_id = %s AND student_id = %s", (course_id, user["id"])).fetchone()
             
             # Fetch hierarchy: modules -> chapters -> lessons -> resources
             modules_rows = conn.execute("SELECT * FROM modules WHERE course_id = %s ORDER BY order_index ASC", (course_id,)).fetchall()
             modules = []
             for m in modules_rows:
                 m_dict = dict(m)
-                ch_rows = conn.execute("SELECT * FROM chapters WHERE module_id = %s ORDER BY chapter_number ASC", (m_dict["id"],)).fetchall()
+                ch_rows = conn.execute("""
+                    SELECT * FROM chapters 
+                    WHERE module_id = %s 
+                      AND status = 'published'
+                      AND (publish_at IS NULL OR publish_at <= NOW())
+                    ORDER BY chapter_number ASC
+                """, (m_dict["id"],)).fetchall()
                 chapters = []
                 for ch in ch_rows:
                     ch_dict = parse_chapter_json_fields(ch)
-                    lesson_rows = conn.execute("SELECT * FROM lessons WHERE chapter_id = %s AND status = 'published' ORDER BY order_index ASC", (ch_dict["id"],)).fetchall()
+                    lesson_rows = conn.execute("""
+                        SELECT * FROM lessons 
+                        WHERE chapter_id = %s 
+                          AND status = 'published' 
+                          AND (publish_at IS NULL OR publish_at <= NOW())
+                        ORDER BY order_index ASC
+                    """, (ch_dict["id"],)).fetchall()
                     lessons = []
                     for l in lesson_rows:
                         l_dict = dict(l)
@@ -2384,7 +2570,6 @@ def api_admin_courses():
         
         if not title:
             return jsonify({"error": "Missing course title"}), 400
-            
         try:
             with get_db() as conn:
                 cursor = conn.execute(
@@ -2397,6 +2582,17 @@ def api_admin_courses():
                     students = conn.execute("SELECT id FROM users WHERE role = 'student' AND class_level = %s", (class_level,)).fetchall()
                     for s in students:
                         conn.execute("INSERT IGNORE INTO course_enrollments (course_id, student_id, progress, status) VALUES (%s, %s, 0, 'active')", (course_id, s['id']))
+                
+            # Check-in version 1 (outside main transaction to avoid self-deadlock)
+            c_data = {
+                "title": title,
+                "description": description,
+                "category": category,
+                "class_level": class_level,
+                "status": status,
+                "thumbnail": None
+            }
+            check_in_version('course', course_id, title, c_data, user['id'])
                         
             log_audit("create_course", f"Created course {title} for Class {class_level}")
             return jsonify({"ok": True, "id": course_id})
@@ -2414,6 +2610,7 @@ def api_admin_courses():
         category = payload.get("category")
         class_level = payload.get("class_level")
         status = payload.get("status")
+        thumbnail = payload.get("thumbnail")
         
         update_fields = []
         params = []
@@ -2433,6 +2630,9 @@ def api_admin_courses():
         if status is not None:
             update_fields.append("status = %s")
             params.append(status)
+        if thumbnail is not None:
+            update_fields.append("thumbnail = %s")
+            params.append(thumbnail)
             
         if not update_fields:
             return jsonify({"error": "No fields to update"}), 400
@@ -2440,8 +2640,26 @@ def api_admin_courses():
         params.append(course_id)
         query = f"UPDATE courses SET {', '.join(update_fields)} WHERE id = %s"
         try:
+            uc = None
             with get_db() as conn:
                 conn.execute(query, tuple(params))
+                
+                # Retrieve the updated course and check-in
+                updated_course = conn.execute("SELECT * FROM courses WHERE id = %s", (course_id,)).fetchone()
+                if updated_course:
+                    uc = dict(updated_course)
+            
+            if uc:
+                c_data = {
+                    "title": uc["title"],
+                    "description": uc["description"],
+                    "category": uc["category"],
+                    "class_level": uc["class_level"],
+                    "status": uc["status"],
+                    "thumbnail": uc.get("thumbnail")
+                }
+                check_in_version('course', course_id, uc["title"], c_data, user['id'])
+                    
             log_audit("update_course", f"Updated parameters for course ID {course_id}")
             return jsonify({"ok": True})
         except Exception as e:
@@ -2584,6 +2802,7 @@ def api_admin_lessons():
         content = payload.get("content")
         order_index = payload.get("order_index", 0)
         status = payload.get("status", "published")
+        publish_at = payload.get("publish_at")
         
         if not chapter_id or not title:
             return jsonify({"error": "Missing chapter_id or title"}), 400
@@ -2591,10 +2810,22 @@ def api_admin_lessons():
         try:
             with get_db() as conn:
                 cursor = conn.execute(
-                    "INSERT INTO lessons (chapter_id, title, content, order_index, status) VALUES (%s, %s, %s, %s, %s)",
-                    (chapter_id, title, content, order_index, status)
+                    "INSERT INTO lessons (chapter_id, title, content, order_index, status, publish_at) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (chapter_id, title, content, order_index, status, publish_at)
                 )
                 lesson_id = cursor.lastrowid
+                
+            # Check-in version 1 (outside main transaction to avoid self-deadlock)
+            l_data = {
+                "chapter_id": chapter_id,
+                "title": title,
+                "content": content,
+                "order_index": order_index,
+                "status": status,
+                "publish_at": str(publish_at) if publish_at else None
+            }
+            check_in_version('lesson', lesson_id, title, l_data, user['id'])
+                
             log_audit("create_lesson", f"Created lesson {title} for chapter ID {chapter_id}")
             return jsonify({"ok": True, "id": lesson_id})
         except Exception as e:
@@ -2610,6 +2841,7 @@ def api_admin_lessons():
         content = payload.get("content")
         order_index = payload.get("order_index")
         status = payload.get("status")
+        publish_at = payload.get("publish_at")
         
         update_fields = []
         params = []
@@ -2626,6 +2858,9 @@ def api_admin_lessons():
         if status is not None:
             update_fields.append("status = %s")
             params.append(status)
+        if publish_at is not None:
+            update_fields.append("publish_at = %s")
+            params.append(publish_at)
             
         if not update_fields:
             return jsonify({"error": "No fields to update"}), 400
@@ -2633,8 +2868,26 @@ def api_admin_lessons():
         params.append(lesson_id)
         query = f"UPDATE lessons SET {', '.join(update_fields)} WHERE id = %s"
         try:
+            ul = None
             with get_db() as conn:
                 conn.execute(query, tuple(params))
+                
+                # Retrieve the updated lesson and check-in
+                updated_lesson = conn.execute("SELECT * FROM lessons WHERE id = %s", (lesson_id,)).fetchone()
+                if updated_lesson:
+                    ul = dict(updated_lesson)
+            
+            if ul:
+                l_data = {
+                    "chapter_id": ul["chapter_id"],
+                    "title": ul["title"],
+                    "content": ul["content"],
+                    "order_index": ul["order_index"],
+                    "status": ul["status"],
+                    "publish_at": str(ul["publish_at"]) if ul.get("publish_at") else None
+                }
+                check_in_version('lesson', lesson_id, ul["title"], l_data, user['id'])
+                    
             log_audit("update_lesson", f"Updated lesson ID {lesson_id}")
             return jsonify({"ok": True})
         except Exception as e:
@@ -2747,6 +3000,94 @@ def api_admin_resources():
             with get_db() as conn:
                 conn.execute("DELETE FROM resources WHERE id = %s", (resource_id,))
             log_audit("delete_resource", f"Deleted resource ID {resource_id}")
+            return jsonify({"ok": True})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+
+
+@app.route('/api/admin/versions', methods=['GET', 'POST'])
+def api_admin_versions():
+    user = get_current_user()
+    if not user or user['role'] not in ('admin', 'teacher'):
+        return jsonify({"error": "Forbidden"}), 403
+        
+    if request.method == 'GET':
+        content_type = request.args.get("content_type")
+        content_id = request.args.get("content_id")
+        if not content_type or not content_id:
+            return jsonify({"error": "Missing content_type or content_id"}), 400
+            
+        try:
+            with get_db() as conn:
+                rows = conn.execute(
+                    """
+                    SELECT cv.*, u.name as creator_name 
+                    FROM content_versions cv
+                    JOIN users u ON cv.created_by = u.id
+                    WHERE cv.content_type = %s AND cv.content_id = %s
+                    ORDER BY cv.version_number DESC
+                    """,
+                    (content_type, content_id)
+                ).fetchall()
+            return jsonify({"versions": [dict(r) for r in rows]})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+            
+    elif request.method == 'POST':
+        payload = request.get_json(silent=True) or {}
+        content_type = payload.get("content_type")
+        content_id = payload.get("content_id")
+        version_number = payload.get("version_number")
+        
+        if not content_type or not content_id or not version_number:
+            return jsonify({"error": "Missing content_type, content_id or version_number"}), 400
+            
+        try:
+            with get_db() as conn:
+                ver = conn.execute(
+                    "SELECT * FROM content_versions WHERE content_type = %s AND content_id = %s AND version_number = %s",
+                    (content_type, content_id, version_number)
+                ).fetchone()
+                if not ver:
+                    return jsonify({"error": "Version not found"}), 404
+                
+                data = json.loads(ver["content_data"])
+                
+                if content_type == 'course':
+                    conn.execute(
+                        "UPDATE courses SET title = %s, description = %s, category = %s, class_level = %s, status = %s, thumbnail = %s, version = %s WHERE id = %s",
+                        (data.get("title"), data.get("description"), data.get("category"), data.get("class_level"), data.get("status"), data.get("thumbnail"), version_number, content_id)
+                    )
+                elif content_type == 'chapter':
+                    conn.execute(
+                        """
+                        UPDATE chapters SET 
+                            class_level = %s, chapter_number = %s, title = %s, description = %s,
+                            learning_objectives = %s, key_points = %s, important_laws = %s, formulas = %s,
+                            constants = %s, important_reactions = %s, notes = %s, real_life_applications = %s,
+                            virtual_labs = %s, practice_questions = %s, common_mistakes = %s, difficulty = %s,
+                            estimated_study_time = %s, chapter_weightage = %s, next_chapter = %s,
+                            status = %s, version = %s, order_index = %s, publish_at = %s
+                        WHERE id = %s
+                        """,
+                        (
+                            data.get("class_level"), data.get("chapter_number"), data.get("title"), data.get("description"),
+                            json.dumps(data.get("learning_objectives", [])), json.dumps(data.get("key_points", [])), json.dumps(data.get("important_laws", [])), json.dumps(data.get("formulas", [])),
+                            json.dumps(data.get("constants", [])), json.dumps(data.get("important_reactions", [])), json.dumps(data.get("notes", [])), json.dumps(data.get("real_life_applications", [])),
+                            json.dumps(data.get("virtual_labs", [])), json.dumps(data.get("practice_questions", [])), json.dumps(data.get("common_mistakes", [])), data.get("difficulty"),
+                            data.get("estimated_study_time"), json.dumps(data.get("chapter_weightage", {})), json.dumps(data.get("next_chapter", {})),
+                            data.get("status"), version_number, data.get("order_index", 0), data.get("publish_at"),
+                            content_id
+                        )
+                    )
+                elif content_type == 'lesson':
+                    conn.execute(
+                        "UPDATE lessons SET title = %s, content = %s, order_index = %s, status = %s, publish_at = %s, version = %s WHERE id = %s",
+                        (data.get("title"), data.get("content"), data.get("order_index"), data.get("status"), data.get("publish_at"), version_number, content_id)
+                    )
+                
+            log_audit("restore_version", f"Restored {content_type} ID {content_id} to version {version_number}")
             return jsonify({"ok": True})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -3584,25 +3925,59 @@ def api_admin_chapters():
         chapter_number = payload.get("chapter_number")
         title = payload.get("title")
         description = payload.get("description")
+        status = payload.get("status", "published")
+        publish_at = payload.get("publish_at")
+        order_index = payload.get("order_index", 0)
         
         if not title:
             return jsonify({"error": "Missing title"}), 400
             
-        with get_db() as conn:
-            cursor = conn.execute(
-                """
-                INSERT INTO chapters (
-                    class_level, chapter_number, title, description,
-                    learning_objectives, key_points, important_laws, formulas,
-                    constants, important_reactions, notes, real_life_applications,
-                    virtual_labs, practice_questions, common_mistakes, difficulty,
-                    estimated_study_time, chapter_weightage, next_chapter
-                ) VALUES (%s, %s, %s, %s, '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', 'Beginner', '4 Hours', '{}', '{}')
-                """,
-                (class_level, chapter_number, title, description)
-            )
-            chapter_id = cursor.lastrowid
-        return jsonify({"ok": True, "id": chapter_id})
+        try:
+            with get_db() as conn:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO chapters (
+                        class_level, chapter_number, title, description,
+                        learning_objectives, key_points, important_laws, formulas,
+                        constants, important_reactions, notes, real_life_applications,
+                        virtual_labs, practice_questions, common_mistakes, difficulty,
+                        estimated_study_time, chapter_weightage, next_chapter, status, publish_at, order_index
+                    ) VALUES (%s, %s, %s, %s, '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', 'Beginner', '4 Hours', '{}', '{}', %s, %s, %s)
+                    """,
+                    (class_level, chapter_number, title, description, status, publish_at, order_index)
+                )
+                chapter_id = cursor.lastrowid
+                
+            # Check-in version 1 (outside main transaction to avoid self-deadlock)
+            ch_data = {
+                "class_level": class_level,
+                "chapter_number": chapter_number,
+                "title": title,
+                "description": description,
+                "learning_objectives": [],
+                "key_points": [],
+                "important_laws": [],
+                "formulas": [],
+                "constants": [],
+                "important_reactions": [],
+                "notes": [],
+                "real_life_applications": [],
+                "virtual_labs": [],
+                "practice_questions": [],
+                "common_mistakes": [],
+                "difficulty": "Beginner",
+                "estimated_study_time": "4 Hours",
+                "chapter_weightage": {},
+                "next_chapter": {},
+                "status": status,
+                "order_index": order_index,
+                "publish_at": str(publish_at) if publish_at else None
+            }
+            check_in_version('chapter', chapter_id, title, ch_data, user['id'])
+                
+            return jsonify({"ok": True, "id": chapter_id})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
         
     elif request.method == 'PUT':
         payload = request.get_json(silent=True) or {}
@@ -3610,52 +3985,97 @@ def api_admin_chapters():
         if not ch_id:
             return jsonify({"error": "Missing chapter id"}), 400
             
-        title = payload.get("title")
-        description = payload.get("description")
-        class_level = payload.get("class_level")
-        chapter_number = payload.get("chapter_number")
-        
-        learning_objectives = json.dumps(payload.get("learning_objectives", [])) if "learning_objectives" in payload else None
-        key_points = json.dumps(payload.get("key_points", [])) if "key_points" in payload else None
-        formulas = json.dumps(payload.get("formulas", [])) if "formulas" in payload else None
-        notes = json.dumps(payload.get("notes", [])) if "notes" in payload else None
-        
-        update_fields = []
-        params = []
-        
-        if title is not None:
-            update_fields.append("title = %s")
-            params.append(title)
-        if description is not None:
-            update_fields.append("description = %s")
-            params.append(description)
-        if class_level is not None:
-            update_fields.append("class_level = %s")
-            params.append(class_level)
-        if chapter_number is not None:
-            update_fields.append("chapter_number = %s")
-            params.append(chapter_number)
-        if learning_objectives is not None:
-            update_fields.append("learning_objectives = %s")
-            params.append(learning_objectives)
-        if key_points is not None:
-            update_fields.append("key_points = %s")
-            params.append(key_points)
-        if formulas is not None:
-            update_fields.append("formulas = %s")
-            params.append(formulas)
-        if notes is not None:
-            update_fields.append("notes = %s")
-            params.append(notes)
+        try:
+            with get_db() as conn:
+                curr = conn.execute("SELECT * FROM chapters WHERE id = %s", (ch_id,)).fetchone()
+            if not curr:
+                return jsonify({"error": "Chapter not found"}), 404
             
-        if not update_fields:
-            return jsonify({"error": "No fields to update"}), 400
+            curr_dict = dict(curr)
+            class_level = payload.get("class_level", curr_dict["class_level"])
+            chapter_number = payload.get("chapter_number", curr_dict["chapter_number"])
+            title = payload.get("title", curr_dict["title"])
+            description = payload.get("description", curr_dict["description"])
             
-        params.append(ch_id)
-        query = f"UPDATE chapters SET {', '.join(update_fields)} WHERE id = %s"
-        with get_db() as conn:
-            conn.execute(query, tuple(params))
-        return jsonify({"ok": True})
+            def load_or_keep(field):
+                if field in payload:
+                    return payload[field]
+                return safe_json_loads(curr_dict.get(field, '[]'))
+                
+            learning_objectives = load_or_keep("learning_objectives")
+            key_points = load_or_keep("key_points")
+            important_laws = load_or_keep("important_laws")
+            formulas = load_or_keep("formulas")
+            constants = load_or_keep("constants")
+            important_reactions = load_or_keep("important_reactions")
+            notes = load_or_keep("notes")
+            real_life_applications = load_or_keep("real_life_applications")
+            virtual_labs = load_or_keep("virtual_labs")
+            practice_questions = load_or_keep("practice_questions")
+            common_mistakes = load_or_keep("common_mistakes")
+            
+            difficulty = payload.get("difficulty", curr_dict.get("difficulty", "Beginner"))
+            estimated_study_time = payload.get("estimated_study_time", curr_dict.get("estimated_study_time", "4 Hours"))
+            chapter_weightage = payload.get("chapter_weightage") or safe_json_loads(curr_dict.get("chapter_weightage", "{}"))
+            next_chapter = payload.get("next_chapter") or safe_json_loads(curr_dict.get("next_chapter", "{}"))
+            
+            status = payload.get("status", curr_dict.get("status", "draft"))
+            order_index = payload.get("order_index", curr_dict.get("order_index", 0))
+            publish_at = payload.get("publish_at", curr_dict.get("publish_at"))
+            
+            with get_db() as conn:
+                conn.execute(
+                    """
+                    UPDATE chapters SET 
+                        class_level = %s, chapter_number = %s, title = %s, description = %s,
+                        learning_objectives = %s, key_points = %s, important_laws = %s, formulas = %s,
+                        constants = %s, important_reactions = %s, notes = %s, real_life_applications = %s,
+                        virtual_labs = %s, practice_questions = %s, common_mistakes = %s, difficulty = %s,
+                        estimated_study_time = %s, chapter_weightage = %s, next_chapter = %s,
+                        status = %s, order_index = %s, publish_at = %s
+                    WHERE id = %s
+                    """,
+                    (
+                        class_level, chapter_number, title, description,
+                        json.dumps(learning_objectives), json.dumps(key_points), json.dumps(important_laws), json.dumps(formulas),
+                        json.dumps(constants), json.dumps(important_reactions), json.dumps(notes), json.dumps(real_life_applications),
+                        json.dumps(virtual_labs), json.dumps(practice_questions), json.dumps(common_mistakes), difficulty,
+                        estimated_study_time, json.dumps(chapter_weightage), json.dumps(next_chapter),
+                        status, order_index, publish_at,
+                        ch_id
+                    )
+                )
+                
+            # Check-in version (outside main transaction to avoid self-deadlock)
+            ch_data = {
+                "class_level": class_level,
+                "chapter_number": chapter_number,
+                "title": title,
+                "description": description,
+                "learning_objectives": learning_objectives,
+                "key_points": key_points,
+                "important_laws": important_laws,
+                "formulas": formulas,
+                "constants": constants,
+                "important_reactions": important_reactions,
+                "notes": notes,
+                "real_life_applications": real_life_applications,
+                "virtual_labs": virtual_labs,
+                "practice_questions": practice_questions,
+                "common_mistakes": common_mistakes,
+                "difficulty": difficulty,
+                "estimated_study_time": estimated_study_time,
+                "chapter_weightage": chapter_weightage,
+                "next_chapter": next_chapter,
+                "status": status,
+                "order_index": order_index,
+                "publish_at": str(publish_at) if publish_at else None
+            }
+            check_in_version('chapter', ch_id, title, ch_data, user['id'])
+                
+            return jsonify({"ok": True})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
         
     elif request.method == 'DELETE':
         ch_id = request.args.get("id")

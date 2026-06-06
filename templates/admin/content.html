@@ -3,6 +3,50 @@
 {% block title %}ChemLove | Curriculum Hub{% endblock %}
 
 {% block dashboard_content %}
+    <!-- Quill Rich Text Editor CDN -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <style>
+        /* Quill dark mode overrides */
+        .ql-toolbar.ql-snow {
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(0, 0, 0, 0.3) !important;
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+        }
+        .ql-container.ql-snow {
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(15, 23, 42, 0.6) !important;
+            border-bottom-left-radius: 0.75rem;
+            border-bottom-right-radius: 0.75rem;
+            color: #fff;
+            min-height: 180px !important;
+            font-family: inherit;
+        }
+        .ql-editor {
+            min-height: 180px !important;
+        }
+        .ql-snow .ql-stroke {
+            stroke: #94a3b8 !important;
+        }
+        .ql-snow .ql-fill {
+            fill: #94a3b8 !important;
+        }
+        .ql-snow .ql-picker {
+            color: #94a3b8 !important;
+        }
+        .ql-snow .ql-picker-options {
+            background-color: #0f172a !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        .ql-snow.ql-toolbar button:hover, .ql-snow .ql-toolbar button:hover {
+            color: #22d3ee !important;
+        }
+        .ql-snow.ql-toolbar button:hover .ql-stroke, .ql-snow .ql-toolbar button:hover .ql-stroke {
+            stroke: #22d3ee !important;
+        }
+    </style>
+
     <!-- Welcoming Header -->
     <div class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
@@ -226,6 +270,58 @@
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Description</label>
                     <textarea id="ch-description-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary min-h-[80px]" required></textarea>
                 </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Order Index</label>
+                        <input type="number" id="ch-order-input" value="0" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Status</label>
+                        <select id="ch-status-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                            <option value="published">Published</option>
+                            <option value="draft">Draft</option>
+                            <option value="review">Review</option>
+                            <option value="archived">Archived</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Schedule Publish (Optional)</label>
+                    <input type="datetime-local" id="ch-publish-at-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary">
+                </div>
+                
+                <!-- DYNAMIC CURRICULUM LISTS BUILDER -->
+                <div class="border-t border-white/5 pt-4 space-y-3">
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500">Curriculum Lists Builder</label>
+                    
+                    <!-- Tab Navigation -->
+                    <div class="flex flex-wrap gap-1 p-1 rounded-xl bg-slate-950/60 border border-white/5">
+                        <button type="button" onclick="switchChListTab('learning_objectives')" id="ch-tab-btn-learning_objectives" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-primary/20 text-primary border border-primary/10">Objectives</button>
+                        <button type="button" onclick="switchChListTab('key_points')" id="ch-tab-btn-key_points" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Key Points</button>
+                        <button type="button" onclick="switchChListTab('important_laws')" id="ch-tab-btn-important_laws" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Laws</button>
+                        <button type="button" onclick="switchChListTab('formulas')" id="ch-tab-btn-formulas" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Formulas</button>
+                        <button type="button" onclick="switchChListTab('constants')" id="ch-tab-btn-constants" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Constants</button>
+                        <button type="button" onclick="switchChListTab('important_reactions')" id="ch-tab-btn-important_reactions" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Reactions</button>
+                        <button type="button" onclick="switchChListTab('virtual_labs')" id="ch-tab-btn-virtual_labs" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Labs</button>
+                        <button type="button" onclick="switchChListTab('practice_questions')" id="ch-tab-btn-practice_questions" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Questions</button>
+                        <button type="button" onclick="switchChListTab('common_mistakes')" id="ch-tab-btn-common_mistakes" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Mistakes</button>
+                        <button type="button" onclick="switchChListTab('notes')" id="ch-tab-btn-notes" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Notes</button>
+                    </div>
+
+                    <!-- Active Workspace -->
+                    <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-4 space-y-3">
+                        <h4 id="ch-list-workspace-title" class="text-[10px] font-bold uppercase text-white tracking-widest">Learning Objectives</h4>
+                        
+                        <div id="ch-list-container" class="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                            <!-- Dynamic items -->
+                        </div>
+
+                        <div class="flex gap-2">
+                            <input type="text" id="ch-list-item-input" class="flex-grow bg-slate-950 border border-white/10 rounded-xl p-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-primary" placeholder="Type new item...">
+                            <button type="button" onclick="addChapterListItem()" class="bg-primary/20 hover:bg-primary/30 border border-primary/20 text-primary font-bold text-xs uppercase px-4 py-2.5 rounded-xl transition-all">Add</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="flex gap-4 pt-2">
                     <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Save Chapter</button>
                     <button type="button" onclick="closeChapterModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
@@ -386,7 +482,10 @@
                 <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Status</label>
                     <select id="course-status-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
-                        <option value="active">Active</option>
+                        <option value="draft">Draft</option>
+                        <option value="review">Review</option>
+                        <option value="published">Published</option>
+                        <option value="active">Active (Legacy)</option>
                         <option value="archived">Archived</option>
                     </select>
                 </div>
@@ -452,12 +551,19 @@
                         <select id="lesson-status-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
                             <option value="published">Published</option>
                             <option value="draft">Draft</option>
+                            <option value="review">Review</option>
+                            <option value="archived">Archived</option>
                         </select>
                     </div>
                 </div>
                 <div>
+                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Schedule Publish (Optional)</label>
+                    <input type="datetime-local" id="lesson-publish-at-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary">
+                </div>
+                <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Lesson Text Content</label>
-                    <textarea id="lesson-content-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary min-h-[120px]" required></textarea>
+                    <div id="lesson-quill-editor" class="bg-slate-900 border border-white/10 rounded-xl font-semibold text-white min-h-[180px]" style="border-radius: 0.75rem; overflow: hidden;"></div>
+                    <input type="hidden" id="lesson-content-input">
                 </div>
                 <div class="flex gap-4 pt-2">
                     <button type="submit" class="flex-grow bg-primary text-on-primary font-bold text-xs uppercase py-3.5 rounded-xl hover:scale-102 transition-all active:scale-98">Save Lesson</button>
@@ -510,6 +616,20 @@
                     <button type="button" onclick="closeResourceModal()" class="flex-grow bg-slate-800 text-slate-400 hover:text-white font-bold text-xs uppercase rounded-xl border border-white/5 py-3.5">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+    <!-- DYNAMIC VERSION HISTORY DRAWER -->
+    <div id="drawer-version-history" class="fixed right-0 top-0 h-full w-full max-w-md bg-slate-950/95 border-l border-white/10 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 overflow-y-auto p-8 backdrop-blur-md">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold uppercase text-white tracking-wide flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-xl">history</span> Version History
+            </h3>
+            <button onclick="closeVersionDrawer()" class="text-slate-400 hover:text-white transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div id="version-drawer-content" class="space-y-4">
+            <!-- Versions list will be populated dynamically -->
         </div>
     </div>
 {% endblock %}
@@ -578,11 +698,13 @@
                     <div>
                         <div class="flex justify-between items-start mb-3">
                             <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">CLASS ${ch.class_level} • CH-${ch.chapter_number}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${ch.status === 'published' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-amber-500/10 text-amber-300'}">${ch.status || 'published'}</span>
                         </div>
                         <h4 class="text-base font-bold text-white uppercase mb-2">${ch.title}</h4>
                         <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed">${ch.description}</p>
                     </div>
                     <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
+                        <button onclick="showVersions('chapter', ${ch.id})" class="text-[10px] font-black uppercase text-amber-400 hover:text-amber-200 transition-colors">Versions</button>
                         <button onclick="editChapter(${ch.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
                         <button onclick="deleteChapter(${ch.id})" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
                     </div>
@@ -608,8 +730,91 @@
         } catch(e) { console.error(e); }
     }
 
+    let activeChListTab = 'learning_objectives';
+    let currentChapterLists = {
+        learning_objectives: [],
+        key_points: [],
+        important_laws: [],
+        formulas: [],
+        constants: [],
+        important_reactions: [],
+        virtual_labs: [],
+        practice_questions: [],
+        common_mistakes: [],
+        notes: []
+    };
+
+    function switchChListTab(tabName) {
+        activeChListTab = tabName;
+        document.querySelectorAll('.ch-list-tab-btn').forEach(btn => {
+            btn.className = "ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white";
+        });
+        const activeBtn = document.getElementById(`ch-tab-btn-${tabName}`);
+        if(activeBtn) {
+            activeBtn.className = "ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-primary/20 text-primary border border-primary/10";
+        }
+        const titles = {
+            learning_objectives: "Learning Objectives",
+            key_points: "Key Points",
+            important_laws: "Important Laws",
+            formulas: "Formulas",
+            constants: "Constants",
+            important_reactions: "Important Reactions",
+            virtual_labs: "Virtual Labs",
+            practice_questions: "Practice Questions",
+            common_mistakes: "Common Mistakes",
+            notes: "Revision Notes"
+        };
+        document.getElementById('ch-list-workspace-title').textContent = titles[tabName] || tabName;
+        document.getElementById('ch-list-item-input').placeholder = `Type new ${titles[tabName].toLowerCase()}...`;
+        renderChListItems();
+    }
+
+    function renderChListItems() {
+        const container = document.getElementById('ch-list-container');
+        container.innerHTML = '';
+        const items = currentChapterLists[activeChListTab] || [];
+        if(items.length === 0) {
+            container.innerHTML = '<div class="text-center py-4 text-slate-500 text-[10px]">// Empty list</div>';
+            return;
+        }
+        items.forEach((item, index) => {
+            const row = document.createElement('div');
+            row.className = "flex justify-between items-center bg-white/5 border border-white/5 rounded-xl p-2 px-3 hover:bg-white/10 transition-colors";
+            row.innerHTML = `
+                <span class="text-xs text-slate-300 pr-4">${item}</span>
+                <button type="button" onclick="removeChapterListItem(${index})" class="text-rose-400 hover:text-rose-300 transition-colors flex items-center">
+                    <span class="material-symbols-outlined text-base">delete</span>
+                </button>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function addChapterListItem() {
+        const input = document.getElementById('ch-list-item-input');
+        const val = input.value.trim();
+        if(!val) return;
+        if(!currentChapterLists[activeChListTab]) currentChapterLists[activeChListTab] = [];
+        currentChapterLists[activeChListTab].push(val);
+        input.value = '';
+        renderChListItems();
+    }
+
+    function removeChapterListItem(index) {
+        if(currentChapterLists[activeChListTab]) {
+            currentChapterLists[activeChListTab].splice(index, 1);
+            renderChListItems();
+        }
+    }
+
     async function openChapterModal(ch = null) {
         await populateChapterModulesDropdown();
+        const fields = [
+            'learning_objectives', 'key_points', 'important_laws', 'formulas',
+            'constants', 'important_reactions', 'virtual_labs', 'practice_questions',
+            'common_mistakes', 'notes'
+        ];
         if(ch) {
             document.getElementById('chapter-modal-title').textContent = "Edit Chapter";
             document.getElementById('ch-edit-id').value = ch.id;
@@ -618,11 +823,24 @@
             document.getElementById('ch-title-input').value = ch.title;
             document.getElementById('ch-module-select').value = ch.module_id || '';
             document.getElementById('ch-description-input').value = ch.description;
+            document.getElementById('ch-order-input').value = ch.order_index || 0;
+            document.getElementById('ch-status-select').value = ch.status || 'published';
+            document.getElementById('ch-publish-at-input').value = ch.publish_at ? ch.publish_at.substring(0, 16) : '';
+            
+            fields.forEach(field => {
+                let val = ch[field];
+                if(typeof val === 'string') {
+                    try { val = JSON.parse(val); } catch(e) { val = []; }
+                }
+                currentChapterLists[field] = Array.isArray(val) ? val : [];
+            });
         } else {
             document.getElementById('chapter-modal-title').textContent = "Add Chapter";
             document.getElementById('chapter-form').reset();
             document.getElementById('ch-edit-id').value = '';
+            fields.forEach(field => currentChapterLists[field] = []);
         }
+        switchChListTab('learning_objectives');
         document.getElementById('modal-chapter').classList.remove('hidden');
     }
 
@@ -641,7 +859,21 @@
             chapter_number: parseInt(document.getElementById('ch-number-input').value),
             title: document.getElementById('ch-title-input').value,
             description: document.getElementById('ch-description-input').value,
-            module_id: document.getElementById('ch-module-select').value ? parseInt(document.getElementById('ch-module-select').value) : null
+            module_id: document.getElementById('ch-module-select').value ? parseInt(document.getElementById('ch-module-select').value) : null,
+            order_index: parseInt(document.getElementById('ch-order-input').value) || 0,
+            status: document.getElementById('ch-status-select').value,
+            publish_at: document.getElementById('ch-publish-at-input').value || null,
+            
+            learning_objectives: currentChapterLists.learning_objectives,
+            key_points: currentChapterLists.key_points,
+            important_laws: currentChapterLists.important_laws,
+            formulas: currentChapterLists.formulas,
+            constants: currentChapterLists.constants,
+            important_reactions: currentChapterLists.important_reactions,
+            virtual_labs: currentChapterLists.virtual_labs,
+            practice_questions: currentChapterLists.practice_questions,
+            common_mistakes: currentChapterLists.common_mistakes,
+            notes: currentChapterLists.notes
         };
         let method = 'POST';
         let url = '/api/admin/chapters';
@@ -1013,12 +1245,13 @@
                     <div>
                         <div class="flex justify-between items-start mb-3">
                             <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">CLASS ${c.class_level} • ${c.category}</span>
-                            <span class="text-[9px] font-bold uppercase tracking-wider ${c.status === 'active' ? 'text-emerald-400' : 'text-slate-500'}">${c.status}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${c.status === 'published' || c.status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-amber-500/10 text-amber-300'}">${c.status || 'published'}</span>
                         </div>
                         <h4 class="text-base font-bold text-white uppercase mb-2">${c.title}</h4>
                         <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed">${c.description || 'No description.'}</p>
                     </div>
                     <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
+                        <button onclick="showVersions('course', ${c.id})" class="text-[10px] font-black uppercase text-amber-400 hover:text-amber-200 transition-colors">Versions</button>
                         <button onclick="editCourse(${c.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
                         <button onclick="deleteCourse(${c.id})" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
                     </div>
@@ -1228,12 +1461,14 @@
                 card.innerHTML = `
                     <div>
                         <div class="flex justify-between items-start mb-3">
-                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">Order: ${l.order_index} • ${l.status}</span>
+                            <span class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md">Order: ${l.order_index}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${l.status === 'published' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-amber-500/10 text-amber-300'}">${l.status || 'published'}</span>
                         </div>
                         <h4 class="text-base font-bold text-white uppercase mb-2">${l.title}</h4>
                         <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed">${l.content || 'No content.'}</p>
                     </div>
                     <div class="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-4">
+                        <button onclick="showVersions('lesson', ${l.id})" class="text-[10px] font-black uppercase text-amber-400 hover:text-amber-200 transition-colors">Versions</button>
                         <button onclick="editLesson(${l.id})" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-200 transition-colors">Edit</button>
                         <button onclick="deleteLesson(${l.id})" class="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors">Delete</button>
                     </div>
@@ -1243,8 +1478,28 @@
         } catch (e) { console.error(e); }
     }
 
+    let quillEditor = null;
+    function initQuill() {
+        if (!quillEditor) {
+            quillEditor = new Quill('#lesson-quill-editor', {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        ['blockquote', 'code-block'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link', 'image'],
+                        ['clean']
+                    ]
+                }
+            });
+        }
+    }
+
     async function openLessonModal(lesson = null) {
         await populateChaptersDropdown('lesson-chapter-select');
+        initQuill();
         if(lesson) {
             document.getElementById('lesson-modal-title').textContent = "Edit Lesson";
             document.getElementById('lesson-edit-id').value = lesson.id;
@@ -1252,11 +1507,13 @@
             document.getElementById('lesson-title-input').value = lesson.title;
             document.getElementById('lesson-order-input').value = lesson.order_index;
             document.getElementById('lesson-status-select').value = lesson.status;
-            document.getElementById('lesson-content-input').value = lesson.content || '';
+            document.getElementById('lesson-publish-at-input').value = lesson.publish_at ? lesson.publish_at.substring(0, 16) : '';
+            quillEditor.root.innerHTML = lesson.content || '';
         } else {
             document.getElementById('lesson-modal-title').textContent = "Add Lesson";
             document.getElementById('lesson-form').reset();
             document.getElementById('lesson-edit-id').value = '';
+            quillEditor.root.innerHTML = '';
         }
         document.getElementById('modal-lesson').classList.remove('hidden');
     }
@@ -1276,7 +1533,8 @@
             title: document.getElementById('lesson-title-input').value,
             order_index: parseInt(document.getElementById('lesson-order-input').value),
             status: document.getElementById('lesson-status-select').value,
-            content: document.getElementById('lesson-content-input').value
+            publish_at: document.getElementById('lesson-publish-at-input').value || null,
+            content: quillEditor.root.innerHTML
         };
 
         let method = 'POST';
@@ -1487,6 +1745,89 @@
                 const res = await fetch(`/api/admin/certificates?id=${id}`, { method: 'DELETE' });
                 if(res.ok) loadCertificatesList();
             } catch(e) { console.error(e); }
+        }
+    }
+
+    // ── VERSION HISTORY SIDEBAR HANDLERS ─────────────────────────────────────
+    function closeVersionDrawer() {
+        const drawer = document.getElementById('drawer-version-history');
+        drawer.classList.add('translate-x-full');
+    }
+
+    async function showVersions(contentType, contentId) {
+        const drawer = document.getElementById('drawer-version-history');
+        const container = document.getElementById('version-drawer-content');
+        
+        container.innerHTML = '<div class="flex justify-center py-8"><div class="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>';
+        drawer.classList.remove('translate-x-full');
+        
+        try {
+            const res = await fetch(`/api/admin/versions?content_type=${contentType}&content_id=${contentId}`);
+            const data = await res.json();
+            const versions = data.versions || [];
+            
+            container.innerHTML = '';
+            if (versions.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-slate-500 text-xs">// No version history found</div>';
+                return;
+            }
+            
+            versions.forEach(v => {
+                const dateStr = new Date(v.created_at).toLocaleString();
+                const item = document.createElement('div');
+                item.className = 'glass-morphism p-4 rounded-xl border border-white/5 space-y-2';
+                
+                let snapshot = {};
+                try {
+                    snapshot = JSON.parse(v.content_data);
+                } catch(e) {}
+                
+                const statusBadge = snapshot.status ? 
+                    `<span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${snapshot.status === 'published' || snapshot.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}">${snapshot.status}</span>` : '';
+                
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-white">Version ${v.version_number} ${statusBadge}</span>
+                        <span class="text-[10px] text-slate-400 font-medium">${dateStr}</span>
+                    </div>
+                    <p class="text-xs text-slate-300 font-semibold truncate">${v.title || 'Untitled'}</p>
+                    <div class="text-[10px] text-slate-500 flex justify-between items-center pt-1 border-t border-white/5">
+                        <span>By: ${v.creator_name || 'System'}</span>
+                        <button onclick="restoreVersion('${contentType}', ${contentId}, ${v.version_number})" class="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 hover:text-cyan-300 text-[9px] font-bold uppercase px-2 py-1 rounded-md border border-cyan-500/20 transition-all">Restore</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        } catch(e) {
+            console.error(e);
+            container.innerHTML = '<div class="text-center py-8 text-rose-400 text-xs">// Error loading version history</div>';
+        }
+    }
+
+    async function restoreVersion(contentType, contentId, versionNumber) {
+        if (!confirm(`Are you sure you want to restore to version ${versionNumber}?`)) return;
+        
+        try {
+            const res = await fetch('/api/admin/versions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content_type: contentType,
+                    content_id: contentId,
+                    version_number: versionNumber
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.ok) {
+                closeVersionDrawer();
+                alert(`Successfully restored to version ${versionNumber}!`);
+                await loadTabContent(activeAdminTab);
+            } else {
+                alert(`Failed to restore: ${data.error || 'Unknown error'}`);
+            }
+        } catch(e) {
+            console.error(e);
+            alert('Failed to restore version due to a network error.');
         }
     }
 
