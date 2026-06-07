@@ -1,6 +1,6 @@
 {% extends 'layouts/dashboard_base.html' %}
 
-{% block title %}ChemLove | Student Profile{% endblock %}
+{% block title %}ChemLove | {% if current_user.role == 'student' %}Student Profile{% elif current_user.role == 'teacher' %}Teacher Profile{% else %}Admin Profile{% endif %}{% endblock %}
 
 {% block dashboard_content %}
     <!-- Header Section -->
@@ -10,7 +10,9 @@
                 <span class="w-2 h-2 rounded-full bg-primary live-pulse"></span>
                 User Telemetry Panel
             </div>
-            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Student Profile</h1>
+            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">
+                {% if current_user.role == 'student' %}Student Profile{% elif current_user.role == 'teacher' %}Teacher Profile{% else %}Admin Profile{% endif %}
+            </h1>
         </div>
         
         <!-- Quick stats summary widget -->
@@ -40,9 +42,15 @@
                         </div>
                     </div>
                     <h2 class="text-xl font-black tracking-tight text-white text-center">{{ current_user.name }}</h2>
+                    {% if current_user.role == 'student' %}
                     <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase mt-2 bg-primary-light text-primary">
                         {{ current_user.achievement_level }} (Lvl {{ current_user.level }})
                     </span>
+                    {% else %}
+                    <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase mt-2 bg-pink-950/20 text-pink-400">
+                        {{ current_user.role | upper }}
+                    </span>
+                    {% endif %}
                 </div>
                 
                 <!-- Tab Switching Buttons -->
@@ -51,6 +59,7 @@
                         <span class="material-symbols-outlined text-sm">person</span>
                         Personal Info
                     </button>
+                    {% if current_user.role == 'student' %}
                     <button onclick="switchTab('academic')" id="tab-btn-academic" class="profile-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-slate-800/40 hover:text-white transition-all text-left">
                         <span class="material-symbols-outlined text-sm">school</span>
                         Academic Info
@@ -63,6 +72,7 @@
                         <span class="material-symbols-outlined text-sm">emoji_events</span>
                         Achievements
                     </button>
+                    {% endif %}
                     <button onclick="switchTab('timeline')" id="tab-btn-timeline" class="profile-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-slate-800/40 hover:text-white transition-all text-left">
                         <span class="material-symbols-outlined text-sm">history</span>
                         Activity Timeline
@@ -103,9 +113,15 @@
                             <input type="text" id="mobile-input" name="mobile" value="{{ current_user.mobile or '' }}" placeholder="+91 XXXXX XXXXX" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3.5 font-semibold text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all">
                         </div>
                         <div>
+                            {% if current_user.role == 'student' %}
                             <label class="block font-bold uppercase text-[9px] mb-1.5 tracking-widest text-slate-500">Class Grade Level</label>
                             <input type="text" value="Class {{ current_user.student_class }}" class="w-full bg-[#0e1416]/50 border border-white/5 rounded-xl p-3.5 font-semibold text-slate-500 cursor-not-allowed" disabled>
                             <input type="hidden" id="class-level-input" value="{{ current_user.student_class }}">
+                            {% else %}
+                            <label class="block font-bold uppercase text-[9px] mb-1.5 tracking-widest text-slate-500">Account Role</label>
+                            <input type="text" value="{{ current_user.role | upper }}" class="w-full bg-[#0e1416]/50 border border-white/5 rounded-xl p-3.5 font-semibold text-slate-500 cursor-not-allowed" disabled>
+                            <input type="hidden" id="class-level-input" value="">
+                            {% endif %}
                         </div>
                     </div>
                     <div class="border-t border-white/5 pt-6 flex justify-end">
@@ -336,6 +352,7 @@
 
     // Load detailed analytics charts
     async function loadAnalyticsCharts() {
+        if (!document.getElementById('weekly-xp-chart')) return;
         try {
             const res = await fetch('/api/student/analytics');
             if (!res.ok) return;

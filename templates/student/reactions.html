@@ -37,7 +37,7 @@
                         </button>
                         <!-- Dropdown Menu -->
                         <div id="type-dropdown-menu" class="hidden absolute right-0 mt-2.5 w-56 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
-                            <div class="space-y-1">
+                            <div class="space-y-1 max-h-[240px] overflow-y-auto pr-1" id="type-dropdown-options">
                                 <button type="button" onclick="selectTypeFilter('all', 'All Reactions')" class="type-option-btn active w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-950/20 transition-all text-left">
                                     <span class="material-symbols-outlined text-sm">science</span> All Reactions
                                 </button>
@@ -103,6 +103,73 @@
     function hideDetail() {
         document.getElementById('detail-section').classList.add('hidden');
         document.getElementById('catalog-section').classList.remove('hidden');
+    }
+
+    function updateCategoryDropdown() {
+        const clsEl = document.getElementById('class-filter');
+        if (!clsEl) return;
+        const cls = clsEl.value;
+        const container = document.getElementById('type-dropdown-options');
+        if (!container) return;
+
+        // Find all unique categories present in the reactions of this class
+        const classReactions = REACTIONS.filter(r => cls === 'all' || String(r.class_level) === cls);
+        const categoriesSet = new Set();
+        
+        classReactions.forEach(r => {
+            const cats = getReactionCategories(r.id);
+            cats.forEach(cat => categoriesSet.add(cat));
+        });
+
+        // Re-build type dropdown options dynamically
+        let optionsHtml = `
+            <button type="button" onclick="selectTypeFilter('all', 'All Reactions')" class="type-option-btn active w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-950/20 transition-all text-left">
+                <span class="material-symbols-outlined text-sm">science</span> All Reactions
+            </button>
+        `;
+
+        const categoryIcons = {
+            "Organic_Named_Reactions": "label",
+            "Substitution_Reactions": "swap_horiz",
+            "Addition_Reactions": "add_box",
+            "Elimination_Reactions": "backspace",
+            "Rearrangement_Reactions": "shuffle",
+            "Oxidation_Reactions": "bolt",
+            "Reduction_Reactions": "trending_down",
+            "Condensation_Reactions": "water_drop",
+            "Disproportionation_Reactions": "compare_arrows",
+            "Hydrolysis_Reactions": "water_drop",
+            "Polymerization_Reactions": "account_tree",
+            "Combustion_Reactions": "local_fire_department",
+            "Free_Radical_Reactions": "groups",
+            "Combination_Reactions": "merge",
+            "Decomposition_Reactions": "splitscreen",
+            "Displacement_Reactions": "move_down",
+            "Double_Displacement_Reactions": "sync_alt",
+            "Neutralization_Reactions": "balance",
+            "Metal_Acid_Reactions": "science",
+            "Metal_Water_Reactions": "opacity",
+            "Oxide_Reactions": "bubble_chart",
+            "Industrial_Processes": "factory",
+            "s_Block_Reactions": "grid_view",
+            "p_Block_Reactions": "table_rows",
+            "d_Block_Reactions": "view_cozy",
+            "Noble_Gas_Reactions": "star"
+        };
+
+        const sortedCategories = Array.from(categoriesSet).sort();
+        
+        sortedCategories.forEach(cat => {
+            const displayName = cat.replace(/_/g, ' ');
+            const icon = categoryIcons[cat] || "science";
+            optionsHtml += `
+                <button type="button" onclick="selectTypeFilter('${cat}', '${displayName}')" class="type-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                    <span class="material-symbols-outlined text-sm">${icon}</span> ${displayName}
+                </button>
+            `;
+        });
+
+        container.innerHTML = optionsHtml;
     }
 
     function selectTypeFilter(type, label) {
@@ -171,6 +238,9 @@
         });
         
         // Trigger filter update
+        if (typeof updateCategoryDropdown === 'function') {
+            updateCategoryDropdown();
+        }
         if (typeof filterReactions === 'function') {
             filterReactions();
         }

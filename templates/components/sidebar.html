@@ -1,36 +1,21 @@
 <aside id="dashboard-sidebar"
     class="fixed left-0 top-0 z-20 h-screen w-64 border-r border-white/5 bg-[#0e1416]/50 backdrop-blur-xl flex flex-col pt-6 px-4 hidden md:flex transition-all duration-300">
-    <div class="flex-grow overflow-y-auto pr-1 space-y-6 scrollbar-thin">
-        <!-- User Info Profile Block -->
-        <div class="px-3 pb-4 mb-4 border-b border-white/5 flex items-center gap-3">
-            <span class="material-symbols-outlined text-cyan-400 text-2xl shrink-0">account_circle</span>
-            <div class="truncate">
-                <div class="font-black text-xs text-white truncate leading-tight">{{ current_user.name }}</div>
-                <div class="text-[9px] font-black uppercase tracking-wider text-slate-500 leading-tight mt-1">
-                    {% if current_user.role == 'student' %}
-                    Student
-                    {% elif current_user.role == 'teacher' %}
-                    Teacher
-                    {% else %}
-                    Admin
-                    {% endif %}
-                </div>
+    
+    <!-- Fixed Brand Logo Block -->
+    <div class="px-3 pb-4 mb-4 border-b border-white/5 flex items-center gap-3 shrink-0">
+        <span class="material-symbols-outlined text-cyan-400 text-3xl shrink-0 animate-pulse">science</span>
+        <div class="truncate">
+            <div class="font-black text-lg tracking-tight text-white uppercase leading-none">Chem<span class="text-cyan-400">Love</span></div>
+            <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight mt-1">
+                Virtual Lab & LMS
             </div>
         </div>
+    </div>
 
+    <div class="flex-grow overflow-y-auto pr-1 space-y-6 scrollbar-thin">
         {% if current_user.role == 'student' %}
         <!-- Student Portal Sidebar Items -->
 
-        <div>
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">User Profile</div>
-            <div class="space-y-1">
-                <a href="/profile"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all {% if active_tab == 'profile' or request.path == '/profile' %}bg-cyan-950/20 text-cyan-400 border border-cyan-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">person</span>
-                    Profile Settings
-                </a>
-            </div>
-        </div>
 
         <div>
             <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">General</div>
@@ -101,21 +86,6 @@
             </div>
         </div>
 
-        <div>
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">Ecosystem</div>
-            <div class="space-y-1">
-                <a href="/about"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all {% if request.path == '/about' %}bg-cyan-950/20 text-cyan-400 border border-cyan-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">info</span>
-                    About
-                </a>
-                <a href="/contact"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all {% if request.path == '/contact' %}bg-cyan-950/20 text-cyan-400 border border-cyan-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">contact_support</span>
-                    Contact
-                </a>
-            </div>
-        </div>
 
         {% elif current_user.role == 'teacher' %}
         <!-- Teacher Portal Sidebar Items -->
@@ -131,6 +101,11 @@
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-pink-950/20 hover:text-pink-400 transition-all {% if active_tab == 'courses' or request.path == '/teacher/courses' %}bg-pink-950/20 text-pink-400 border border-pink-500/10{% endif %}">
                     <span class="material-symbols-outlined text-base">collections_bookmark</span>
                     My Courses
+                </a>
+                                <a href="/teacher/content"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-pink-950/20 hover:text-pink-400 transition-all {% if active_tab == 'content' or request.path == '/teacher/content' %}bg-pink-950/20 text-pink-400 border border-pink-500/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">article</span>
+                    Content
                 </a>
                 <a href="/teacher/students"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-pink-950/20 hover:text-pink-400 transition-all {% if active_tab == 'students' or request.path == '/teacher/students' %}bg-pink-950/20 text-pink-400 border border-pink-500/10{% endif %}">
@@ -152,11 +127,6 @@
                     <span class="material-symbols-outlined text-base">quiz</span>
                     Quizzes
                 </a>
-                <a href="/teacher/content"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-pink-950/20 hover:text-pink-400 transition-all {% if active_tab == 'content' or request.path == '/teacher/content' %}bg-pink-950/20 text-pink-400 border border-pink-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">article</span>
-                    Content
-                </a>
                 <a href="/teacher/reports"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-pink-950/20 hover:text-pink-400 transition-all {% if active_tab == 'reports' or request.path == '/teacher/reports' %}bg-pink-950/20 text-pink-400 border border-pink-500/10{% endif %}">
                     <span class="material-symbols-outlined text-base">summarize</span>
@@ -165,32 +135,7 @@
             </div>
         </div>
 
-        <div>
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">User Profile</div>
-            <div class="space-y-1">
-                <a href="/profile"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-pink-950/20 hover:text-pink-400 transition-all {% if active_tab == 'profile' or request.path == '/profile' %}bg-pink-950/20 text-pink-400 border border-pink-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">person</span>
-                    Profile Settings
-                </a>
-            </div>
-        </div>
 
-        <div>
-            <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2 px-3">Ecosystem</div>
-            <div class="space-y-1">
-                <a href="/about"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-pink-950/20 hover:text-pink-400 transition-all {% if request.path == '/about' %}bg-pink-950/20 text-pink-400 border border-pink-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">info</span>
-                    About
-                </a>
-                <a href="/contact"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-pink-950/20 hover:text-pink-400 transition-all {% if request.path == '/contact' %}bg-pink-950/20 text-pink-400 border border-pink-500/10{% endif %}">
-                    <span class="material-symbols-outlined text-base">contact_support</span>
-                    Contact
-                </a>
-            </div>
-        </div>
 
         {% elif current_user.role == 'admin' %}
         <!-- Super Admin Enterprise ERP/LMS Portal Sidebar Items -->
@@ -892,15 +837,5 @@
         </script>
 
         {% endif %}
-    </div>
-
-    <div class="pb-6 border-t border-white/5 pt-4">
-        <form method="POST" action="/logout" class="block w-full">
-            <button type="submit"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-red-400 hover:bg-red-950/20 transition-all text-left">
-                <span class="material-symbols-outlined text-base">logout</span>
-                Logout
-            </button>
-        </form>
     </div>
 </aside>

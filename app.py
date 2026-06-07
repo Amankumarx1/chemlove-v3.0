@@ -4641,11 +4641,7 @@ def api_quizzes():
 
 @app.route('/api/reactions')
 def api_reactions():
-    user = get_current_user()
     class_level = request.args.get('class_level')
-    if user and user.get('role') == 'student':
-        class_level = user.get('classLevel')
-        
     try:
         with get_db() as conn:
             if class_level and class_level != 'all':
@@ -4714,6 +4710,7 @@ def api_admin_chapters():
     if request.method == 'POST':
         payload = request.get_json(silent=True) or {}
         course_id = payload.get("course_id")
+        module_id = payload.get("module_id")
         class_level = payload.get("class_level")
         chapter_number = payload.get("chapter_number")
         title = payload.get("title")
@@ -4737,7 +4734,7 @@ def api_admin_chapters():
                 cursor = conn.execute(
                     """
                     INSERT INTO chapters (
-                        course_id, class_level, chapter_number, title, description,
+                        course_id, module_id, class_level, chapter_number, title, description,
                         key_points, notes, formulas, reactions, experiment_content,
                         overview_content, key_points_content, formula_content, reaction_content, practice_content,
                         learning_objectives, important_laws, constants, important_reactions,
@@ -4746,7 +4743,7 @@ def api_admin_chapters():
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', 'Beginner', '4 Hours', '{}', '{}', %s, %s, %s)
                     """,
                     (
-                        course_id, class_level, chapter_number, title, description,
+                        course_id, module_id, class_level, chapter_number, title, description,
                         key_points, notes, formulas, reactions, experiment_content,
                         notes, key_points, formulas, reactions,
                         status, publish_at, order_index
@@ -4758,6 +4755,7 @@ def api_admin_chapters():
             # Check-in version 1 (outside main transaction to avoid self-deadlock)
             ch_data = {
                 "course_id": course_id,
+                "module_id": module_id,
                 "class_level": class_level,
                 "chapter_number": chapter_number,
                 "title": title,
@@ -4802,6 +4800,7 @@ def api_admin_chapters():
             
             curr_dict = dict(curr)
             course_id = payload.get("course_id") if "course_id" in payload else curr_dict.get("course_id")
+            module_id = payload.get("module_id") if "module_id" in payload else curr_dict.get("module_id")
             class_level = payload.get("class_level", curr_dict["class_level"])
             chapter_number = payload.get("chapter_number", curr_dict["chapter_number"])
             title = payload.get("title", curr_dict["title"])
@@ -4840,7 +4839,7 @@ def api_admin_chapters():
                 conn.execute(
                     """
                     UPDATE chapters SET 
-                        course_id = %s, class_level = %s, chapter_number = %s, title = %s, description = %s,
+                        course_id = %s, module_id = %s, class_level = %s, chapter_number = %s, title = %s, description = %s,
                         key_points = %s, notes = %s, formulas = %s, reactions = %s, experiment_content = %s,
                         overview_content = %s, key_points_content = %s, formula_content = %s, reaction_content = %s, practice_content = %s,
                         learning_objectives = %s, important_laws = %s, constants = %s, important_reactions = %s,
@@ -4850,7 +4849,7 @@ def api_admin_chapters():
                     WHERE id = %s
                     """,
                     (
-                        course_id, class_level, chapter_number, title, description,
+                        course_id, module_id, class_level, chapter_number, title, description,
                         key_points, notes, formulas, reactions, experiment_content,
                         notes, key_points, formulas, reactions, json.dumps(practice_questions),
                         json.dumps(learning_objectives), json.dumps(important_laws), json.dumps(constants), json.dumps(important_reactions),
@@ -4865,6 +4864,7 @@ def api_admin_chapters():
             # Check-in version (outside main transaction to avoid self-deadlock)
             ch_data = {
                 "course_id": course_id,
+                "module_id": module_id,
                 "class_level": class_level,
                 "chapter_number": chapter_number,
                 "title": title,

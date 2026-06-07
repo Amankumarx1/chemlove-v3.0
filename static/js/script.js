@@ -10,6 +10,9 @@ fetch('/api/reactions')
   .then(data => {
     REACTIONS = data.reactions || [];
     console.log("Successfully loaded " + REACTIONS.length + " reactions dynamically.");
+    if (typeof updateCategoryDropdown === 'function') {
+      updateCategoryDropdown();
+    }
     if (typeof filterReactions === 'function') {
       filterReactions();
     }

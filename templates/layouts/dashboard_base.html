@@ -15,6 +15,7 @@
                 extend: {
                     "colors": {
                         "primary": "#4cd7f6",
+                        "on-primary": "#001f26",
                         "secondary": "#a1cedb",
                         "tertiary": "#ffb0cd",
                         "background": "#0e1416",
@@ -51,8 +52,40 @@
         {% include 'components/sidebar.html' %}
 
         <!-- Main Content Area Wrapper -->
-        <div class="flex-grow md:pl-64 w-full">
-            <main class="p-6 md:p-8 max-w-7xl mx-auto w-full relative z-10">
+        <div class="flex-grow md:pl-64 w-full flex flex-col min-h-screen">
+            <!-- Top Header Navbar -->
+            <header class="h-16 border-b border-white/5 bg-[#0e1416]/10 backdrop-blur-md px-6 md:px-8 flex justify-end items-center relative z-20 shrink-0">
+                <!-- Dropdown Trigger -->
+                <div class="relative inline-block text-left" id="user-menu-container">
+                    <button id="user-menu-btn" type="button" class="flex items-center gap-3 bg-[#171d1e]/40 hover:bg-slate-800/40 border border-white/10 px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all shadow-md">
+                        <span class="material-symbols-outlined text-base text-cyan-400">account_circle</span>
+                        <span class="text-white">{{ current_user.name }}</span>
+                        <span id="user-menu-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
+                    </button>
+                    <!-- Dropdown Menu -->
+                    <div id="user-menu-dropdown" class="hidden absolute right-0 mt-2.5 w-48 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
+                        <div class="space-y-1">
+                            <a href="/profile" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                <span class="material-symbols-outlined text-sm">person</span> Profile
+                            </a>
+                            <a href="/about" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                <span class="material-symbols-outlined text-sm">info</span> About Us
+                            </a>
+                            <a href="/contact" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                <span class="material-symbols-outlined text-sm">contact_support</span> Contact Us
+                            </a>
+                            <div class="border-t border-white/5 my-1"></div>
+                            <form method="POST" action="/logout" class="block w-full">
+                                <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-950/20 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">logout</span> Logout
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="p-6 md:p-8 max-w-7xl mx-auto w-full relative z-10 flex-grow">
                 {% block dashboard_content %}{% endblock %}
             </main>
         </div>
@@ -91,6 +124,30 @@
     </script>
 
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const userBtn = document.getElementById('user-menu-btn');
+            const userMenu = document.getElementById('user-menu-dropdown');
+            const userArrow = document.getElementById('user-menu-arrow');
+            
+            if (userBtn && userMenu) {
+                userBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    userMenu.classList.toggle('hidden');
+                    if (userArrow) {
+                        userArrow.classList.toggle('rotate-180');
+                    }
+                });
+                
+                document.addEventListener('click', () => {
+                    userMenu.classList.add('hidden');
+                    if (userArrow) {
+                        userArrow.classList.remove('rotate-180');
+                    }
+                });
+            }
+        });
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
