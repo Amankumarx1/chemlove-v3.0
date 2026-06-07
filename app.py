@@ -154,13 +154,61 @@ def no_cache_html(response):
 
 # ── Startup connectivity check ─────────────────────────────────────────────
 def init_db():
-    """Verify MySQL database is reachable. Tables are managed via schema.sql."""
+    """Verify MySQL database is reachable and apply V3+V4 Guided Learning schema additions."""
     try:
         with get_db() as conn:
             conn.execute("SELECT 1").fetchone()
-        print("[DATABASE] MySQL connection verified successfully.")
+            
+            # Create chapter_section_progress table
+            conn.execute("""
+            CREATE TABLE IF NOT EXISTS chapter_section_progress (
+                user_id INT NOT NULL,
+                chapter_id INT NOT NULL,
+                section_name VARCHAR(50) NOT NULL,
+                is_completed BOOLEAN DEFAULT FALSE,
+                completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, chapter_id, section_name),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE
+            )
+            """)
+            
+            # V3: Alter chapters table to ensure content columns exist
+            v3_columns = {
+                "overview_content": "LONGTEXT NULL",
+                "key_points_content": "LONGTEXT NULL",
+                "formula_content": "LONGTEXT NULL",
+                "reaction_content": "LONGTEXT NULL",
+                "experiment_content": "LONGTEXT NULL",
+                "practice_content": "LONGTEXT NULL"
+            }
+            for col, col_def in v3_columns.items():
+                try:
+                    conn.execute(f"ALTER TABLE chapters ADD COLUMN {col} {col_def}")
+                except Exception:
+                    pass  # Column already exists
+
+            # V4: Add section-level tracking columns to chapter_progress
+            v4_progress_cols = {
+                "overview_completed":    "BOOLEAN DEFAULT FALSE",
+                "keypoints_completed":   "BOOLEAN DEFAULT FALSE",
+                "formulas_completed":    "BOOLEAN DEFAULT FALSE",
+                "reactions_completed":   "BOOLEAN DEFAULT FALSE",
+                "experiments_completed": "BOOLEAN DEFAULT FALSE",
+                "practice_completed":    "BOOLEAN DEFAULT FALSE",
+                "quiz_completed":        "BOOLEAN DEFAULT FALSE",
+                "completion_percentage": "INT DEFAULT 0",
+                "xp_earned":             "INT DEFAULT 0",
+            }
+            for col, col_def in v4_progress_cols.items():
+                try:
+                    conn.execute(f"ALTER TABLE chapter_progress ADD COLUMN {col} {col_def}")
+                except Exception:
+                    pass  # Column already exists
+                    
+        print("[DATABASE] MySQL connection and Guided Learning V4 schemas verified successfully.")
     except Exception as e:
-        print(f"[DATABASE] WARNING: Could not reach MySQL database: {e}")
+        print(f"[DATABASE] WARNING: Could not complete database v3 initialization: {e}")
 
 
 init_db()
@@ -1238,7 +1286,745 @@ def student_chapter_view(chapter_id):
     except Exception as e:
         print(f"Error updating last chapter tracking: {e}")
         
-    return render_template('student/chapter_view.html', current_user=user, chapter_data=chapter_data, active_tab='chapters')
+    # Calculate progress percentage dynamically
+    chapter_progress_percent = 0
+    try:
+        with get_db() as conn:
+            # Check if explicitly completed in chapter_progress
+            progress_rec = conn.execute("SELECT is_completed FROM chapter_progress WHERE user_id = %s AND chapter_id = %s", (user["id"], chapter_id)).fetchone()
+            if progress_rec and progress_rec["is_completed"]:
+                chapter_progress_percent = 100
+            else:
+                # Count total lessons in this chapter
+                total_lessons = conn.execute("SELECT COUNT(*) FROM lessons WHERE chapter_id = %s AND status = 'published'", (chapter_id,)).fetchone()
+                total_count = total_lessons[0] if total_lessons else 0
+                
+                if total_count > 0:
+                    # Count completed lessons by student
+                    completed_lessons = conn.execute("""
+                        SELECT COUNT(DISTINCT lp.lesson_id) 
+                        FROM lesson_progress lp
+                        JOIN lessons l ON lp.lesson_id = l.id
+                        WHERE lp.user_id = %s AND l.chapter_id = %s AND lp.is_completed = TRUE
+                    """, (user["id"], chapter_id)).fetchone()
+                    completed_count = completed_lessons[0] if completed_lessons else 0
+                    
+                    chapter_progress_percent = min(100, round((completed_count / total_count) * 100))
+                else:
+                    chapter_progress_percent = 0
+    except Exception as e:
+        print(f"Error calculating chapter progress: {e}")
+
+    state = get_chapter_v4_state(user['id'], chapter_id)
+        
+    return render_template('student/chapter_view.html', 
+                           current_user=user, 
+                           chapter_data=chapter_data, 
+                           chapter_progress_percent=chapter_progress_percent,
+                           state=state,
+                           active_tab='chapters')
+
+
+@app.route('/api/student/chapter/complete', methods=['POST'])
+@student_required
+def api_student_chapter_complete():
+    user = get_current_user()
+    payload = request.get_json(silent=True) or {}
+    chapter_id = payload.get("chapter_id")
+    
+    if not chapter_id:
+        return jsonify({"error": "Missing chapter_id"}), 400
+        
+    try:
+        with get_db() as conn:
+            exists = conn.execute("SELECT * FROM chapter_progress WHERE user_id = %s AND chapter_id = %s", (user["id"], chapter_id)).fetchone()
+            if exists:
+                conn.execute("UPDATE chapter_progress SET is_completed = TRUE, completed_at = NOW() WHERE user_id = %s AND chapter_id = %s", (user["id"], chapter_id))
+            else:
+                conn.execute("INSERT INTO chapter_progress (user_id, chapter_id, is_completed, completed_at) VALUES (%s, %s, TRUE, NOW())", (user["id"], chapter_id))
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def get_chapter_mastery(user_id, chapter_id):
+    chapter_data = get_chapter(chapter_id)
+    if not chapter_data:
+        return {"mastery_percent": 0, "checklist": {}, "active_sections": [], "empty_sections": []}
+        
+    quiz_data = get_quiz(chapter_id)
+    
+    sections = {
+        "overview": bool(chapter_data.get("overview_content") or chapter_data.get("notes")),
+        "keypoints": bool(chapter_data.get("key_points_content") or chapter_data.get("key_points")),
+        "formulas": bool(chapter_data.get("formula_content") or chapter_data.get("formulas")),
+        "reactions": bool(chapter_data.get("reaction_content") or chapter_data.get("reactions")),
+        "experiments": bool(chapter_data.get("experiment_content")),
+        "practice": bool(chapter_data.get("practice_content") or chapter_data.get("practice_questions")),
+        "quiz": bool(quiz_data)
+    }
+    
+    default_weights = {
+        "overview": 10,
+        "keypoints": 15,
+        "formulas": 15,
+        "reactions": 15,
+        "experiments": 20,
+        "practice": 10,
+        "quiz": 15
+    }
+    
+    active_sections = [sec for sec, has_content in sections.items() if has_content]
+    sum_active_weights = sum(default_weights[sec] for sec in active_sections)
+    
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT section_name FROM chapter_section_progress
+            WHERE user_id = %s AND chapter_id = %s AND is_completed = TRUE
+        """, (user_id, chapter_id)).fetchall()
+    completed_sections = {r["section_name"] for r in rows}
+    
+    empty_sections = [sec for sec, has_content in sections.items() if not has_content]
+    if empty_sections:
+        with get_db() as conn:
+            for sec in empty_sections:
+                if sec not in completed_sections:
+                    conn.execute("""
+                        INSERT INTO chapter_section_progress (user_id, chapter_id, section_name, is_completed, completed_at)
+                        VALUES (%s, %s, %s, TRUE, NOW())
+                        ON DUPLICATE KEY UPDATE is_completed = TRUE, completed_at = NOW()
+                    """, (user_id, chapter_id, sec))
+                    completed_sections.add(sec)
+                    
+    if sum_active_weights > 0:
+        completed_active_weight = sum(default_weights[sec] for sec in active_sections if sec in completed_sections)
+        mastery_percent = min(100, round((completed_active_weight / sum_active_weights) * 100))
+    else:
+        mastery_percent = 100
+        
+    checklist = {sec: (sec in completed_sections) for sec in default_weights.keys()}
+    
+    if mastery_percent >= 100:
+        try:
+            with get_db() as conn:
+                exists = conn.execute("SELECT * FROM chapter_progress WHERE user_id = %s AND chapter_id = %s", (user_id, chapter_id)).fetchone()
+                if exists:
+                    conn.execute("UPDATE chapter_progress SET is_completed = TRUE, completed_at = NOW() WHERE user_id = %s AND chapter_id = %s", (user_id, chapter_id))
+                else:
+                    conn.execute("INSERT INTO chapter_progress (user_id, chapter_id, is_completed, completed_at) VALUES (%s, %s, TRUE, NOW())", (user_id, chapter_id))
+        except Exception as e:
+            print(f"Error marking chapter complete: {e}")
+            
+    return {
+        "mastery_percent": mastery_percent,
+        "checklist": checklist,
+        "active_sections": active_sections,
+        "empty_sections": empty_sections
+    }
+
+
+@app.route('/api/chapter/<int:chapter_id>/section/<string:section_name>', methods=['GET'])
+@student_required
+def api_chapter_section_view(chapter_id, section_name):
+    user = get_current_user()
+    chapter_data = get_chapter(chapter_id)
+    if not chapter_data:
+        return jsonify({"error": "Chapter not found"}), 404
+        
+    quiz_data = get_quiz(chapter_id)
+    
+    sections_has_content = {
+        "overview": bool(chapter_data.get("overview_content") or chapter_data.get("notes")),
+        "keypoints": bool(chapter_data.get("key_points_content") or chapter_data.get("key_points")),
+        "formulas": bool(chapter_data.get("formula_content") or chapter_data.get("formulas")),
+        "reactions": bool(chapter_data.get("reaction_content") or chapter_data.get("reactions")),
+        "experiments": bool(chapter_data.get("experiment_content")),
+        "practice": bool(chapter_data.get("practice_content") or chapter_data.get("practice_questions")),
+        "quiz": bool(quiz_data)
+    }
+    
+    if not sections_has_content.get(section_name, False):
+        return jsonify({"ok": True, "empty": True})
+        
+    if section_name in ("overview", "keypoints", "formulas", "reactions"):
+        try:
+            with get_db() as conn:
+                conn.execute("""
+                    INSERT INTO chapter_section_progress (user_id, chapter_id, section_name, is_completed, completed_at)
+                    VALUES (%s, %s, %s, TRUE, NOW())
+                    ON DUPLICATE KEY UPDATE is_completed = TRUE, completed_at = NOW()
+                """, (user["id"], chapter_id, section_name))
+        except Exception as e:
+            print(f"Error auto-completing section {section_name}: {e}")
+            
+    mastery = get_chapter_mastery(user["id"], chapter_id)
+    
+    content = ""
+    if section_name == "overview":
+        content = chapter_data.get("overview_content") or chapter_data.get("notes") or ""
+    elif section_name == "keypoints":
+        content = chapter_data.get("key_points_content") or chapter_data.get("key_points") or ""
+    elif section_name == "formulas":
+        content = chapter_data.get("formula_content") or chapter_data.get("formulas") or ""
+    elif section_name == "reactions":
+        content = chapter_data.get("reaction_content") or chapter_data.get("reactions") or ""
+    elif section_name == "experiments":
+        content = chapter_data.get("experiment_content") or ""
+    elif section_name == "practice":
+        p_data = chapter_data.get("practice_questions")
+        if not p_data:
+            p_data = safe_json_loads(chapter_data.get("practice_content") or '[]')
+        if isinstance(p_data, str):
+            p_data = safe_json_loads(p_data)
+        content = p_data if isinstance(p_data, list) else []
+    elif section_name == "quiz":
+        content = quiz_data
+        
+    return jsonify({
+        "ok": True,
+        "content": content,
+        "is_completed": mastery["checklist"].get(section_name, False),
+        "mastery_percent": mastery["mastery_percent"],
+        "checklist": mastery["checklist"],
+        "active_sections": mastery["active_sections"]
+    })
+
+
+@app.route('/api/chapter/<int:chapter_id>/section/<string:section_name>/complete', methods=['POST'])
+@student_required
+def api_chapter_section_complete(chapter_id, section_name):
+    user = get_current_user()
+    chapter_data = get_chapter(chapter_id)
+    if not chapter_data:
+        return jsonify({"error": "Chapter not found"}), 404
+        
+    mastery_before = get_chapter_mastery(user["id"], chapter_id)
+    already_chapter_completed = (mastery_before["mastery_percent"] >= 100)
+    
+    try:
+        with get_db() as conn:
+            conn.execute("""
+                INSERT INTO chapter_section_progress (user_id, chapter_id, section_name, is_completed, completed_at)
+                VALUES (%s, %s, %s, TRUE, NOW())
+                ON DUPLICATE KEY UPDATE is_completed = TRUE, completed_at = NOW()
+            """, (user["id"], chapter_id, section_name))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
+    mastery_after = get_chapter_mastery(user["id"], chapter_id)
+    newly_completed = (mastery_after["mastery_percent"] >= 100 and not already_chapter_completed)
+    
+    xp_earned = 0
+    badge_unlocked = None
+    
+    if newly_completed:
+        xp_earned = 150
+        badge_unlocked = "Chapter Mastered"
+        try:
+            with get_db() as conn:
+                conn.execute(
+                    "UPDATE student_profiles SET current_xp = current_xp + %s WHERE user_id = %s",
+                    (xp_earned, user["id"])
+                )
+                conn.execute(
+                    "INSERT IGNORE INTO user_badges (user_id, badge_id, unlocked_at) VALUES (%s, 1, NOW())",
+                    (user["id"],)
+                )
+                add_history(user["id"], "quiz_passed", f"chapter_id={chapter_id},mastery_xp=150")
+        except Exception as e:
+            print(f"Error awarding chapter mastery XP/badge: {e}")
+            
+    return jsonify({
+        "ok": True,
+        "is_completed": True,
+        "mastery_percent": mastery_after["mastery_percent"],
+        "checklist": mastery_after["checklist"],
+        "active_sections": mastery_after["active_sections"],
+        "newly_completed": newly_completed,
+        "xp_earned": xp_earned,
+        "badge": badge_unlocked
+    })
+
+
+@app.route('/api/chapter/<int:chapter_id>/quiz', methods=['GET'])
+@student_required
+def api_chapter_quiz_data(chapter_id):
+    quiz_data = get_quiz(chapter_id)
+    if not quiz_data:
+        return jsonify({"error": "Quiz not found"}), 404
+    return jsonify({
+        "ok": True,
+        "quiz": quiz_data
+    })
+
+
+@app.route('/student/chapter/<int:chapter_id>/next')
+@student_required
+def student_chapter_next(chapter_id):
+    user = get_current_user()
+    chapter = get_chapter(chapter_id)
+    if not chapter:
+        flash('Chapter not found.', 'error')
+        return redirect(url_for('student_chapters'))
+        
+    try:
+        with get_db() as conn:
+            next_ch = conn.execute("""
+                SELECT id FROM chapters 
+                WHERE class_level = %s AND chapter_number > %s AND status = 'published'
+                ORDER BY chapter_number ASC LIMIT 1
+            """, (chapter['class_level'], chapter['chapter_number'])).fetchone()
+            
+            if next_ch:
+                return redirect(url_for('student_chapter_view', chapter_id=next_ch['id']))
+            else:
+                flash('Congratulations! You have completed the last chapter for this class level.', 'success')
+                return redirect(url_for('student_chapters'))
+    except Exception as e:
+        print(f"Error fetching next chapter: {e}")
+        return redirect(url_for('student_chapters'))
+
+
+# ============================================================
+# V4 CHAPTER LEARNING JOURNEY — SECTION SUB-PAGES
+# ============================================================
+
+SECTION_ORDER = ['overview', 'key-points', 'formulas', 'reactions', 'experiments', 'practice', 'quiz']
+SECTION_DB_MAP = {
+    'overview': 'overview',
+    'key-points': 'keypoints',
+    'formulas': 'formulas',
+    'reactions': 'reactions',
+    'experiments': 'experiments',
+    'practice': 'practice',
+    'quiz': 'quiz',
+}
+
+
+def get_chapter_v4_state(user_id, chapter_id):
+    """Return section availability and progress state for a chapter."""
+    chapter_data = get_chapter(chapter_id)
+    if not chapter_data:
+        return None
+
+    quiz_data = get_quiz(chapter_id)
+
+    has_content = {
+        'overview':   bool(chapter_data.get('overview_content') or chapter_data.get('notes')),
+        'keypoints':  bool(chapter_data.get('key_points_content') or chapter_data.get('key_points')),
+        'formulas':   bool(chapter_data.get('formula_content') or chapter_data.get('formulas')),
+        'reactions':  bool(chapter_data.get('reaction_content') or chapter_data.get('reactions')),
+        'experiments':bool(chapter_data.get('experiment_content')),
+        'practice':   bool(chapter_data.get('practice_content') or chapter_data.get('practice_questions')),
+        'quiz':       bool(quiz_data),
+    }
+
+    # Get completed sections from DB
+    try:
+        with get_db() as conn:
+            rows = conn.execute(
+                "SELECT section_name FROM chapter_section_progress WHERE user_id=%s AND chapter_id=%s AND is_completed=TRUE",
+                (user_id, chapter_id)
+            ).fetchall()
+        completed = {r['section_name'] for r in rows}
+    except Exception:
+        completed = set()
+
+    # Auto-mark empty sections as completed
+    for sec, has in has_content.items():
+        if not has and sec not in completed:
+            try:
+                with get_db() as conn:
+                    conn.execute("""
+                        INSERT INTO chapter_section_progress (user_id, chapter_id, section_name, is_completed, completed_at)
+                        VALUES (%s, %s, %s, TRUE, NOW())
+                        ON DUPLICATE KEY UPDATE is_completed=TRUE, completed_at=NOW()
+                    """, (user_id, chapter_id, sec))
+                completed.add(sec)
+            except Exception:
+                pass
+
+    # Compute active sections in order
+    active_sections = [s for s in ['overview', 'keypoints', 'formulas', 'reactions', 'experiments', 'practice', 'quiz'] if has_content[s]]
+
+    # Compute mastery %
+    default_weights = {'overview': 10, 'keypoints': 15, 'formulas': 15, 'reactions': 15, 'experiments': 20, 'practice': 10, 'quiz': 15}
+    sum_active = sum(default_weights[s] for s in active_sections)
+    if sum_active > 0:
+        comp_weight = sum(default_weights[s] for s in active_sections if s in completed)
+        mastery = min(100, round(comp_weight / sum_active * 100))
+    else:
+        mastery = 100
+
+    # Build section states in URL-slug order
+    section_states = {}
+    prev_active_completed = True  # overview is always first and starts unlocked
+    for url_slug in SECTION_ORDER:
+        db_key = SECTION_DB_MAP[url_slug]
+        if not has_content[db_key]:
+            section_states[url_slug] = 'skipped'
+        elif db_key in completed:
+            section_states[url_slug] = 'completed'
+        elif prev_active_completed:
+            section_states[url_slug] = 'available'
+            prev_active_completed = False
+        else:
+            section_states[url_slug] = 'locked'
+        # If has content and was completed, prev stays True
+        if has_content[db_key] and db_key not in completed:
+            prev_active_completed = False
+
+    return {
+        'chapter_data': chapter_data,
+        'quiz_data': quiz_data,
+        'has_content': has_content,
+        'completed': completed,
+        'active_sections': active_sections,
+        'mastery': mastery,
+        'section_states': section_states,
+        'is_chapter_completed': mastery >= 100,
+    }
+
+
+def _chapter_section_view(chapter_id, section_slug, template_name):
+    """Shared handler for all section sub-pages."""
+    user = get_current_user()
+    state = get_chapter_v4_state(user['id'], chapter_id)
+    if not state:
+        flash('Chapter not found.', 'error')
+        return redirect(url_for('student_chapters'))
+
+    # Determine prev/next active (non-skipped) slugs
+    active_slugs = [s for s in SECTION_ORDER if state['section_states'].get(s) != 'skipped']
+    try:
+        idx = active_slugs.index(section_slug)
+    except ValueError:
+        # Section is skipped — redirect to roadmap
+        return redirect(url_for('student_chapter_view', chapter_id=chapter_id))
+
+    prev_slug = active_slugs[idx - 1] if idx > 0 else None
+    next_slug = active_slugs[idx + 1] if idx < len(active_slugs) - 1 else None
+
+    return render_template(
+        template_name,
+        current_user=user,
+        chapter_data=state['chapter_data'],
+        quiz_data=state['quiz_data'],
+        state=state,
+        section_slug=section_slug,
+        prev_slug=prev_slug,
+        next_slug=next_slug,
+        chapter_id=chapter_id,
+        active_tab='chapters',
+    )
+
+
+@app.route('/student/chapter/<int:chapter_id>/overview')
+@student_required
+def student_chapter_overview(chapter_id):
+    # Auto-complete overview on visit
+    user = get_current_user()
+    try:
+        with get_db() as conn:
+            conn.execute("""
+                INSERT INTO chapter_section_progress (user_id, chapter_id, section_name, is_completed, completed_at)
+                VALUES (%s, %s, 'overview', TRUE, NOW())
+                ON DUPLICATE KEY UPDATE is_completed=TRUE, completed_at=NOW()
+            """, (user['id'], chapter_id))
+    except Exception as e:
+        print(f"Error marking overview complete: {e}")
+    return _chapter_section_view(chapter_id, 'overview', 'student/chapter_section.html')
+
+
+@app.route('/student/chapter/<int:chapter_id>/key-points')
+@student_required
+def student_chapter_keypoints(chapter_id):
+    user = get_current_user()
+    try:
+        with get_db() as conn:
+            conn.execute("""
+                INSERT INTO chapter_section_progress (user_id, chapter_id, section_name, is_completed, completed_at)
+                VALUES (%s, %s, 'keypoints', TRUE, NOW())
+                ON DUPLICATE KEY UPDATE is_completed=TRUE, completed_at=NOW()
+            """, (user['id'], chapter_id))
+    except Exception as e:
+        print(f"Error marking keypoints complete: {e}")
+    return _chapter_section_view(chapter_id, 'key-points', 'student/chapter_section.html')
+
+
+@app.route('/student/chapter/<int:chapter_id>/formulas')
+@student_required
+def student_chapter_formulas(chapter_id):
+    user = get_current_user()
+    try:
+        with get_db() as conn:
+            conn.execute("""
+                INSERT INTO chapter_section_progress (user_id, chapter_id, section_name, is_completed, completed_at)
+                VALUES (%s, %s, 'formulas', TRUE, NOW())
+                ON DUPLICATE KEY UPDATE is_completed=TRUE, completed_at=NOW()
+            """, (user['id'], chapter_id))
+    except Exception as e:
+        print(f"Error marking formulas complete: {e}")
+    return _chapter_section_view(chapter_id, 'formulas', 'student/chapter_section.html')
+
+
+@app.route('/student/chapter/<int:chapter_id>/reactions')
+@student_required
+def student_chapter_reactions(chapter_id):
+    user = get_current_user()
+    try:
+        with get_db() as conn:
+            conn.execute("""
+                INSERT INTO chapter_section_progress (user_id, chapter_id, section_name, is_completed, completed_at)
+                VALUES (%s, %s, 'reactions', TRUE, NOW())
+                ON DUPLICATE KEY UPDATE is_completed=TRUE, completed_at=NOW()
+            """, (user['id'], chapter_id))
+    except Exception as e:
+        print(f"Error marking reactions complete: {e}")
+    return _chapter_section_view(chapter_id, 'reactions', 'student/chapter_section.html')
+
+
+@app.route('/student/chapter/<int:chapter_id>/experiments')
+@student_required
+def student_chapter_experiments(chapter_id):
+    user = get_current_user()
+    try:
+        with get_db() as conn:
+            conn.execute("""
+                INSERT INTO chapter_section_progress (user_id, chapter_id, section_name, is_completed, completed_at)
+                VALUES (%s, %s, 'experiments', TRUE, NOW())
+                ON DUPLICATE KEY UPDATE is_completed=TRUE, completed_at=NOW()
+            """, (user['id'], chapter_id))
+    except Exception as e:
+        print(f"Error marking experiments complete: {e}")
+    return _chapter_section_view(chapter_id, 'experiments', 'student/chapter_section.html')
+
+
+@app.route('/student/chapter/<int:chapter_id>/practice')
+@student_required
+def student_chapter_practice(chapter_id):
+    return _chapter_section_view(chapter_id, 'practice', 'student/chapter_section.html')
+
+
+@app.route('/student/chapter/<int:chapter_id>/quiz')
+@student_required
+def student_chapter_quiz(chapter_id):
+    return _chapter_section_view(chapter_id, 'quiz', 'student/chapter_section.html')
+
+
+@app.route('/api/chapter/<int:chapter_id>/complete-section', methods=['POST'])
+@student_required
+def api_chapter_complete_section(chapter_id):
+    """Mark a section as completed."""
+    user = get_current_user()
+    payload = request.get_json(silent=True) or {}
+    section_name = payload.get('section')  # DB key: overview, keypoints, etc.
+    if not section_name:
+        return jsonify({'error': 'Missing section'}), 400
+    try:
+        with get_db() as conn:
+            conn.execute("""
+                INSERT INTO chapter_section_progress (user_id, chapter_id, section_name, is_completed, completed_at)
+                VALUES (%s, %s, %s, TRUE, NOW())
+                ON DUPLICATE KEY UPDATE is_completed=TRUE, completed_at=NOW()
+            """, (user['id'], chapter_id, section_name))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    state = get_chapter_v4_state(user['id'], chapter_id)
+    return jsonify({'ok': True, 'mastery': state['mastery'], 'section_states': state['section_states']})
+
+
+@app.route('/api/chapter/<int:chapter_id>/complete-chapter', methods=['POST'])
+@student_required
+def api_chapter_complete(chapter_id):
+    """Mark chapter as 100% complete, award XP, update all section flags."""
+    user = get_current_user()
+    chapter_data = get_chapter(chapter_id)
+    if not chapter_data:
+        return jsonify({'error': 'Chapter not found'}), 404
+
+    xp_reward = 150
+
+    try:
+        with get_db() as conn:
+            # Mark all sections complete in chapter_section_progress
+            for sec in ['overview', 'keypoints', 'formulas', 'reactions', 'experiments', 'practice', 'quiz']:
+                conn.execute("""
+                    INSERT INTO chapter_section_progress (user_id, chapter_id, section_name, is_completed, completed_at)
+                    VALUES (%s, %s, %s, TRUE, NOW())
+                    ON DUPLICATE KEY UPDATE is_completed=TRUE, completed_at=NOW()
+                """, (user['id'], chapter_id, sec))
+
+            # Check if already completed to avoid double XP
+            existing = conn.execute(
+                "SELECT is_completed FROM chapter_progress WHERE user_id=%s AND chapter_id=%s",
+                (user['id'], chapter_id)
+            ).fetchone()
+            already_done = existing and existing['is_completed']
+
+            if existing:
+                conn.execute("""
+                    UPDATE chapter_progress SET
+                        is_completed=TRUE,
+                        overview_completed=TRUE, keypoints_completed=TRUE,
+                        formulas_completed=TRUE, reactions_completed=TRUE,
+                        experiments_completed=TRUE, practice_completed=TRUE,
+                        quiz_completed=TRUE, completion_percentage=100,
+                        xp_earned=%s, completed_at=NOW()
+                    WHERE user_id=%s AND chapter_id=%s
+                """, (xp_reward, user['id'], chapter_id))
+            else:
+                conn.execute("""
+                    INSERT INTO chapter_progress
+                        (user_id, chapter_id, is_completed,
+                         overview_completed, keypoints_completed, formulas_completed,
+                         reactions_completed, experiments_completed, practice_completed,
+                         quiz_completed, completion_percentage, xp_earned, completed_at)
+                    VALUES (%s, %s, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, 100, %s, NOW())
+                """, (user['id'], chapter_id, xp_reward))
+
+            if not already_done:
+                # Award XP
+                conn.execute(
+                    "UPDATE student_profiles SET current_xp=current_xp+%s WHERE user_id=%s",
+                    (xp_reward, user['id'])
+                )
+                conn.execute(
+                    "INSERT IGNORE INTO user_badges (user_id, badge_id, unlocked_at) VALUES (%s, 1, NOW())",
+                    (user['id'],)
+                )
+                add_history(user['id'], 'quiz_passed', f"chapter_id={chapter_id},xp={xp_reward}")
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    return jsonify({
+        'ok': True,
+        'xp_earned': 0 if already_done else xp_reward,
+        'redirect': f'/student/chapter/{chapter_id}'
+    })
+
+
+@app.route('/api/chapter/<int:chapter_id>/v4-state', methods=['GET'])
+@student_required
+def api_chapter_v4_state(chapter_id):
+    """Get current V4 state for the chapter roadmap page."""
+    user = get_current_user()
+    state = get_chapter_v4_state(user['id'], chapter_id)
+    if not state:
+        return jsonify({'error': 'Chapter not found'}), 404
+    return jsonify({
+        'ok': True,
+        'mastery': state['mastery'],
+        'section_states': state['section_states'],
+        'is_completed': state['is_chapter_completed'],
+        'active_sections': state['active_sections'],
+    })
+
+
+@app.route('/api/ai/tutor', methods=['POST'])
+@student_required
+def api_ai_tutor():
+    payload = request.get_json(silent=True) or {}
+    question = payload.get("question", "").strip()
+    chapter_title = payload.get("chapter_title", "Chemistry")
+    
+    if not question:
+        return jsonify({"error": "Question is empty"}), 400
+        
+    question_lower = question.lower()
+    
+    if "explain" in question_lower or "what is" in question_lower or "define" in question_lower:
+        if "molarity" in question_lower:
+            response = (
+                "🧪 Molarity (M) Explained Simply:\n\n"
+                "Molarity is a measure of how concentrated a solution is. Specifically, it tells you how many moles of a solute (like salt) are dissolved in exactly 1 Liter of the total solution.\n\n"
+                "💡 Analogy:\n"
+                "Imagine a crowded room. Molarity is like the number of people (moles) per square meter (liter). If there are more people in the same room, the room is more 'concentrated' (higher Molarity).\n\n"
+                "📝 Formula:\n"
+                "Molarity (M) = Moles of solute (n) / Volume of solution in liters (V)\n"
+                "Unit: mol/L or M\n\n"
+                "⚠️ Note: Molarity depends on temperature because temperature affects volume (liquids expand when heated)."
+            )
+        elif "molality" in question_lower:
+            response = (
+                "🧪 Molality (m) Explained Simply:\n\n"
+                "Molality is another way to measure concentration, but instead of liters of solution, it compares the moles of solute to the mass of the solvent in kilograms.\n\n"
+                "📝 Formula:\n"
+                "Molality (m) = Moles of solute (n) / Mass of solvent in kilograms (kg)\n"
+                "Unit: mol/kg or m\n\n"
+                "💡 Key Advantage:\n"
+                "Unlike Molarity, Molality DOES NOT change with temperature because mass doesn't expand or contract with temperature changes! This makes it extremely useful in thermodynamics."
+            )
+        elif "solution" in question_lower:
+            response = (
+                "🧪 What is a Solution?\n\n"
+                "A solution is a homogeneous mixture of two or more substances. Homogeneous means that the mixture is uniform throughout - every drop of soda water or saline drip has the exact same concentration of solutes.\n\n"
+                "It consists of two parts:\n"
+                "1. Solute: The substance being dissolved (usually present in smaller amounts, e.g., sugar).\n"
+                "2. Solvent: The dissolving medium (usually present in larger amounts, e.g., water)."
+            )
+        else:
+            response = (
+                f"🧠 Let's look at {chapter_title}:\n\n"
+                f"The concept you asked about in relation to '{chapter_title}' involves understanding standard homogeneous chemistry structures. "
+                "In a typical solution, the solute is dissolved in a solvent, and the physical properties of the solvent are modified (e.g., vapor pressure lowering, boiling point elevation).\n\n"
+                "Try asking specifically about 'molarity', 'molality', or 'solutions' for a detailed card view!"
+            )
+            
+    elif "memory" in question_lower or "trick" in question_lower or "mnemonic" in question_lower:
+        if "molarity" in question_lower or "molality" in question_lower:
+            response = (
+                "🧠 Memory Trick — Molarity vs Molality:\n\n"
+                "How do you remember which is which?\n\n"
+                "1. MolaRity (with an R):\n"
+                "Think of 'R' for 'Room' or 'Receptacle' (which has Volume/Liters). Molarity is moles per Liter.\n\n"
+                "2. MolaLity (with an L):\n"
+                "Think of 'L' for 'lbs' or 'Loads' (which refers to Mass/Kilograms). Molality is moles per Kilogram.\n\n"
+                "Mnemonic: MolaRity is for R-unning (requires space/volume). MolaLity is for L-ifting (requires weight/mass)."
+            )
+        else:
+            response = (
+                "🧠 Chemistry Memory Trick:\n\n"
+                "To remember solute vs solvent, look at the length of the words:\n"
+                "• SOLUTE is a shorter word (6 letters) -> Smaller amount (being dissolved).\n"
+                "• SOLVENT is a longer word (7 letters) -> Larger amount (doing the dissolving)."
+            )
+            
+    elif "mcq" in question_lower or "quiz" in question_lower or "test" in question_lower:
+        response = (
+            "📝 AI Quiz Generator:\n\n"
+            "Here are 3 concept check questions for you:\n\n"
+            "Q1. Which concentration term is temperature independent?\n"
+            "A) Molarity\n"
+            "B) Molality\n"
+            "C) Normality\n"
+            "D) Formality\n"
+            "Answer: B (Explanation: Molality depends on solvent mass, which doesn't change with temperature).\n\n"
+            "Q2. A solution made by dissolving 2 moles of NaCl in 2 kg of water has a molality of:\n"
+            "A) 1 m\n"
+            "B) 2 m\n"
+            "C) 0.5 m\n"
+            "D) 4 m\n"
+            "Answer: A (Explanation: 2 mol / 2 kg = 1 m).\n\n"
+            "Q3. Soda water is an example of what type of solution?\n"
+            "A) Gas in Liquid\n"
+            "B) Liquid in Gas\n"
+            "C) Liquid in Liquid\n"
+            "D) Solid in Liquid\n"
+            "Answer: A (Explanation: Carbon dioxide gas dissolved in water under pressure)."
+        )
+    else:
+        response = (
+            f"Hello! I am your ChemLove AI Tutor. I can help explain complex concepts in '{chapter_title}' simply.\n\n"
+            "Try asking me:\n"
+            "• 'Explain molarity in simple words'\n"
+            "• 'Give me a memory trick for molarity vs molality'\n"
+            "• 'Generate MCQs to test me'"
+        )
+        
+    return jsonify({"ok": True, "response": response})
 
 
 @app.route('/student/reactions')
@@ -3921,6 +4707,7 @@ def api_admin_chapters():
         
     if request.method == 'POST':
         payload = request.get_json(silent=True) or {}
+        course_id = payload.get("course_id")
         class_level = payload.get("class_level")
         chapter_number = payload.get("chapter_number")
         title = payload.get("title")
@@ -3928,6 +4715,13 @@ def api_admin_chapters():
         status = payload.get("status", "published")
         publish_at = payload.get("publish_at")
         order_index = payload.get("order_index", 0)
+        
+        # Text fields
+        key_points = payload.get("key_points", "")
+        notes = payload.get("notes", "")
+        formulas = payload.get("formulas", "")
+        reactions = payload.get("reactions", "")
+        experiment_content = payload.get("experiment_content", "")
         
         if not title:
             return jsonify({"error": "Missing title"}), 400
@@ -3937,31 +4731,40 @@ def api_admin_chapters():
                 cursor = conn.execute(
                     """
                     INSERT INTO chapters (
-                        class_level, chapter_number, title, description,
-                        learning_objectives, key_points, important_laws, formulas,
-                        constants, important_reactions, notes, real_life_applications,
+                        course_id, class_level, chapter_number, title, description,
+                        key_points, notes, formulas, reactions, experiment_content,
+                        overview_content, key_points_content, formula_content, reaction_content, practice_content,
+                        learning_objectives, important_laws, constants, important_reactions,
                         virtual_labs, practice_questions, common_mistakes, difficulty,
                         estimated_study_time, chapter_weightage, next_chapter, status, publish_at, order_index
-                    ) VALUES (%s, %s, %s, %s, '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', 'Beginner', '4 Hours', '{}', '{}', %s, %s, %s)
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', 'Beginner', '4 Hours', '{}', '{}', %s, %s, %s)
                     """,
-                    (class_level, chapter_number, title, description, status, publish_at, order_index)
+                    (
+                        course_id, class_level, chapter_number, title, description,
+                        key_points, notes, formulas, reactions, experiment_content,
+                        notes, key_points, formulas, reactions,
+                        status, publish_at, order_index
+                    )
                 )
                 chapter_id = cursor.lastrowid
+                print("Chapter Saved:", chapter_id)
                 
             # Check-in version 1 (outside main transaction to avoid self-deadlock)
             ch_data = {
+                "course_id": course_id,
                 "class_level": class_level,
                 "chapter_number": chapter_number,
                 "title": title,
                 "description": description,
+                "key_points": key_points,
+                "notes": notes,
+                "formulas": formulas,
+                "reactions": reactions,
+                "experiment_content": experiment_content,
                 "learning_objectives": [],
-                "key_points": [],
                 "important_laws": [],
-                "formulas": [],
                 "constants": [],
                 "important_reactions": [],
-                "notes": [],
-                "real_life_applications": [],
                 "virtual_labs": [],
                 "practice_questions": [],
                 "common_mistakes": [],
@@ -3992,10 +4795,18 @@ def api_admin_chapters():
                 return jsonify({"error": "Chapter not found"}), 404
             
             curr_dict = dict(curr)
+            course_id = payload.get("course_id") if "course_id" in payload else curr_dict.get("course_id")
             class_level = payload.get("class_level", curr_dict["class_level"])
             chapter_number = payload.get("chapter_number", curr_dict["chapter_number"])
             title = payload.get("title", curr_dict["title"])
             description = payload.get("description", curr_dict["description"])
+            
+            # Direct text fields
+            key_points = payload.get("key_points") if "key_points" in payload else curr_dict.get("key_points", "")
+            notes = payload.get("notes") if "notes" in payload else curr_dict.get("notes", "")
+            formulas = payload.get("formulas") if "formulas" in payload else curr_dict.get("formulas", "")
+            reactions = payload.get("reactions") if "reactions" in payload else curr_dict.get("reactions", "")
+            experiment_content = payload.get("experiment_content") if "experiment_content" in payload else curr_dict.get("experiment_content", "")
             
             def load_or_keep(field):
                 if field in payload:
@@ -4003,13 +4814,9 @@ def api_admin_chapters():
                 return safe_json_loads(curr_dict.get(field, '[]'))
                 
             learning_objectives = load_or_keep("learning_objectives")
-            key_points = load_or_keep("key_points")
             important_laws = load_or_keep("important_laws")
-            formulas = load_or_keep("formulas")
             constants = load_or_keep("constants")
             important_reactions = load_or_keep("important_reactions")
-            notes = load_or_keep("notes")
-            real_life_applications = load_or_keep("real_life_applications")
             virtual_labs = load_or_keep("virtual_labs")
             practice_questions = load_or_keep("practice_questions")
             common_mistakes = load_or_keep("common_mistakes")
@@ -4027,39 +4834,46 @@ def api_admin_chapters():
                 conn.execute(
                     """
                     UPDATE chapters SET 
-                        class_level = %s, chapter_number = %s, title = %s, description = %s,
-                        learning_objectives = %s, key_points = %s, important_laws = %s, formulas = %s,
-                        constants = %s, important_reactions = %s, notes = %s, real_life_applications = %s,
+                        course_id = %s, class_level = %s, chapter_number = %s, title = %s, description = %s,
+                        key_points = %s, notes = %s, formulas = %s, reactions = %s, experiment_content = %s,
+                        overview_content = %s, key_points_content = %s, formula_content = %s, reaction_content = %s, practice_content = %s,
+                        learning_objectives = %s, important_laws = %s, constants = %s, important_reactions = %s,
                         virtual_labs = %s, practice_questions = %s, common_mistakes = %s, difficulty = %s,
                         estimated_study_time = %s, chapter_weightage = %s, next_chapter = %s,
                         status = %s, order_index = %s, publish_at = %s
                     WHERE id = %s
                     """,
                     (
-                        class_level, chapter_number, title, description,
-                        json.dumps(learning_objectives), json.dumps(key_points), json.dumps(important_laws), json.dumps(formulas),
-                        json.dumps(constants), json.dumps(important_reactions), json.dumps(notes), json.dumps(real_life_applications),
+                        course_id, class_level, chapter_number, title, description,
+                        key_points, notes, formulas, reactions, experiment_content,
+                        notes, key_points, formulas, reactions, json.dumps(practice_questions),
+                        json.dumps(learning_objectives), json.dumps(important_laws), json.dumps(constants), json.dumps(important_reactions),
                         json.dumps(virtual_labs), json.dumps(practice_questions), json.dumps(common_mistakes), difficulty,
                         estimated_study_time, json.dumps(chapter_weightage), json.dumps(next_chapter),
                         status, order_index, publish_at,
                         ch_id
                     )
                 )
+                print("Chapter Saved:", ch_id)
                 
             # Check-in version (outside main transaction to avoid self-deadlock)
             ch_data = {
+                "course_id": course_id,
                 "class_level": class_level,
                 "chapter_number": chapter_number,
                 "title": title,
                 "description": description,
-                "learning_objectives": learning_objectives,
                 "key_points": key_points,
-                "important_laws": important_laws,
+                "notes": notes,
                 "formulas": formulas,
+                "reactions": reactions,
+                "experiment_content": experiment_content,
+                "learning_objectives": learning_objectives,
+                "important_laws": important_laws,
                 "constants": constants,
                 "important_reactions": important_reactions,
                 "notes": notes,
-                "real_life_applications": real_life_applications,
+                "real_life_applications": curr_dict.get("real_life_applications", {}),
                 "virtual_labs": virtual_labs,
                 "practice_questions": practice_questions,
                 "common_mistakes": common_mistakes,
@@ -4084,6 +4898,57 @@ def api_admin_chapters():
         with get_db() as conn:
             conn.execute("DELETE FROM chapters WHERE id = %s", (ch_id,))
         return jsonify({"ok": True})
+
+
+@app.route('/admin/debug/chapter/<int:chapter_id>')
+def admin_debug_chapter(chapter_id):
+    user = get_current_user()
+    if not user or user['role'] not in ('admin', 'teacher'):
+        return "Forbidden", 403
+        
+    try:
+        with get_db() as conn:
+            row = conn.execute("SELECT * FROM chapters WHERE id = %s", (chapter_id,)).fetchone()
+            
+        if not row:
+            return f"Chapter {chapter_id} not found", 404
+            
+        ch = dict(row)
+        char_counts = {}
+        missing_fields = []
+        
+        for k, v in ch.items():
+            if v is None:
+                missing_fields.append(k)
+                char_counts[k] = 0
+            else:
+                char_counts[k] = len(str(v))
+                
+        debug_info = {
+            "chapter_id": chapter_id,
+            "raw_mysql_values": {
+                "id": ch.get("id"),
+                "course_id": ch.get("course_id"),
+                "class_level": ch.get("class_level"),
+                "chapter_number": ch.get("chapter_number"),
+                "title": ch.get("title"),
+                "description": ch.get("description"),
+                "key_points": ch.get("key_points"),
+                "notes": ch.get("notes"),
+                "formulas": ch.get("formulas"),
+                "reactions": ch.get("reactions"),
+                "experiment_content": ch.get("experiment_content"),
+                "created_at": str(ch.get("created_at")),
+                "updated_at": str(ch.get("updated_at"))
+            },
+            "character_counts": char_counts,
+            "missing_fields": missing_fields,
+            "last_updated": str(ch.get("updated_at") or ch.get("created_at"))
+        }
+        
+        return jsonify(debug_info)
+    except Exception as e:
+        return f"Error: {e}", 500
 
 
 @app.route('/api/admin/reactions', methods=['POST', 'PUT', 'DELETE'])

@@ -256,15 +256,23 @@
                         <input type="number" id="ch-number-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
                     </div>
                 </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Associated Course</label>
+                        <select id="ch-course-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
+                            <option value="">Select Course...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Associated Module</label>
+                        <select id="ch-module-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary">
+                            <option value="">No Module Alignment</option>
+                        </select>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Title</label>
                     <input type="text" id="ch-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" placeholder="Structure of Atom" required>
-                </div>
-                <div>
-                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Associated Module</label>
-                    <select id="ch-module-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary">
-                        <option value="">No Module Alignment</option>
-                    </select>
                 </div>
                 <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Description</label>
@@ -290,35 +298,57 @@
                     <input type="datetime-local" id="ch-publish-at-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary">
                 </div>
                 
-                <!-- DYNAMIC CURRICULUM LISTS BUILDER -->
-                <div class="border-t border-white/5 pt-4 space-y-3">
-                    <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500">Curriculum Lists Builder</label>
+                <!-- RICH CURRICULUM CONTENT EDITORS -->
+                <div class="border-t border-white/5 pt-4 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500">Curriculum Content Editors</label>
+                        <span class="text-[9px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded font-medium">⚠️ Unsaved changes warning: click Save Chapter to persist</span>
+                    </div>
                     
-                    <!-- Tab Navigation -->
+                    <!-- Content Tab Navigation -->
                     <div class="flex flex-wrap gap-1 p-1 rounded-xl bg-slate-950/60 border border-white/5">
-                        <button type="button" onclick="switchChListTab('learning_objectives')" id="ch-tab-btn-learning_objectives" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-primary/20 text-primary border border-primary/10">Objectives</button>
-                        <button type="button" onclick="switchChListTab('key_points')" id="ch-tab-btn-key_points" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Key Points</button>
-                        <button type="button" onclick="switchChListTab('important_laws')" id="ch-tab-btn-important_laws" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Laws</button>
-                        <button type="button" onclick="switchChListTab('formulas')" id="ch-tab-btn-formulas" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Formulas</button>
-                        <button type="button" onclick="switchChListTab('constants')" id="ch-tab-btn-constants" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Constants</button>
-                        <button type="button" onclick="switchChListTab('important_reactions')" id="ch-tab-btn-important_reactions" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Reactions</button>
-                        <button type="button" onclick="switchChListTab('virtual_labs')" id="ch-tab-btn-virtual_labs" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Labs</button>
-                        <button type="button" onclick="switchChListTab('practice_questions')" id="ch-tab-btn-practice_questions" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Questions</button>
-                        <button type="button" onclick="switchChListTab('common_mistakes')" id="ch-tab-btn-common_mistakes" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Mistakes</button>
-                        <button type="button" onclick="switchChListTab('notes')" id="ch-tab-btn-notes" class="ch-list-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Notes</button>
+                        <button type="button" onclick="switchChContentEditorTab('notes')" id="ch-editor-tab-notes" class="ch-editor-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-primary/20 text-primary border border-primary/10">Notes</button>
+                        <button type="button" onclick="switchChContentEditorTab('key_points')" id="ch-editor-tab-key_points" class="ch-editor-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Key Points</button>
+                        <button type="button" onclick="switchChContentEditorTab('formulas')" id="ch-editor-tab-formulas" class="ch-editor-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Formulas</button>
+                        <button type="button" onclick="switchChContentEditorTab('reactions')" id="ch-editor-tab-reactions" class="ch-editor-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Reactions</button>
+                        <button type="button" onclick="switchChContentEditorTab('experiment_content')" id="ch-editor-tab-experiment_content" class="ch-editor-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">Experiment Content</button>
                     </div>
 
-                    <!-- Active Workspace -->
-                    <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-4 space-y-3">
-                        <h4 id="ch-list-workspace-title" class="text-[10px] font-bold uppercase text-white tracking-widest">Learning Objectives</h4>
-                        
-                        <div id="ch-list-container" class="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
-                            <!-- Dynamic items -->
+                    <!-- Editor Workspace -->
+                    <div class="space-y-2">
+                        <!-- Notes Editor -->
+                        <div id="ch-editor-pane-notes" class="ch-editor-pane space-y-1.5">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Detailed Notes</div>
+                            <textarea id="ch-notes-textarea" rows="12" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 font-mono text-xs text-slate-300 focus:outline-none focus:border-primary resize-y" placeholder="1. Introduction..." oninput="updateCharCount('notes')"></textarea>
+                            <div class="text-right text-[10px] text-slate-500 font-mono"><span id="ch-notes-char-count">0</span> characters</div>
                         </div>
 
-                        <div class="flex gap-2">
-                            <input type="text" id="ch-list-item-input" class="flex-grow bg-slate-950 border border-white/10 rounded-xl p-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-primary" placeholder="Type new item...">
-                            <button type="button" onclick="addChapterListItem()" class="bg-primary/20 hover:bg-primary/30 border border-primary/20 text-primary font-bold text-xs uppercase px-4 py-2.5 rounded-xl transition-all">Add</button>
+                        <!-- Key Points Editor -->
+                        <div id="ch-editor-pane-key_points" class="ch-editor-pane hidden space-y-1.5">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Key Points</div>
+                            <textarea id="ch-keypoints-textarea" rows="12" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 font-mono text-xs text-slate-300 focus:outline-none focus:border-primary resize-y" placeholder="• Concept 1..." oninput="updateCharCount('key_points')"></textarea>
+                            <div class="text-right text-[10px] text-slate-500 font-mono"><span id="ch-keypoints-char-count">0</span> characters</div>
+                        </div>
+
+                        <!-- Formulas Editor -->
+                        <div id="ch-editor-pane-formulas" class="ch-editor-pane hidden space-y-1.5">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Formulas</div>
+                            <textarea id="ch-formulas-textarea" rows="12" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 font-mono text-xs text-slate-300 focus:outline-none focus:border-primary resize-y" placeholder="E = mc²..." oninput="updateCharCount('formulas')"></textarea>
+                            <div class="text-right text-[10px] text-slate-500 font-mono"><span id="ch-formulas-char-count">0</span> characters</div>
+                        </div>
+
+                        <!-- Reactions Editor -->
+                        <div id="ch-editor-pane-reactions" class="ch-editor-pane hidden space-y-1.5">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Reactions</div>
+                            <textarea id="ch-reactions-textarea" rows="12" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 font-mono text-xs text-slate-300 focus:outline-none focus:border-primary resize-y" placeholder="2H₂ + O₂ → 2H₂O..." oninput="updateCharCount('reactions')"></textarea>
+                            <div class="text-right text-[10px] text-slate-500 font-mono"><span id="ch-reactions-char-count">0</span> characters</div>
+                        </div>
+
+                        <!-- Experiment Content Editor -->
+                        <div id="ch-editor-pane-experiment_content" class="ch-editor-pane hidden space-y-1.5">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Experiment Content</div>
+                            <textarea id="ch-experiment-content-textarea" rows="12" class="w-full bg-slate-900 border border-white/10 rounded-xl p-4 font-mono text-xs text-slate-300 focus:outline-none focus:border-primary resize-y" placeholder="Aim: To determine..." oninput="updateCharCount('experiment_content')"></textarea>
+                            <div class="text-right text-[10px] text-slate-500 font-mono"><span id="ch-experiment-content-char-count">0</span> characters</div>
                         </div>
                     </div>
                 </div>
@@ -808,18 +838,71 @@
         }
     }
 
+    function formatFieldContent(val) {
+        if (!val) return '';
+        if (typeof val === 'string') {
+            try {
+                const parsed = JSON.parse(val);
+                if (Array.isArray(parsed)) {
+                    return parsed.map(item => typeof item === 'object' ? JSON.stringify(item) : item).join('\n');
+                }
+                return val;
+            } catch(e) {
+                return val;
+            }
+        }
+        if (Array.isArray(val)) {
+            return val.map(item => typeof item === 'object' ? JSON.stringify(item) : item).join('\n');
+        }
+        return String(val);
+    }
+
+    let activeChContentEditorTab = 'notes';
+    function switchChContentEditorTab(tabName) {
+        activeChContentEditorTab = tabName;
+        document.querySelectorAll('.ch-editor-pane').forEach(pane => pane.classList.add('hidden'));
+        document.getElementById(`ch-editor-pane-${tabName}`).classList.remove('hidden');
+        
+        document.querySelectorAll('.ch-editor-tab-btn').forEach(btn => {
+            btn.className = "ch-editor-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white";
+        });
+        const activeBtn = document.getElementById(`ch-editor-tab-${tabName}`);
+        if(activeBtn) {
+            activeBtn.className = "ch-editor-tab-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-primary/20 text-primary border border-primary/10";
+        }
+    }
+
+    function updateCharCount(field) {
+        let textareaId = '';
+        let countId = '';
+        if(field === 'notes') { textareaId = 'ch-notes-textarea'; countId = 'ch-notes-char-count'; }
+        else if(field === 'key_points') { textareaId = 'ch-keypoints-textarea'; countId = 'ch-keypoints-char-count'; }
+        else if(field === 'formulas') { textareaId = 'ch-formulas-textarea'; countId = 'ch-formulas-char-count'; }
+        else if(field === 'reactions') { textareaId = 'ch-reactions-textarea'; countId = 'ch-reactions-char-count'; }
+        else if(field === 'experiment_content') { textareaId = 'ch-experiment-content-textarea'; countId = 'ch-experiment-content-char-count'; }
+        
+        if (textareaId && countId) {
+            const textarea = document.getElementById(textareaId);
+            const countSpan = document.getElementById(countId);
+            if(textarea && countSpan) {
+                countSpan.textContent = textarea.value.length;
+            }
+        }
+    }
+    
+    function updateAllCharCounts() {
+        ['notes', 'key_points', 'formulas', 'reactions', 'experiment_content'].forEach(updateCharCount);
+    }
+
     async function openChapterModal(ch = null) {
+        await populateCoursesDropdown('ch-course-select');
         await populateChapterModulesDropdown();
-        const fields = [
-            'learning_objectives', 'key_points', 'important_laws', 'formulas',
-            'constants', 'important_reactions', 'virtual_labs', 'practice_questions',
-            'common_mistakes', 'notes'
-        ];
         if(ch) {
             document.getElementById('chapter-modal-title').textContent = "Edit Chapter";
             document.getElementById('ch-edit-id').value = ch.id;
             document.getElementById('ch-class-select').value = ch.class_level;
             document.getElementById('ch-number-input').value = ch.chapter_number;
+            document.getElementById('ch-course-select').value = ch.course_id || '';
             document.getElementById('ch-title-input').value = ch.title;
             document.getElementById('ch-module-select').value = ch.module_id || '';
             document.getElementById('ch-description-input').value = ch.description;
@@ -827,20 +910,25 @@
             document.getElementById('ch-status-select').value = ch.status || 'published';
             document.getElementById('ch-publish-at-input').value = ch.publish_at ? ch.publish_at.substring(0, 16) : '';
             
-            fields.forEach(field => {
-                let val = ch[field];
-                if(typeof val === 'string') {
-                    try { val = JSON.parse(val); } catch(e) { val = []; }
-                }
-                currentChapterLists[field] = Array.isArray(val) ? val : [];
-            });
+            document.getElementById('ch-notes-textarea').value = formatFieldContent(ch.notes);
+            document.getElementById('ch-keypoints-textarea').value = formatFieldContent(ch.key_points);
+            document.getElementById('ch-formulas-textarea').value = formatFieldContent(ch.formulas);
+            document.getElementById('ch-reactions-textarea').value = formatFieldContent(ch.reactions);
+            document.getElementById('ch-experiment-content-textarea').value = formatFieldContent(ch.experiment_content);
+            updateAllCharCounts();
         } else {
             document.getElementById('chapter-modal-title').textContent = "Add Chapter";
             document.getElementById('chapter-form').reset();
             document.getElementById('ch-edit-id').value = '';
-            fields.forEach(field => currentChapterLists[field] = []);
+            
+            document.getElementById('ch-notes-textarea').value = '';
+            document.getElementById('ch-keypoints-textarea').value = '';
+            document.getElementById('ch-formulas-textarea').value = '';
+            document.getElementById('ch-reactions-textarea').value = '';
+            document.getElementById('ch-experiment-content-textarea').value = '';
+            updateAllCharCounts();
         }
-        switchChListTab('learning_objectives');
+        switchChContentEditorTab('notes');
         document.getElementById('modal-chapter').classList.remove('hidden');
     }
 
@@ -857,6 +945,7 @@
         const payload = {
             class_level: document.getElementById('ch-class-select').value,
             chapter_number: parseInt(document.getElementById('ch-number-input').value),
+            course_id: document.getElementById('ch-course-select').value ? parseInt(document.getElementById('ch-course-select').value) : null,
             title: document.getElementById('ch-title-input').value,
             description: document.getElementById('ch-description-input').value,
             module_id: document.getElementById('ch-module-select').value ? parseInt(document.getElementById('ch-module-select').value) : null,
@@ -864,16 +953,11 @@
             status: document.getElementById('ch-status-select').value,
             publish_at: document.getElementById('ch-publish-at-input').value || null,
             
-            learning_objectives: currentChapterLists.learning_objectives,
-            key_points: currentChapterLists.key_points,
-            important_laws: currentChapterLists.important_laws,
-            formulas: currentChapterLists.formulas,
-            constants: currentChapterLists.constants,
-            important_reactions: currentChapterLists.important_reactions,
-            virtual_labs: currentChapterLists.virtual_labs,
-            practice_questions: currentChapterLists.practice_questions,
-            common_mistakes: currentChapterLists.common_mistakes,
-            notes: currentChapterLists.notes
+            key_points: document.getElementById('ch-keypoints-textarea').value,
+            notes: document.getElementById('ch-notes-textarea').value,
+            formulas: document.getElementById('ch-formulas-textarea').value,
+            reactions: document.getElementById('ch-reactions-textarea').value,
+            experiment_content: document.getElementById('ch-experiment-content-textarea').value
         };
         let method = 'POST';
         let url = '/api/admin/chapters';
