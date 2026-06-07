@@ -1,0 +1,60 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Course Management{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Header -->
+    <div class="mb-12">
+        <div class="inline-flex items-center gap-2 bg-pink-container/20 text-pink-400 bg-pink-950/20 border border-pink-500/10 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
+            <span class="w-2 h-2 rounded-full bg-pink-400 live-pulse animate-ping"></span>
+            Curriculum Catalog
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase text-white">Course Management</h1>
+        <p class="text-slate-400 mt-2 text-sm font-medium">Manage teacher course allocations, view active curricula, and assign syllabi to classrooms.</p>
+    </div>
+
+    <!-- Coming Soon Container -->
+    <div class="relative overflow-hidden rounded-3xl border border-white/5 bg-[#171d1e]/40 p-8 md:p-16 text-center backdrop-blur-xl">
+        <!-- Background decorative gradients -->
+        <div class="absolute -left-16 -top-16 w-48 h-48 bg-pink-500/10 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+        <div class="absolute -right-16 -bottom-16 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+
+        <div class="max-w-md mx-auto space-y-6 relative z-10">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-950/50 border border-pink-500/30 text-pink-400 mb-2 animate-bounce">
+                <span class="material-symbols-outlined text-3xl">hourglass_empty</span>
+            </div>
+            
+            <h2 class="text-2xl md:text-3xl font-black uppercase tracking-tight text-white leading-none">
+                Course Management Coming Soon
+            </h2>
+            
+            <p class="text-xs text-slate-400 leading-relaxed font-medium">
+                We are currently designing a brand new course orchestration panel for educators. Soon you'll be able to assign courses to classrooms, track student syllabus metrics, and coordinate module releases.
+            </p>
+            
+            <!-- Status Checklist -->
+            <div class="mt-8 border-t border-white/5 pt-8 text-left space-y-4 max-w-xs mx-auto">
+                <h4 class="text-[9px] uppercase font-bold tracking-widest text-slate-500 text-center mb-4">Teacher Console Progress</h4>
+                
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-emerald-400 text-sm">check_circle</span>
+                    <span class="text-xs text-slate-300 font-semibold">Teacher Allocation DB Schema</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-emerald-400 text-sm">check_circle</span>
+                    <span class="text-xs text-slate-300 font-semibold">Curriculum Linker Engine</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="w-4 h-4 rounded-full border-2 border-pink-400 border-t-transparent animate-spin shrink-0"></span>
+                    <span class="text-xs text-white font-bold">Classroom Assignment Console</span>
+                </div>
+            </div>
+
+            <div class="pt-6 flex flex-col sm:flex-row gap-3 justify-center">
+                <a href="/teacher/dashboard" class="bg-pink-500 text-[#001f26] text-[10px] font-black uppercase tracking-wider px-6 py-3.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-pink-500/10">
+                    Return to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -147,7 +147,7 @@
                             <div class="flex justify-between items-center mb-3">
                                 <div>
                                     <div class="text-xs font-bold text-white uppercase tracking-tight">{{ ec.course_title }}</div>
-                                    <div class="text-[8px] text-slate-500 uppercase mt-0.5">${ec.category}</div>
+                                    <div class="text-[8px] text-slate-500 uppercase mt-0.5">{{ ec.category }}</div>
                                 </div>
                                 <span class="text-xs font-black text-cyan-400 font-mono">{{ ec.progress }}%</span>
                             </div>
@@ -234,7 +234,7 @@
                             </span>
                             <div>
                                 <div class="text-xs font-black text-white uppercase tracking-tight mt-1">{{ b.name }}</div>
-                                <div class="text-[8px] text-slate-400 mt-1">${b.description}</div>
+                                <div class="text-[8px] text-slate-400 mt-1">{{ b.description }}</div>
                                 <div class="text-[8px] text-amber-300 font-bold uppercase tracking-wider mt-2">+{{ b.xp_reward }} XP</div>
                             </div>
                         </div>
@@ -257,7 +257,7 @@
                         <span class="absolute w-2 h-2 rounded-full bg-cyan-400 -left-[29px] top-1"></span>
                         <div class="bg-[#171d1e]/40 border border-white/5 p-4 rounded-xl flex justify-between items-center gap-4">
                             <div>
-                                <div class="text-[9px] font-bold uppercase tracking-wider text-slate-500">${item.event_type}</div>
+                                <div class="text-[9px] font-bold uppercase tracking-wider text-slate-500">{{ item.event_type }}</div>
                                 <div class="text-xs text-slate-300 font-medium mt-1">
                                     {% if item.event_type == 'login_success' %}
                                         Session start: User context authenticated
@@ -266,11 +266,11 @@
                                     {% elif item.event_type == 'profile_updated' %}
                                         Telemetry sync: User metadata synced
                                     {% else %}
-                                        ${item.event_type.upper()}: ${item.event_data or 'No data'}
+                                        {{ item.event_type.upper() }}: {{ item.event_data or 'No data' }}
                                     {% endif %}
                                 </div>
                             </div>
-                            <span class="text-[8px] font-bold text-slate-500 shrink-0 font-mono">${item.created_at}</span>
+                            <span class="text-[8px] font-bold text-slate-500 shrink-0 font-mono">{{ item.created_at }}</span>
                         </div>
                     </div>
                     {% else %}

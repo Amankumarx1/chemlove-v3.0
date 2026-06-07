@@ -2525,6 +2525,12 @@ def teacher_dashboard():
     return render_template('teacher/dashboard.html', current_user=get_current_user(), active_tab='dashboard')
 
 
+@app.route('/teacher/courses')
+@teacher_required
+def teacher_courses():
+    return render_template('teacher/courses.html', current_user=get_current_user(), active_tab='courses')
+
+
 @app.route('/teacher/students')
 @teacher_required
 def teacher_students():
