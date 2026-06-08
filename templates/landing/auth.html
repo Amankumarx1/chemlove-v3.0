@@ -314,7 +314,7 @@
                     class="w-full md:w-1/2 h-full flex flex-col justify-center p-10 pt-20 form-side login-form-side overflow-y-auto">
                     <div class="my-auto w-full">
                         <!-- Login form post -->
-                        <form class="space-y-4 mt-6" method="POST" action="/login">
+                        <form id="loginForm" class="space-y-4 mt-6" method="POST" action="/login">
                             <div class="space-y-1.5">
                                 <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Email
                                     Address</label>
@@ -350,7 +350,7 @@
                             <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500">OR</span>
                             <div class="flex-grow h-px bg-white/5"></div>
                         </div>
-                        <button
+                        <button onclick="window.location.href='/auth/google'" type="button"
                             class="w-full py-3 glass-panel border-white/5 flex items-center justify-center gap-3 text-slate-200 hover:text-white rounded-xl hover:bg-slate-800/40 transition-all text-xs font-bold uppercase tracking-wider">
                             <img alt="Google" class="w-4 h-4"
                                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJwBfSQp1BUfdyj2n08Qi8exGD5_7I5HFKpZ8GGo5PwykhODSP9ApjPvNGsbcgHTI_QZqPn9iB-UpJBXRiDQ8d96zH3FPSzUJzv9KAV-Yclh8apagLVk6NYjw5U-MGLHxFrZNZGMEfLrHvmh7x1SIfQnB2eB3GFp0r1lm3vMiWfaeTyShVpGdkk-6fS-FqCF6CYynE78HcW2PNI9mzO9dlBnEpkkqoO1d6gcG1ssAAjkHgEfcLul7C1qu8BTJZMdpRN3z-VQT3dgei" />
@@ -385,7 +385,7 @@
                     class="w-full md:w-1/2 h-full flex flex-col justify-center p-10 pt-20 form-side signup-form-side overflow-y-auto">
                     <div class="my-auto w-full">
                         <!-- Sign Up form post -->
-                        <form class="space-y-4" method="POST" action="/signup">
+                        <form id="signupForm" class="space-y-4" method="POST" action="/signup">
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="space-y-1">
                                     <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Full
@@ -475,6 +475,25 @@
                                 </div>
                             </div>
 
+                            <!-- Teacher Verification Section -->
+                            <div id="teacher-verification-section" class="hidden space-y-4 transition-all duration-300 overflow-hidden max-h-0 opacity-0">
+                                <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3.5 shadow-lg relative overflow-hidden">
+                                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-amber-500/5 rounded-full blur-lg"></div>
+                                    <span class="material-symbols-outlined text-amber-400 text-lg shrink-0 mt-0.5">warning</span>
+                                    <div>
+                                        <div class="text-[10px] font-bold text-amber-400 uppercase tracking-widest leading-none mb-1">Teacher Registration</div>
+                                        <p class="text-[10px] font-semibold text-amber-200/70 leading-normal">Teacher accounts require a valid Teacher Access Code provided by the ChemLove Administration Team.</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Teacher Access Code *</label>
+                                    <input name="teacherAccessCode" id="signup-teacher-code"
+                                        class="w-full bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-3 text-xs font-semibold text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all placeholder:text-slate-600"
+                                        placeholder="Enter Teacher Verification Code" type="text" />
+                                    <div id="teacher-code-error" class="hidden text-[9px] font-bold text-red-400 uppercase tracking-widest mt-1"></div>
+                                </div>
+                            </div>
+
                             <button
                                 class="w-full py-3 kinetic-gradient text-white font-bold text-xs uppercase rounded-xl neon-cyan hover:scale-[0.98] transition-transform tracking-wider mt-3"
                                 type="submit">Create Account</button>
@@ -486,7 +505,7 @@
                             <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500">OR</span>
                             <div class="flex-grow h-px bg-white/5"></div>
                         </div>
-                        <button
+                        <button onclick="window.location.href='/auth/google'" type="button"
                             class="w-full py-3 glass-panel border-white/5 flex items-center justify-center gap-3 text-slate-200 hover:text-white rounded-xl hover:bg-slate-800/40 transition-all text-xs font-bold uppercase tracking-wider">
                             <img alt="Google" class="w-4 h-4"
                                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJwBfSQp1BUfdyj2n08Qi8exGD5_7I5HFKpZ8GGo5PwykhODSP9ApjPvNGsbcgHTI_QZqPn9iB-UpJBXRiDQ8d96zH3FPSzUJzv9KAV-Yclh8apagLVk6NYjw5U-MGLHxFrZNZGMEfLrHvmh7x1SIfQnB2eB3GFp0r1lm3vMiWfaeTyShVpGdkk-6fS-FqCF6CYynE78HcW2PNI9mzO9dlBnEpkkqoO1d6gcG1ssAAjkHgEfcLul7C1qu8BTJZMdpRN3z-VQT3dgei" />
@@ -713,20 +732,87 @@
             const roleSelect = document.getElementById('signup-role-select');
             const classContainer = document.getElementById('signup-class-container');
             const roleContainer = document.getElementById('signup-role-container');
+            const teacherSection = document.getElementById('teacher-verification-section');
+            const teacherCodeInput = document.getElementById('signup-teacher-code');
+            const teacherCodeError = document.getElementById('teacher-code-error');
+            const signupForm = document.getElementById('signupForm');
 
             if (roleSelect && classContainer && roleContainer) {
                 function updateRoleLayout() {
                     if (roleSelect.value === 'teacher') {
                         classContainer.classList.add('hidden');
                         roleContainer.classList.add('col-span-2');
+                        if (teacherSection) {
+                            teacherSection.classList.remove('hidden');
+                            setTimeout(() => {
+                                teacherSection.classList.remove('max-h-0', 'opacity-0');
+                                teacherSection.classList.add('max-h-[300px]', 'opacity-100');
+                            }, 10);
+                        }
+                        if (teacherCodeInput) {
+                            teacherCodeInput.setAttribute('required', 'required');
+                        }
                     } else {
                         classContainer.classList.remove('hidden');
                         roleContainer.classList.remove('col-span-2');
+                        if (teacherSection) {
+                            teacherSection.classList.remove('max-h-[300px]', 'opacity-100');
+                            teacherSection.classList.add('max-h-0', 'opacity-0');
+                            setTimeout(() => {
+                                if (roleSelect.value !== 'teacher') {
+                                    teacherSection.classList.add('hidden');
+                                }
+                            }, 300);
+                        }
+                        if (teacherCodeInput) {
+                            teacherCodeInput.removeAttribute('required');
+                            teacherCodeInput.value = '';
+                        }
+                        if (teacherCodeError) {
+                            teacherCodeError.classList.add('hidden');
+                            teacherCodeError.textContent = '';
+                        }
                     }
                 }
 
                 roleSelect.addEventListener('change', updateRoleLayout);
                 updateRoleLayout(); // initialize on load
+            }
+
+            if (signupForm && roleSelect && teacherCodeInput && teacherCodeError) {
+                signupForm.addEventListener('submit', async (e) => {
+                    if (roleSelect.value === 'teacher') {
+                        e.preventDefault();
+                        const codeVal = teacherCodeInput.value.trim();
+                        if (!codeVal) {
+                            teacherCodeError.textContent = "Teacher Access Code is required.";
+                            teacherCodeError.classList.remove('hidden');
+                            return;
+                        }
+                        
+                        try {
+                            const response = await fetch('/auth/verify-teacher-code', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ code: codeVal })
+                            });
+                            const result = await response.json();
+                            if (result.valid) {
+                                teacherCodeError.classList.add('hidden');
+                                // Code is valid, submit programmatically
+                                signupForm.submit();
+                            } else {
+                                teacherCodeError.textContent = "Invalid Teacher Access Code.";
+                                teacherCodeError.classList.remove('hidden');
+                            }
+                        } catch (error) {
+                            teacherCodeError.textContent = "Error verifying access code. Please try again.";
+                            teacherCodeError.classList.remove('hidden');
+                        }
+                    }
+                });
             }
 
             // Custom Dropdowns Toggle Handlers for Signup

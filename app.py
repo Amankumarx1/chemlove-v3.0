@@ -12,9 +12,21 @@ import mysql.connector
 from mysql.connector.pooling import MySQLConnectionPool
 from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
+from authlib.integrations.flask_client import OAuth
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "change-this-secret-key")
+
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
 
 # ── Database connection pool ────────────────────────────────────────────────
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -886,6 +898,18 @@ def signup():
             flash('Please fill all required fields.', 'error')
             return redirect(url_for('signup'))
 
+        if role == 'teacher':
+            submitted_code = request.form.get('teacherAccessCode', '').strip()
+            expected_code = os.getenv("TEACHER_ACCESS_CODE", "CHEM2K26V3").strip()
+            if submitted_code != expected_code:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+                    return jsonify({
+                        "success": False,
+                        "message": "Invalid Teacher Access Code"
+                    }), 403
+                flash('Invalid Teacher Access Code.', 'error')
+                return redirect(url_for('signup'))
+
         if role == 'student' and not class_level:
             flash('Please select class level for student role.', 'error')
             return redirect(url_for('signup'))
@@ -954,6 +978,163 @@ def login():
         return redirect_by_role(user)
 
     return render_template('landing/auth.html', active_form='login')
+
+
+@app.route('/auth/verify-teacher-code', methods=['POST'])
+def verify_teacher_code():
+    data = request.get_json(silent=True) or {}
+    code = data.get('code', '').strip()
+    expected = os.getenv("TEACHER_ACCESS_CODE", "CHEM2K26V3").strip()
+    return jsonify({"valid": code == expected})
+
+
+@app.route('/auth/google')
+def auth_google():
+    client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+    if not client_id:
+        return redirect(url_for('auth_google_mock'))
+    
+    redirect_uri = url_for('auth_google_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+
+@app.route('/auth/google/mock')
+def auth_google_mock():
+    return render_template('landing/google_mock.html')
+
+
+@app.route('/auth/google/callback')
+def auth_google_callback():
+    # Handle both simulated mock profile Choice and real Google OAuth redirect
+    mock_profile = request.args.get('mock_profile', '')
+    
+    email = ""
+    name = ""
+    role_hint = "student"
+    
+    if mock_profile:
+        if mock_profile == 'student':
+            email = 'alex.r@chemlove.com'
+            name = 'Alex Rivera'
+            role_hint = 'student'
+        elif mock_profile == 'teacher':
+            email = 'sarah.j@chemlove.edu'
+            name = 'Dr. Sarah Jenkins'
+            role_hint = 'teacher'
+        elif mock_profile == 'admin':
+            email = 'admin@chemlove.com'
+            name = 'Admin Owner'
+            role_hint = 'admin'
+        elif mock_profile == 'custom':
+            email = request.args.get('email', '').strip().lower()
+            name = request.args.get('name', '').strip()
+            role_hint = request.args.get('role', 'student').strip()
+    else:
+        client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+        if not client_id:
+            flash("Google Authentication is not configured.", "error")
+            return redirect(url_for('login'))
+        
+        try:
+            token = google.authorize_access_token()
+            user_info = token.get('userinfo')
+            if not user_info:
+                raise ValueError("No userinfo found in OAuth token response.")
+            
+            email = user_info.get('email', '').strip().lower()
+            name = user_info.get('name', '').strip()
+            
+        except Exception as e:
+            flash(f"Google Authentication failed: {str(e)}", "error")
+            return redirect(url_for('login'))
+    
+    if not email:
+        flash("Google account does not expose a valid email address.", "error")
+        return redirect(url_for('login'))
+        
+    with get_db() as conn:
+        user = conn.execute("SELECT * FROM users WHERE email = %s", (email,)).fetchone()
+        
+    if user:
+        if user.get('status') == 'suspended':
+            flash('This account has been suspended. Please contact the administrator.', 'error')
+            return redirect(url_for('login'))
+        
+        session['user_id'] = user['id']
+        add_history(user['id'], "google_login_success")
+        flash('Login successful via Google.', 'success')
+        return redirect_by_role(user)
+    else:
+        # Redirect new Google users to complete profiles
+        session['google_auth_pending'] = {
+            'email': email,
+            'name': name,
+            'role_hint': role_hint
+        }
+        return redirect(url_for('auth_google_finish'))
+
+
+@app.route('/auth/google/finish', methods=['GET', 'POST'])
+def auth_google_finish():
+    pending = session.get('google_auth_pending')
+    if not pending:
+        flash("No pending authentication session found.", "error")
+        return redirect(url_for('login'))
+        
+    if request.method == 'POST':
+        role = request.form.get('role', '').strip()
+        institution = request.form.get('institution', '').strip()
+        class_level = request.form.get('classLevel', '').strip()
+        
+        if not role or not institution:
+            flash("Institution and Role are required.", "error")
+            return render_template('landing/google_finish.html', email=pending['email'], name=pending['name'], role_hint=pending.get('role_hint', 'student'))
+            
+        if role == 'student' and not class_level:
+            flash("Class level is required for student profiles.", "error")
+            return render_template('landing/google_finish.html', email=pending['email'], name=pending['name'], role_hint=pending.get('role_hint', 'student'))
+            
+        if role == 'teacher':
+            submitted_code = request.form.get('teacherAccessCode', '').strip()
+            expected_code = os.getenv("TEACHER_ACCESS_CODE", "CHEM2K26V3").strip()
+            if submitted_code != expected_code:
+                flash("Invalid Teacher Access Code.", "error")
+                return render_template('landing/google_finish.html', email=pending['email'], name=pending['name'], role_hint=pending.get('role_hint', 'student'))
+        
+        import secrets
+        rand_pass = secrets.token_hex(24)
+        
+        with get_db() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO users(name, email, password_hash, institution, role, class_level, status, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
+                """,
+                (pending['name'], pending['email'], generate_password_hash(rand_pass), institution, role,
+                 class_level if role == 'student' else None)
+            )
+            user_id = cursor.lastrowid
+            
+            if role == 'student':
+                conn.execute(
+                    "INSERT INTO student_profiles(user_id, current_xp, level) VALUES (%s, 100, 1)",
+                    (user_id,)
+                )
+            elif role == 'teacher':
+                conn.execute(
+                    "INSERT INTO teacher_profiles(user_id, department) VALUES (%s, 'Chemistry')",
+                    (user_id,)
+                )
+            
+            user_row = conn.execute("SELECT * FROM users WHERE id = %s", (user_id,)).fetchone()
+            
+        session.pop('google_auth_pending', None)
+        session['user_id'] = user_id
+        add_history(user_id, "google_signup_success", f"role={role}")
+        flash('Account created successfully via Google.', 'success')
+        return redirect_by_role(user_row)
+        
+    return render_template('landing/google_finish.html', email=pending['email'], name=pending['name'], role_hint=pending.get('role_hint', 'student'))
 
 
 @app.route('/logout', methods=['POST'])

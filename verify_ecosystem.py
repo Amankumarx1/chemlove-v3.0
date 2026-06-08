@@ -127,7 +127,7 @@ def db_cleanup():
         cursor = conn.cursor()
         # Get user IDs of test users to be extra thorough, though cascades handle most
         cursor.execute(
-            "SELECT id FROM users WHERE email IN ('student_test@example.com', 'teacher_test@example.com', 'admin_test@example.com')"
+            "SELECT id FROM users WHERE email IN ('student_test@example.com', 'teacher_test@example.com', 'admin_test@example.com', 'alex.r@chemlove.com', 'sarah.j@chemlove.edu')"
         )
         user_ids = [row[0] for row in cursor.fetchall()]
 
@@ -162,14 +162,36 @@ def run_tests():
     assert status == 200, f"Admin signup failed: {status}"
     print("SUCCESS: Admin registered successfully")
 
-    # Register Teacher
-    status, _, _, _, _ = teacher.request(
+    # Register Teacher (Failing attempt - missing code)
+    status, _, headers, _, _ = teacher.request(
         "POST", "/signup",
         {"name": "Teacher Test", "email": "teacher_test@example.com", "password": "pass123", "institution": "Test High", "role": "teacher"},
+        is_json=False,
+        follow_redirects=False
+    )
+    assert status == 302, f"Expected redirect on missing code: {status}"
+    assert "/signup" in headers.get("Location", ""), f"Expected redirect to signup, got {headers.get('Location')}"
+    print("SUCCESS: Teacher signup blocked without access code")
+
+    # Register Teacher (Failing attempt - wrong code)
+    status, _, headers, _, _ = teacher.request(
+        "POST", "/signup",
+        {"name": "Teacher Test", "email": "teacher_test@example.com", "password": "pass123", "institution": "Test High", "role": "teacher", "teacherAccessCode": "WRONG_CODE"},
+        is_json=False,
+        follow_redirects=False
+    )
+    assert status == 302, f"Expected redirect on wrong code: {status}"
+    assert "/signup" in headers.get("Location", ""), f"Expected redirect to signup, got {headers.get('Location')}"
+    print("SUCCESS: Teacher signup blocked with invalid access code")
+
+    # Register Teacher (Successful attempt - correct code)
+    status, _, _, _, _ = teacher.request(
+        "POST", "/signup",
+        {"name": "Teacher Test", "email": "teacher_test@example.com", "password": "pass123", "institution": "Test High", "role": "teacher", "teacherAccessCode": "CHEM2K26V3"},
         is_json=False
     )
     assert status == 200, f"Teacher signup failed: {status}"
-    print("SUCCESS: Teacher registered successfully")
+    print("SUCCESS: Teacher registered successfully with valid access code")
 
     # Register Student
     status, _, _, _, _ = student.request(
@@ -660,6 +682,72 @@ def run_tests():
     status, _, _, _, _ = student.request("GET", "/student/quiz/6", follow_redirects=False)
     assert status == 302, f"Class 10 student allowed to access Class 12 quiz: {status}"
     print("SUCCESS: Quiz class boundaries enforced")
+
+    print("\n--- STEP 19: Google Auth & Mock flow verification ---")
+    google_client = ChemLoveClient()
+    
+    # 19.1 GET /auth/google redirects appropriately based on client configuration
+    status, _, headers, _, _ = google_client.request("GET", "/auth/google", follow_redirects=False)
+    assert status == 302, f"Expected redirect from /auth/google, got {status}"
+    loc = headers.get("Location", "")
+    assert "accounts.google.com" in loc or "/auth/google/mock" in loc, f"Expected Google OAuth or Mock redirect, got {loc}"
+    print(f"SUCCESS: GET /auth/google redirects to: {loc}")
+
+    # 19.2 GET /auth/google/mock should return 200
+    status, _, _, body, _ = google_client.request("GET", "/auth/google/mock")
+    assert status == 200, f"GET /auth/google/mock returned {status}"
+    assert "Choose an account" in body or "Choose account" in body or "Google" in body, "Expected google mock template content not found"
+    print("SUCCESS: GET /auth/google/mock renders chooser dialog successfully")
+
+    # 19.3 GET /auth/google/callback for a new mock user should redirect to finish
+    status, _, headers, _, _ = google_client.request(
+        "GET", "/auth/google/callback?mock_profile=student",
+        follow_redirects=False
+    )
+    assert status == 302, f"Expected redirect, got {status}"
+    assert "/auth/google/finish" in headers.get("Location", ""), f"Expected onboarding finish redirect, got {headers.get('Location')}"
+    print("SUCCESS: New google profile callback redirects to onboarding completion")
+
+    # 19.4 Complete onboarding as student
+    status, _, _, _, _ = google_client.request(
+        "POST", "/auth/google/finish",
+        {"institution": "Caltech University", "role": "student", "classLevel": "12"},
+        is_json=False
+    )
+    assert status == 200, f"Google student onboarding failed: {status}"
+    print("SUCCESS: Google student onboarding completed successfully")
+
+    # 19.5 Callback for existing google user logs in directly
+    existing_google = ChemLoveClient()
+    status, _, headers, _, _ = existing_google.request(
+        "GET", "/auth/google/callback?mock_profile=student",
+        follow_redirects=False
+    )
+    assert status == 302, f"Expected redirect, got {status}"
+    assert "/student/dashboard" in headers.get("Location", ""), f"Expected login redirect to student dashboard, got {headers.get('Location')}"
+    print("SUCCESS: Existing Google user logged in directly and redirected to dashboard")
+
+    # 19.6 Onboarding as teacher requires the access code
+    teacher_google = ChemLoveClient()
+    # Trigger callback
+    status, _, _, _, _ = teacher_google.request("GET", "/auth/google/callback?mock_profile=teacher")
+    # Attempt to complete with invalid code
+    status, _, _, body, _ = teacher_google.request(
+        "POST", "/auth/google/finish",
+        {"institution": "Stanford", "role": "teacher", "teacherAccessCode": "WRONG_CODE"},
+        is_json=False
+    )
+    assert "Invalid Teacher Access Code" in body, "Expected validation failure for invalid teacher code"
+    print("SUCCESS: Google teacher onboarding blocked with invalid code")
+
+    # Complete with correct access code
+    status, _, _, _, _ = teacher_google.request(
+        "POST", "/auth/google/finish",
+        {"institution": "Stanford", "role": "teacher", "teacherAccessCode": "CHEM2K26V3"},
+        is_json=False
+    )
+    assert status == 200, f"Google teacher onboarding completed with status {status}"
+    print("SUCCESS: Google teacher onboarding completed successfully with valid access code")
 
     # Final DB cleanup
     db_cleanup()

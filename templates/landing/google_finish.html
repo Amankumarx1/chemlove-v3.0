@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Complete Onboarding | ChemLove</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <style>
+        body {
+            background-color: #0e1416;
+            overflow-x: hidden;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #4cd7f6, #ffb0cd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .glass-panel {
+            background: rgba(27, 33, 34, 0.6);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+            border-radius: 32px;
+        }
+
+        .neon-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .neon-cyan:hover {
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.6);
+        }
+    </style>
+</head>
+
+<body class="bg-[#0e1416] text-[#dee3e6] font-sans flex flex-col min-h-screen relative select-none">
+
+    <!-- Ambient background glows -->
+    <div class="absolute top-1/4 -right-20 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-0 -left-20 w-[500px] h-[500px] bg-rose-500/5 rounded-full blur-[150px] pointer-events-none"></div>
+
+    <!-- Main Container -->
+    <main class="flex-grow flex items-center justify-center py-12 px-6 relative z-10">
+        <div class="w-full max-w-lg glass-panel p-8 md:p-10 relative">
+
+            <!-- Card Header -->
+            <div class="text-center mb-6">
+                <span class="text-[9px] font-bold uppercase tracking-widest text-[#4cd7f6] bg-[#4cd7f6]/10 px-2.5 py-1.5 rounded-full border border-[#4cd7f6]/20 inline-block mb-3">ONE-STEP SETUP</span>
+                <h1 class="text-2xl font-black uppercase tracking-tight text-white">Complete Your <span class="gradient-text">Profile</span></h1>
+                <p class="text-xs text-slate-400 mt-1.5 leading-relaxed max-w-sm mx-auto">
+                    Welcome <span class="text-[#4cd7f6] font-bold">{{ name }}</span>! Provide details below to connect your Google account (<span class="text-slate-300">{{ email }}</span>).
+                </p>
+            </div>
+
+            <!-- Onboarding Form -->
+            <form id="googleFinishForm" class="space-y-4" method="POST" action="/auth/google/finish">
+                <!-- Academic Institution -->
+                <div class="space-y-1.5">
+                    <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Academic Institution *</label>
+                    <input name="institution" type="text" required placeholder="University / School Name"
+                        class="w-full bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-3 text-xs font-semibold text-white focus:outline-none focus:border-[#4cd7f6] focus:ring-1 focus:ring-[#4cd7f6] transition-all placeholder:text-slate-600" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Academic Class (Student only) -->
+                    <div class="space-y-1" id="signup-class-container">
+                        <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Academic Class</label>
+                        <input type="hidden" name="classLevel" id="signup-class-select" value="12">
+                        <div class="relative inline-block text-left w-full" id="signup-class-dropdown-container">
+                            <button id="signup-class-dropdown-btn" type="button" class="w-full flex items-center justify-between gap-2 bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-[#4cd7f6] focus:ring-1 focus:ring-[#4cd7f6] transition-all cursor-pointer">
+                                <span id="selected-signup-class-label">Class 12</span>
+                                <span id="signup-class-dropdown-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
+                            </button>
+                            <!-- Dropdown Menu -->
+                            <div id="signup-class-dropdown-menu" class="hidden absolute left-0 right-0 mt-2.5 bg-[#171d1e] border border-white/5 rounded-2xl shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
+                                <div class="space-y-1">
+                                    <button type="button" onclick="selectSignupClass('9', 'Class 9')" class="signup-class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                        <span class="material-symbols-outlined text-sm">filter_9</span> Class 9
+                                    </button>
+                                    <button type="button" onclick="selectSignupClass('10', 'Class 10')" class="signup-class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                        <span class="material-symbols-outlined text-sm">filter_10</span> Class 10
+                                    </button>
+                                    <button type="button" onclick="selectSignupClass('11', 'Class 11')" class="signup-class-option-btn w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                        <span class="material-symbols-outlined text-sm">looks_one</span> Class 11
+                                    </button>
+                                    <button type="button" onclick="selectSignupClass('12', 'Class 12')" class="signup-class-option-btn active w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-950/20 transition-all text-left">
+                                        <span class="material-symbols-outlined text-sm">looks_two</span> Class 12
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Role Selector -->
+                    <div class="space-y-1" id="signup-role-container">
+                        <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Role</label>
+                        <input type="hidden" name="role" id="signup-role-select" value="{{ role_hint }}">
+                        <div class="relative inline-block text-left w-full" id="signup-role-dropdown-container">
+                            <button id="signup-role-dropdown-btn" type="button" class="w-full flex items-center justify-between gap-2 bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-[#4cd7f6] focus:ring-1 focus:ring-[#4cd7f6] transition-all cursor-pointer">
+                                <span id="selected-signup-role-label">{% if role_hint == 'teacher' %}Teacher{% else %}Student{% endif %}</span>
+                                <span id="signup-role-dropdown-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
+                            </button>
+                            <!-- Dropdown Menu -->
+                            <div id="signup-role-dropdown-menu" class="hidden absolute left-0 right-0 mt-2.5 bg-[#171d1e] border border-white/5 rounded-2xl shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
+                                <div class="space-y-1">
+                                    <button type="button" onclick="selectSignupRole('student', 'Student')" class="signup-role-option-btn {% if role_hint != 'teacher' %}active text-cyan-400 bg-cyan-950/20{% else %}text-slate-300{% endif %} w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left">
+                                        <span class="material-symbols-outlined text-sm">school</span> Student
+                                    </button>
+                                    <button type="button" onclick="selectSignupRole('teacher', 'Teacher')" class="signup-role-option-btn {% if role_hint == 'teacher' %}active text-cyan-400 bg-cyan-950/20{% else %}text-slate-300{% endif %} w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left">
+                                        <span class="material-symbols-outlined text-sm">co_present</span> Teacher
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teacher Verification Section -->
+                <div id="teacher-verification-section" class="hidden space-y-4 transition-all duration-300 overflow-hidden max-h-0 opacity-0">
+                    <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3.5 shadow-lg relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 w-16 h-16 bg-amber-500/5 rounded-full blur-lg"></div>
+                        <span class="material-symbols-outlined text-amber-400 text-lg shrink-0 mt-0.5">warning</span>
+                        <div>
+                            <div class="text-[10px] font-bold text-amber-400 uppercase tracking-widest leading-none mb-1">Teacher Registration</div>
+                            <p class="text-[10px] font-semibold text-amber-200/70 leading-normal">Teacher accounts require a valid Teacher Access Code provided by the ChemLove Administration Team.</p>
+                        </div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Teacher Access Code *</label>
+                        <input name="teacherAccessCode" id="signup-teacher-code"
+                            class="w-full bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-3 text-xs font-semibold text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all placeholder:text-slate-600"
+                            placeholder="Enter Teacher Verification Code" type="text" />
+                        <div id="teacher-code-error" class="hidden text-[9px] font-bold text-red-400 uppercase tracking-widest mt-1"></div>
+                    </div>
+                </div>
+
+                <!-- Flash Errors (like duplicate warnings or incorrect keys) -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="bg-red-950/40 border border-red-500/20 text-red-200 p-3 rounded-xl text-xs flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm shrink-0">error</span>
+                    <span class="font-bold uppercase tracking-wider text-[10px]">{{ message }}</span>
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <button
+                    class="w-full py-3 bg-gradient-to-r from-cyan-500 to-cyan-300 text-slate-900 font-bold text-xs uppercase rounded-xl neon-cyan hover:scale-[0.98] transition-transform tracking-wider mt-4"
+                    type="submit">Complete Setup</button>
+            </form>
+
+            <div class="text-center mt-6">
+                <a href="/login" class="text-xs font-bold text-slate-400 hover:text-white transition-colors">
+                    Cancel and return to Login
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function selectSignupClass(classVal, label) {
+            const inputEl = document.getElementById('signup-class-select');
+            if (inputEl) {
+                inputEl.value = classVal;
+                inputEl.dispatchEvent(new Event('change'));
+            }
+            const labelEl = document.getElementById('selected-signup-class-label');
+            if (labelEl) {
+                labelEl.textContent = label;
+            }
+            const optionBtns = document.querySelectorAll('.signup-class-option-btn');
+            optionBtns.forEach(btn => {
+                if (btn.getAttribute('onclick').includes(`'${classVal}'`)) {
+                    btn.classList.add('active', 'text-cyan-400', 'bg-cyan-950/20');
+                    btn.classList.remove('text-slate-300');
+                } else {
+                    btn.classList.remove('active', 'text-cyan-400', 'bg-cyan-950/20');
+                    btn.classList.add('text-slate-300');
+                }
+            });
+            const menu = document.getElementById('signup-class-dropdown-menu');
+            const arrow = document.getElementById('signup-class-dropdown-arrow');
+            if (menu) menu.classList.add('hidden');
+            if (arrow) arrow.classList.remove('rotate-180');
+        }
+
+        function selectSignupRole(roleVal, label) {
+            const inputEl = document.getElementById('signup-role-select');
+            if (inputEl) {
+                inputEl.value = roleVal;
+                inputEl.dispatchEvent(new Event('change'));
+            }
+            const labelEl = document.getElementById('selected-signup-role-label');
+            if (labelEl) {
+                labelEl.textContent = label;
+            }
+            const optionBtns = document.querySelectorAll('.signup-role-option-btn');
+            optionBtns.forEach(btn => {
+                if (btn.getAttribute('onclick').includes(`'${roleVal}'`)) {
+                    btn.classList.add('active', 'text-cyan-400', 'bg-cyan-950/20');
+                    btn.classList.remove('text-slate-300');
+                } else {
+                    btn.classList.remove('active', 'text-cyan-400', 'bg-cyan-950/20');
+                    btn.classList.add('text-slate-300');
+                }
+            });
+            const menu = document.getElementById('signup-role-dropdown-menu');
+            const arrow = document.getElementById('signup-role-dropdown-arrow');
+            if (menu) menu.classList.add('hidden');
+            if (arrow) arrow.classList.remove('rotate-180');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const roleSelect = document.getElementById('signup-role-select');
+            const classContainer = document.getElementById('signup-class-container');
+            const roleContainer = document.getElementById('signup-role-container');
+            const teacherSection = document.getElementById('teacher-verification-section');
+            const teacherCodeInput = document.getElementById('signup-teacher-code');
+            const teacherCodeError = document.getElementById('teacher-code-error');
+            const form = document.getElementById('googleFinishForm');
+
+            if (roleSelect && classContainer && roleContainer) {
+                function updateRoleLayout() {
+                    if (roleSelect.value === 'teacher') {
+                        classContainer.classList.add('hidden');
+                        roleContainer.classList.add('col-span-2');
+                        if (teacherSection) {
+                            teacherSection.classList.remove('hidden');
+                            setTimeout(() => {
+                                teacherSection.classList.remove('max-h-0', 'opacity-0');
+                                teacherSection.classList.add('max-h-[300px]', 'opacity-100');
+                            }, 10);
+                        }
+                        if (teacherCodeInput) {
+                            teacherCodeInput.setAttribute('required', 'required');
+                        }
+                    } else {
+                        classContainer.classList.remove('hidden');
+                        roleContainer.classList.remove('col-span-2');
+                        if (teacherSection) {
+                            teacherSection.classList.remove('max-h-[300px]', 'opacity-100');
+                            teacherSection.classList.add('max-h-0', 'opacity-0');
+                            setTimeout(() => {
+                                if (roleSelect.value !== 'teacher') {
+                                    teacherSection.classList.add('hidden');
+                                }
+                            }, 300);
+                        }
+                        if (teacherCodeInput) {
+                            teacherCodeInput.removeAttribute('required');
+                            teacherCodeInput.value = '';
+                        }
+                        if (teacherCodeError) {
+                            teacherCodeError.classList.add('hidden');
+                            teacherCodeError.textContent = '';
+                        }
+                    }
+                }
+
+                roleSelect.addEventListener('change', updateRoleLayout);
+                updateRoleLayout(); // initialize on load
+            }
+
+            // Custom Dropdowns handlers
+            const classBtn = document.getElementById('signup-class-dropdown-btn');
+            const classMenu = document.getElementById('signup-class-dropdown-menu');
+            const classArrow = document.getElementById('signup-class-dropdown-arrow');
+            const roleBtn = document.getElementById('signup-role-dropdown-btn');
+            const roleMenu = document.getElementById('signup-role-dropdown-menu');
+            const roleArrow = document.getElementById('signup-role-dropdown-arrow');
+
+            if (classBtn && classMenu) {
+                classBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    classMenu.classList.toggle('hidden');
+                    if (roleMenu) roleMenu.classList.add('hidden');
+                    if (roleArrow) roleArrow.classList.remove('rotate-180');
+                    if (classArrow) classArrow.classList.toggle('rotate-180');
+                });
+            }
+
+            if (roleBtn && roleMenu) {
+                roleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    roleMenu.classList.toggle('hidden');
+                    if (classMenu) classMenu.classList.add('hidden');
+                    if (classArrow) classArrow.classList.remove('rotate-180');
+                    if (roleArrow) roleArrow.classList.toggle('rotate-180');
+                });
+            }
+
+            document.addEventListener('click', () => {
+                if (classMenu) classMenu.classList.add('hidden');
+                if (classArrow) classArrow.classList.remove('rotate-180');
+                if (roleMenu) roleMenu.classList.add('hidden');
+                if (roleArrow) roleArrow.classList.remove('rotate-180');
+            });
+
+            // Pre-submit validation via AJAX for Teacher Code
+            if (form && roleSelect && teacherCodeInput && teacherCodeError) {
+                form.addEventListener('submit', async (e) => {
+                    if (roleSelect.value === 'teacher') {
+                        e.preventDefault();
+                        const codeVal = teacherCodeInput.value.trim();
+                        if (!codeVal) {
+                            teacherCodeError.textContent = "Teacher Access Code is required.";
+                            teacherCodeError.classList.remove('hidden');
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch('/auth/verify-teacher-code', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ code: codeVal })
+                            });
+                            const result = await response.json();
+                            if (result.valid) {
+                                teacherCodeError.classList.add('hidden');
+                                form.submit();
+                            } else {
+                                teacherCodeError.textContent = "Invalid Teacher Access Code.";
+                                teacherCodeError.classList.remove('hidden');
+                            }
+                        } catch (error) {
+                            teacherCodeError.textContent = "Error verifying access code. Please try again.";
+                            teacherCodeError.classList.remove('hidden');
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>
