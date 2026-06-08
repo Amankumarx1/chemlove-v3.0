@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 try:
+    if os.getenv("VERCEL") == "1":
+        # Force PyMySQL on Vercel to avoid native binary compilation issues
+        raise ImportError("Forced PyMySQL on Vercel")
     import mysql.connector
     from mysql.connector.pooling import MySQLConnectionPool
     HAS_NATIVE_MYSQL = True
@@ -41,14 +44,19 @@ except (ImportError, Exception):
             
         def get_connection(self):
             import pymysql
-            return MockConnection(pymysql.connect(
-                host=self.config.get("host", "localhost"),
-                user=self.config.get("user", "root"),
-                password=self.config.get("password", ""),
-                database=self.config.get("database", "chemlove"),
-                port=self.config.get("port", 3306),
-                autocommit=False
-            ))
+            connect_kwargs = {
+                "host": self.config.get("host", "localhost"),
+                "user": self.config.get("user", "root"),
+                "password": self.config.get("password", ""),
+                "database": self.config.get("database", "chemlove"),
+                "port": int(self.config.get("port", 3306)),
+                "autocommit": False
+            }
+            # Enable SSL connection dynamically if ssl parameters are in config
+            if any('ssl' in k.lower() for k in self.config.keys()):
+                connect_kwargs["ssl"] = {}
+                
+            return MockConnection(pymysql.connect(**connect_kwargs))
             
     MySQLConnectionPool = MockMySQLConnectionPool
     HAS_NATIVE_MYSQL = False
@@ -84,13 +92,22 @@ def parse_mysql_url(url):
     # Extract port
     port = parsed.port if parsed.port is not None else 3306
     
-    return {
+    config = {
         "host": parsed.hostname or "localhost",
         "port": port,
         "user": urllib.parse.unquote(parsed.username or "root"),
         "password": urllib.parse.unquote(parsed.password or ""),
         "database": database
     }
+    
+    # Parse query parameters (e.g. ssl-mode, ssl_ca)
+    if parsed.query:
+        query_params = urllib.parse.parse_qs(parsed.query)
+        for k, v in query_params.items():
+            if v:
+                config[k] = v[0]
+                
+    return config
 
 if DATABASE_URL and DATABASE_URL.startswith("mysql://"):
     try:
@@ -98,9 +115,18 @@ if DATABASE_URL and DATABASE_URL.startswith("mysql://"):
     except Exception as e:
         raise RuntimeError(f"Error parsing DATABASE_URL: {e}")
 else:
+    port_val = os.getenv("MYSQL_PORT")
+    if port_val and port_val.strip():
+        try:
+            port = int(port_val)
+        except ValueError:
+            port = 3306
+    else:
+        port = 3306
+        
     db_config = {
         "host": os.getenv("MYSQL_HOST", "localhost"),
-        "port": int(os.getenv("MYSQL_PORT", 3306)),
+        "port": port,
         "user": os.getenv("MYSQL_USER", "root"),
         "password": os.getenv("MYSQL_PASSWORD", ""),
         "database": os.getenv("MYSQL_DATABASE", "chemlove")
@@ -241,7 +267,17 @@ def init_db():
         print(f"[DATABASE] WARNING: Could not complete database v3 initialization: {e}")
 
 
-init_db()
+# Database initialization deferred to before_request to prevent block during serverless imports
+_db_initialized = False
+
+@app.before_request
+def maybe_init_db():
+    global _db_initialized
+    if not _db_initialized:
+        if request.path.startswith('/static/') or request.path in ('/favicon.ico', '/favicon.png'):
+            return
+        _db_initialized = True
+        init_db()
 
 
 # ── Static content helpers ─────────────────────────────────────────────────
