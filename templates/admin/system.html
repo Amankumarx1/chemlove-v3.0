@@ -1,0 +1,132 @@
+﻿{% extends "layouts/admin_base.html" %}
+{% block title %}System Telemetry | ChemLove Admin{% endblock %}
+{% block breadcrumb_active %}System Telemetry{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-black text-white tracking-tight">System Telemetry</h1>
+    <p class="text-xs text-slate-500 mt-1">Runtime environment, database health, and infrastructure diagnostics</p>
+  </div>
+
+  <!-- Health Status -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    {% for label, status, icon in [
+      ('Flask Server', 'online', 'dns'),
+      ('MySQL Database', 'online' if db_tables else 'degraded', 'storage'),
+      ('AI Engine', 'online', 'psychology'),
+      ('Email Service', 'unknown', 'email'),
+    ] %}
+    <div class="bg-surface-container border border-white/5 rounded-2xl p-4 flex flex-col items-center gap-2">
+      <div class="w-10 h-10 rounded-xl
+        {% if status == 'online' %}bg-cyan-950/40 border border-cyan-500/20
+        {% elif status == 'degraded' %}bg-amber-950/40 border border-amber-500/20
+        {% else %}bg-slate-800/40 border border-slate-600/20{% endif %}
+        flex items-center justify-center">
+        <span class="material-symbols-outlined
+          {% if status == 'online' %}text-cyan-400
+          {% elif status == 'degraded' %}text-amber-400
+          {% else %}text-slate-500{% endif %} text-lg">{{ icon }}</span>
+      </div>
+      <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">{{ label }}</div>
+      <div class="flex items-center gap-1">
+        <span class="w-1.5 h-1.5 rounded-full
+          {% if status == 'online' %}bg-cyan-500
+          {% elif status == 'degraded' %}bg-amber-500
+          {% else %}bg-slate-500{% endif %}"></span>
+        <span class="text-[9px] font-bold uppercase
+          {% if status == 'online' %}text-cyan-400
+          {% elif status == 'degraded' %}text-amber-400
+          {% else %}text-slate-500{% endif %}">{{ status }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Runtime Environment -->
+    <div class="bg-surface-container border border-white/5 rounded-2xl overflow-hidden">
+      <div class="p-4 border-b border-white/5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-sky-400 text-base">terminal</span>
+        <span class="text-xs font-black uppercase tracking-widest text-slate-300">Runtime Environment</span>
+      </div>
+      <div class="p-4 space-y-0 divide-y divide-white/5">
+        {% for label, val in [
+          ('Flask Environment', system_info.get('flask_env', 'N/A')),
+          ('Python Version', system_info.get('python_version', 'N/A')[:40]),
+          ('Platform', system_info.get('platform', 'N/A')),
+          ('AI Model', system_info.get('ai_model', 'N/A')),
+          ('DB Host', system_info.get('db_host', 'N/A')),
+          ('Database', system_info.get('db_name', 'N/A')),
+        ] %}
+        <div class="flex items-center justify-between py-2.5">
+          <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{{ label }}</span>
+          <span class="text-[10px] font-mono text-slate-300 max-w-[200px] truncate text-right">{{ val }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Database Size Summary -->
+    <div class="bg-surface-container border border-white/5 rounded-2xl overflow-hidden">
+      <div class="p-4 border-b border-white/5 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-amber-400 text-base">database</span>
+          <span class="text-xs font-black uppercase tracking-widest text-slate-300">Database Storage</span>
+        </div>
+        <span class="text-[10px] font-black text-amber-400">{{ db_size }} MB total</span>
+      </div>
+      <div class="overflow-x-auto max-h-80 overflow-y-auto scrollbar-thin">
+        <table class="w-full text-[10px]">
+          <thead class="bg-surface-container-high sticky top-0">
+            <tr>
+              <th class="px-4 py-2 text-left font-black uppercase tracking-widest text-slate-500">Table</th>
+              <th class="px-4 py-2 text-right font-black uppercase tracking-widest text-slate-500">Rows</th>
+              <th class="px-4 py-2 text-right font-black uppercase tracking-widest text-slate-500">Size (KB)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5">
+            {% for t in db_tables %}
+            <tr class="hover:bg-white/[0.02]">
+              <td class="px-4 py-2 font-mono text-slate-300">{{ t.table_name }}</td>
+              <td class="px-4 py-2 text-right text-slate-400">{{ t.table_rows or 0 }}</td>
+              <td class="px-4 py-2 text-right text-slate-400">{{ t.size_kb or 0 }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="px-4 py-8 text-center text-slate-600">No database tables found</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="bg-surface-container border border-white/5 rounded-2xl p-5">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="material-symbols-outlined text-rose-400 text-base">build</span>
+      <span class="text-xs font-black uppercase tracking-widest text-slate-300">Admin Quick Actions</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <a href="/admin/activity" class="flex flex-col items-center gap-2 p-4 rounded-xl bg-surface-container-high border border-white/5 hover:border-sky-500/20 hover:bg-sky-950/10 transition-all text-center">
+        <span class="material-symbols-outlined text-sky-400">history</span>
+        <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">View Logs</span>
+      </a>
+      <a href="/admin/analytics" class="flex flex-col items-center gap-2 p-4 rounded-xl bg-surface-container-high border border-white/5 hover:border-cyan-500/20 hover:bg-cyan-950/10 transition-all text-center">
+        <span class="material-symbols-outlined text-cyan-400">analytics</span>
+        <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Analytics</span>
+      </a>
+      <a href="/admin/settings" class="flex flex-col items-center gap-2 p-4 rounded-xl bg-surface-container-high border border-white/5 hover:border-violet-500/20 hover:bg-violet-950/10 transition-all text-center">
+        <span class="material-symbols-outlined text-violet-400">settings</span>
+        <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Settings</span>
+      </a>
+      <a href="/admin/ai" class="flex flex-col items-center gap-2 p-4 rounded-xl bg-surface-container-high border border-white/5 hover:border-amber-500/20 hover:bg-amber-950/10 transition-all text-center">
+        <span class="material-symbols-outlined text-amber-400">psychology</span>
+        <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">AI Center</span>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

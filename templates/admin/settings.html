@@ -1,0 +1,139 @@
+﻿{% extends "layouts/admin_base.html" %}
+{% block title %}Platform Settings | ChemLove Admin{% endblock %}
+{% block breadcrumb_active %}Platform Settings{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-black text-white tracking-tight">Platform Settings</h1>
+    <p class="text-xs text-slate-500 mt-1">Control library access modes, content manager permissions, and platform behaviour</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Library Access Control -->
+    <div class="bg-surface-container border border-white/5 rounded-2xl overflow-hidden">
+      <div class="p-4 border-b border-white/5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-sky-400 text-base">library_books</span>
+        <span class="text-xs font-black uppercase tracking-widest text-slate-300">Library Access Modes</span>
+      </div>
+      <div class="p-4 space-y-4">
+        <p class="text-[10px] text-slate-500 leading-relaxed">
+          Control whether students can access content from other class levels or are restricted to their own batch.
+        </p>
+
+        <!-- Current Settings Table -->
+        {% if settings %}
+        <div class="rounded-xl overflow-hidden border border-white/5">
+          <table class="w-full text-xs">
+            <thead class="bg-surface-container-high">
+              <tr>
+                <th class="px-3 py-2.5 text-left font-black uppercase tracking-widest text-slate-500">Category</th>
+                <th class="px-3 py-2.5 text-left font-black uppercase tracking-widest text-slate-500">Mode</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              {% for s in settings %}
+              <tr>
+                <td class="px-3 py-2 text-slate-300">{{ s.category_name }}</td>
+                <td class="px-3 py-2">
+                  <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider
+                    {% if s.access_mode == 'OPEN' %}bg-cyan-950/40 text-cyan-400 border border-cyan-500/20
+                    {% elif s.access_mode == 'EXPLORE' %}bg-sky-950/40 text-sky-400 border border-sky-500/20
+                    {% else %}bg-rose-950/40 text-rose-400 border border-rose-500/20{% endif %}">
+                    {{ s.access_mode }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-6 text-slate-600 text-xs">No library settings configured yet.</div>
+        {% endif %}
+
+        <!-- Add/Update Setting -->
+        <form method="POST" class="space-y-3 pt-2 border-t border-white/5">
+          <input type="hidden" name="action" value="update_library">
+          <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">Add / Update Rule</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[10px] text-slate-600 block mb-1">Category Name</label>
+              <input type="text" name="category_name" placeholder="e.g. Chemistry" required
+                class="w-full bg-[#090d0e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:ring-0 placeholder:text-slate-600">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-600 block mb-1">Access Mode</label>
+              <select name="access_mode" class="w-full bg-[#090d0e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                <option value="STRICT">STRICT — Own class only</option>
+                <option value="EXPLORE">EXPLORE — Browse other levels</option>
+                <option value="OPEN">OPEN — Full unrestricted access</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="w-full py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold uppercase tracking-wider transition-all">
+            Update Library Setting
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Content Manager Permissions -->
+    <div class="bg-surface-container border border-white/5 rounded-2xl overflow-hidden">
+      <div class="p-4 border-b border-white/5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-violet-400 text-base">manage_accounts</span>
+        <span class="text-xs font-black uppercase tracking-widest text-slate-300">Content Manager Permissions</span>
+      </div>
+      <form method="POST" class="p-4 space-y-3">
+        <input type="hidden" name="action" value="update_permissions">
+        <p class="text-[10px] text-slate-500 leading-relaxed mb-4">
+          Control what Content Managers are allowed to do on the platform.
+        </p>
+        {% set perm_labels = {
+          'can_create_chapters': ('Create Chapters', 'menu_book'),
+          'can_edit_courses': ('Edit Courses', 'edit'),
+          'can_manage_users': ('View User Data', 'group'),
+          'can_issue_certificates': ('Issue Certificates', 'workspace_premium'),
+        } %}
+        {% for key, (label, icon) in perm_labels.items() %}
+        <label class="flex items-center justify-between p-3 rounded-xl bg-[#090d0e] border border-white/10 cursor-pointer hover:border-violet-500/20 transition-all">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-violet-400 text-base">{{ icon }}</span>
+            <span class="text-xs font-bold text-slate-300">{{ label }}</span>
+          </div>
+          <input type="checkbox" name="{{ key }}" value="1"
+            {% if cm_perms.get(key) %}checked{% endif %}
+            class="rounded border-white/20 bg-transparent text-violet-500 focus:ring-violet-500">
+        </label>
+        {% endfor %}
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold uppercase tracking-wider transition-all mt-4">
+          Save Permissions
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Access Mode Reference -->
+  <div class="bg-surface-container border border-white/5 rounded-2xl p-5">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="material-symbols-outlined text-amber-400 text-base">info</span>
+      <span class="text-xs font-black uppercase tracking-widest text-slate-300">Access Mode Reference</span>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {% for mode, desc, color in [
+        ('STRICT', 'Students can only access courses and chapters matching their assigned class level. Most controlled mode.', 'rose'),
+        ('EXPLORE', 'Students can browse and read content from other levels but assignments remain class-specific.', 'sky'),
+        ('OPEN', 'Full platform access — students can enroll in any course regardless of class level.', 'cyan'),
+      ] %}
+      <div class="p-4 rounded-xl bg-{{ color }}-950/20 border border-{{ color }}-500/20">
+        <div class="text-xs font-black text-{{ color }}-400 mb-1.5">{{ mode }}</div>
+        <p class="text-[10px] text-slate-500 leading-relaxed">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

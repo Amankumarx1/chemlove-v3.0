@@ -778,6 +778,20 @@ def admin_required(f):
     return decorated
 
 
+def content_manager_or_admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            flash('Please login first.', 'error')
+            return redirect(url_for('login'))
+        if user['role'] not in ('admin', 'content_manager'):
+            flash('Unauthorized access. Content Manager or Admin role required.', 'error')
+            return redirect(url_for('profile_page'))
+        return f(*args, **kwargs)
+    return decorated
+
+
 def redirect_by_role(user):
     if user['role'] == 'admin':
         return redirect(url_for('admin_dashboard'))
@@ -2607,6 +2621,7 @@ def admin_dashboard():
         }
 
     audit_logs = []
+    chart_data = []
     try:
         with get_db() as conn:
             rows = conn.execute("""
@@ -2617,241 +2632,262 @@ def admin_dashboard():
                 LIMIT 50
             """).fetchall()
             for r in rows:
-                audit_logs.append(dict(r))
-    except Exception as e:
-        print(f"Error getting audit logs: {e}")
+                a = {}
+                for k, v in dict(r).items():
+                    # Convert MySQL Undefined / non-serializable types to safe Python types
+                    if v is None or str(type(v)) == "<class 'mysql.connector.types.Undefined'>":
+                        a[k] = None
+                    elif isinstance(v, datetime):
+                        a[k] = v.strftime('%Y-%m-%d %H:%M:%S')
+                    else:
+                        try:
+                            a[k] = str(v) if not isinstance(v, (int, float, bool, str)) else v
+                        except Exception:
+                            a[k] = None
+                audit_logs.append(a)
 
-    chart_data = []
-    try:
-        with get_db() as conn:
-            rows = conn.execute("""
-                SELECT DATE(created_at) as d, COUNT(*) as c 
-                FROM users 
+            # 7-day signup trend for the line chart
+            trend_rows = conn.execute("""
+                SELECT DATE(created_at) AS day, COUNT(*) AS count
+                FROM users
                 WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                 GROUP BY DATE(created_at)
-                ORDER BY d ASC
+                ORDER BY day ASC
             """).fetchall()
-            for r in rows:
-                chart_data.append({
-                    'date': r['d'].strftime('%b %d') if hasattr(r['d'], 'strftime') else str(r['d']),
-                    'count': r['c']
-                })
+            chart_data = [{'date': str(r['day']), 'count': int(r['count'])} for r in trend_rows]
     except Exception as e:
-        print(f"Error getting chart data: {e}")
+        print(f"Error fetching dashboard data: {e}")
 
-    if not chart_data:
-        chart_data = [
-            {'date': 'June 1', 'count': 1},
-            {'date': 'June 2', 'count': 2},
-            {'date': 'June 3', 'count': 3},
-            {'date': 'June 4', 'count': 5},
-            {'date': 'June 5', 'count': 8}
-        ]
-
-    return render_template('admin/dashboard.html', current_user=get_current_user(), stats=stats, audit_logs=audit_logs, chart_data=chart_data, active_tab='dashboard')
+    return render_template(
+        'admin/dashboard.html',
+        current_user=get_current_user(),
+        stats=stats,
+        audit_logs=audit_logs,
+        chart_data=chart_data,
+        active_tab='dashboard'
+    )
 
 
 @app.route('/admin/erp-stub')
 @admin_required
 def admin_erp_stub():
-    module = request.args.get('module', 'System Administration')
-    metrics = {
-        'Academies': [
-            {'title': 'Partner Schools', 'val': '12 Active', 'desc': 'Colleges & Institutions linked'},
-            {'title': 'Branches', 'val': '34 Nodes', 'desc': 'Physical labs synchronization status'},
-            {'title': 'Coordinators', 'val': '15 Registered', 'desc': 'Active institution operators'}
-        ],
-        'Assessments': [
-            {'title': 'Quiz Bank Entries', 'val': '1,420 Items', 'desc': 'Physics, Biology & Chemistry'},
-            {'title': 'Coding Challenges', 'val': '84 Challenges', 'desc': 'Syntax compilation validators'},
-            {'title': 'Avg Class Rank', 'val': 'Top 10%', 'desc': 'Across all connected academies'}
-        ],
-        'Certifications': [
-            {'title': 'Certificate Templates', 'val': '5 Premium', 'desc': 'SVG Custom vector layouts'},
-            {'title': 'Revocation Keys', 'val': '0 Active', 'desc': 'Security keys validation status'},
-            {'title': 'Achievements Badges', 'val': '12 Unlocked', 'desc': 'Live gamification statistics'}
-        ],
-        'Communications': [
-            {'title': 'Send Grid SMTP Status', 'val': 'Connected', 'desc': 'Email relay server validation'},
-            {'title': 'Scheduled Broadcasts', 'val': '2 Pending', 'desc': 'System notifications queue'},
-            {'title': 'Relay Latency', 'val': '1.2s', 'desc': 'Websocket messaging broker'}
-        ],
-        'Settings': [
-            {'title': 'Branding Override', 'val': 'ChemLove Premium', 'desc': 'Global brand title'},
-            {'title': 'Multi-Factor Auth (MFA)', 'val': 'Enforced', 'desc': 'Security authentication keys'},
-            {'title': 'SMTP Relay Server', 'val': 'smtp.gmail.com', 'desc': 'Mail system transport configurations'}
-        ],
-        'AI': [
-            {'title': 'LLM Gateway', 'val': 'DeepSeek / Gemini', 'desc': 'Active inference nodes status'},
-            {'title': 'AI Generation Queue', 'val': '0 In-Queue', 'desc': 'Auto-quiz compilation request log'},
-            {'title': 'Token Budget Utilisation', 'val': '14.2%', 'desc': 'Platform-wide consumption telemetry'}
-        ],
-        'System': [
-            {'title': 'Database Backup', 'val': 'Daily Autocommit', 'desc': 'Automated SQL binary backups'},
-            {'title': 'Intrusion Detection System', 'val': 'Shield Active', 'desc': 'Threat monitoring terminal logs'},
-            {'title': 'Backup History', 'val': '14 Backups', 'desc': 'Available restore snapshots'}
-        ]
-    }
-    selected_metrics = metrics.get(module, [
-        {'title': 'ERP Component', 'val': 'Scalable Node', 'desc': 'Under Supervision'},
-        {'title': 'System Integration', 'val': 'Connected', 'desc': 'Operational'},
-        {'title': 'Status', 'val': 'Optimal', 'desc': 'All services live'}
-    ])
-    return render_template('admin/erp_stub.html', current_user=get_current_user(), module=module, metrics=selected_metrics, active_tab=module.lower())
+    return redirect(url_for('admin_dashboard'))
+
 
 
 @app.route('/admin/control-center', methods=['GET', 'POST'])
 @admin_required
 def admin_control_center():
-    user = get_current_user()
-    if request.method == 'POST':
-        action = request.form.get('action')
-        if action == 'create':
-            name = request.form.get('name')
-            email = request.form.get('email')
-            institution = request.form.get('institution')
-            role = request.form.get('role')
-            class_level = request.form.get('class_level') if role == 'student' else None
-            password = request.form.get('password')
-            
-            if not (name and email and password and institution and role):
-                flash("Missing required fields for user creation.", "error")
-                return redirect(url_for('admin_control_center'))
-            
-            pwd_hash = generate_password_hash(password)
-            try:
-                with get_db() as conn:
-                    existing = conn.execute("SELECT id FROM users WHERE email = %s", (email,)).fetchone()
-                    if existing:
-                        flash("A user with this email registry already exists.", "error")
-                        return redirect(url_for('admin_control_center'))
-                    
-                    cursor = conn.execute(
-                        "INSERT INTO users (name, email, password_hash, institution, role, class_level, status) VALUES (%s, %s, %s, %s, %s, %s, 'active')",
-                        (name, email, pwd_hash, institution, role, class_level)
-                    )
-                    new_uid = cursor.lastrowid
-                    
-                    if role == 'student':
-                        conn.execute("INSERT IGNORE INTO student_profiles (user_id, current_xp, level) VALUES (%s, 100, 1)", (new_uid,))
-                        if class_level:
-                            matching_courses = conn.execute("SELECT id FROM courses WHERE class_level = %s AND status = 'active'", (class_level,)).fetchall()
-                            for c in matching_courses:
-                                conn.execute("INSERT IGNORE INTO course_enrollments (course_id, student_id, progress, status) VALUES (%s, %s, 0, 'active')", (c['id'], new_uid))
-                    elif role == 'teacher':
-                        conn.execute("INSERT IGNORE INTO teacher_profiles (user_id, department) VALUES (%s, 'Chemistry')", (new_uid,))
-                        
-                log_audit("create_user", f"Created user {name} ({role}) - Email: {email}")
-                flash(f"Successfully registered user {name}.", "success")
-            except Exception as e:
-                flash(f"Error creating user: {e}", "error")
-                
-        elif action == 'edit':
-            uid = request.form.get('id')
-            name = request.form.get('name')
-            institution = request.form.get('institution')
-            role = request.form.get('role')
-            class_level = request.form.get('class_level') if role == 'student' else None
-            status = request.form.get('status')
-            
-            if not (uid and name and institution and role and status):
-                flash("Missing required fields for user edit.", "error")
-                return redirect(url_for('admin_control_center'))
-            
-            try:
-                with get_db() as conn:
-                    conn.execute(
-                        "UPDATE users SET name = %s, institution = %s, role = %s, class_level = %s, status = %s WHERE id = %s",
-                        (name, institution, role, class_level, status, uid)
-                    )
-                    if role == 'student':
-                        conn.execute("INSERT IGNORE INTO student_profiles (user_id, current_xp, level) VALUES (%s, 100, 1)", (uid,))
-                    elif role == 'teacher':
-                        conn.execute("INSERT IGNORE INTO teacher_profiles (user_id, department) VALUES (%s, 'Chemistry')", (uid,))
-                log_audit("edit_user", f"Updated user parameters for ID {uid}: {name} ({role}), status: {status}")
-                flash("User parameters successfully updated.", "success")
-            except Exception as e:
-                flash(f"Error updating user: {e}", "error")
-                
-        elif action == 'delete':
-            uid = request.form.get('id')
-            if not uid:
-                flash("User ID missing for deletion.", "error")
-                return redirect(url_for('admin_control_center'))
-            try:
-                with get_db() as conn:
-                    target = conn.execute("SELECT name, email, role FROM users WHERE id = %s", (uid,)).fetchone()
-                    if target:
-                        conn.execute("DELETE FROM users WHERE id = %s", (uid,))
-                        log_audit("delete_user", f"Purged user {target['name']} ({target['role']}) - Email: {target['email']} - ID: {uid}")
-                        flash(f"User {target['name']} permanently deleted.", "success")
-                    else:
-                        flash("User not found.", "error")
-            except Exception as e:
-                flash(f"Error deleting user: {e}", "error")
-                
-        elif action == 'reset_password':
-            uid = request.form.get('id')
-            password = request.form.get('password')
-            if not (uid and password):
-                flash("Missing ID or new password.", "error")
-                return redirect(url_for('admin_control_center'))
-            pwd_hash = generate_password_hash(password)
-            try:
-                with get_db() as conn:
-                    target = conn.execute("SELECT name, email FROM users WHERE id = %s", (uid,)).fetchone()
-                    if target:
-                        conn.execute("UPDATE users SET password_hash = %s WHERE id = %s", (pwd_hash, uid))
-                        log_audit("reset_password", f"Reset password credentials for {target['name']} (ID: {uid})")
-                        flash(f"Credentials successfully reset for {target['name']}.", "success")
-                    else:
-                        flash("User not found.", "error")
-            except Exception as e:
-                flash(f"Error resetting credentials: {e}", "error")
+    role = request.args.get('role', 'student')
+    if role == 'teacher':
+        return redirect(url_for('admin_users_teachers'))
+    elif role == 'admin':
+        return redirect(url_for('admin_users_admins'))
+    elif role == 'content_manager' or role == 'content-manager':
+        return redirect(url_for('admin_users_content_managers'))
+    return redirect(url_for('admin_users_students'))
 
-        return redirect(url_for('admin_control_center'))
 
-    search_query = request.args.get('search', '').strip()
-    selected_role = request.args.get('role', 'all').strip()
+def handle_user_crud_logic(redirect_url):
+    action = request.form.get('action')
+    name = request.form.get('name')
+    email = request.form.get('email')
+    institution = request.form.get('institution')
+    role = request.form.get('role')
+    class_level = request.form.get('class_level') if role == 'student' else None
+    password = request.form.get('password')
     
+    if action == 'create':
+        if not (name and email and password and institution and role):
+            flash("Missing required fields for user creation.", "error")
+            return redirect(redirect_url)
+        pwd_hash = generate_password_hash(password)
+        try:
+            with get_db() as conn:
+                existing = conn.execute("SELECT id FROM users WHERE email = %s", (email,)).fetchone()
+                if existing:
+                    flash("A user with this email registry already exists.", "error")
+                    return redirect(redirect_url)
+                cursor = conn.execute(
+                    "INSERT INTO users (name, email, password_hash, institution, role, class_level, status) VALUES (%s, %s, %s, %s, %s, %s, 'active')",
+                    (name, email, pwd_hash, institution, role, class_level)
+                )
+                new_uid = cursor.lastrowid
+                if role == 'student':
+                    conn.execute("INSERT IGNORE INTO student_profiles (user_id, current_xp, level) VALUES (%s, 100, 1)", (new_uid,))
+                    if class_level:
+                        matching_courses = conn.execute("SELECT id FROM courses WHERE class_level = %s AND status = 'active'", (class_level,)).fetchall()
+                        for c in matching_courses:
+                            conn.execute("INSERT IGNORE INTO course_enrollments (course_id, student_id, progress, status) VALUES (%s, %s, 0, 'active')", (c['id'], new_uid))
+                elif role == 'teacher':
+                    conn.execute("INSERT IGNORE INTO teacher_profiles (user_id, department) VALUES (%s, 'Chemistry')", (new_uid,))
+            log_audit("create_user", f"Created user {name} ({role}) - Email: {email}")
+            flash(f"Successfully registered user {name}.", "success")
+        except Exception as e:
+            flash(f"Error creating user: {e}", "error")
+            
+    elif action == 'edit':
+        uid = request.form.get('id')
+        status = request.form.get('status')
+        if not (uid and name and institution and role and status):
+            flash("Missing required fields for user edit.", "error")
+            return redirect(redirect_url)
+        try:
+            with get_db() as conn:
+                conn.execute(
+                    "UPDATE users SET name = %s, institution = %s, role = %s, class_level = %s, status = %s WHERE id = %s",
+                    (name, institution, role, class_level, status, uid)
+                )
+                if role == 'student':
+                    conn.execute("INSERT IGNORE INTO student_profiles (user_id, current_xp, level) VALUES (%s, 100, 1)", (uid,))
+                elif role == 'teacher':
+                    conn.execute("INSERT IGNORE INTO teacher_profiles (user_id, department) VALUES (%s, 'Chemistry')", (uid,))
+            log_audit("edit_user", f"Updated user parameters for ID {uid}: {name} ({role}), status: {status}")
+            flash("User parameters successfully updated.", "success")
+        except Exception as e:
+            flash(f"Error updating user: {e}", "error")
+            
+    elif action == 'delete':
+        uid = request.form.get('id')
+        if not uid:
+            flash("User ID missing for deletion.", "error")
+            return redirect(redirect_url)
+        try:
+            with get_db() as conn:
+                target = conn.execute("SELECT name, email, role FROM users WHERE id = %s", (uid,)).fetchone()
+                if target:
+                    conn.execute("DELETE FROM users WHERE id = %s", (uid,))
+                    log_audit("delete_user", f"Purged user {target['name']} ({target['role']}) - Email: {target['email']} - ID: {uid}")
+                    flash(f"User {target['name']} permanently deleted.", "success")
+                else:
+                    flash("User not found.", "error")
+        except Exception as e:
+            flash(f"Error deleting user: {e}", "error")
+            
+    elif action == 'reset_password':
+        uid = request.form.get('id')
+        if not (uid and password):
+            flash("Missing ID or new password.", "error")
+            return redirect(redirect_url)
+        pwd_hash = generate_password_hash(password)
+        try:
+            with get_db() as conn:
+                target = conn.execute("SELECT name, email FROM users WHERE id = %s", (uid,)).fetchone()
+                if target:
+                    conn.execute("UPDATE users SET password_hash = %s WHERE id = %s", (pwd_hash, uid))
+                    log_audit("reset_password", f"Reset password credentials for {target['name']} (ID: {uid})")
+                    flash(f"Credentials successfully reset for {target['name']}.", "success")
+                else:
+                    flash("User not found.", "error")
+        except Exception as e:
+            flash(f"Error resetting credentials: {e}", "error")
+
+    return redirect(redirect_url)
+
+
+@app.route('/admin/users/students', methods=['GET', 'POST'])
+@admin_required
+def admin_users_students():
+    if request.method == 'POST':
+        return handle_user_crud_logic(request.url)
+    
+    search_query = request.args.get('search', '').strip()
     users = []
     try:
         with get_db() as conn:
-            query = "SELECT * FROM users"
+            query = "SELECT * FROM users WHERE role = 'student'"
             params = []
-            conditions = []
-            
             if search_query:
-                conditions.append("(name LIKE %s OR email LIKE %s OR institution LIKE %s)")
+                query += " AND (name LIKE %s OR email LIKE %s OR institution LIKE %s)"
                 like_term = f"%{search_query}%"
                 params.extend([like_term, like_term, like_term])
-                
-            if selected_role != 'all':
-                conditions.append("role = %s")
-                params.append(selected_role)
-                
-            if conditions:
-                query += " WHERE " + " AND ".join(conditions)
-                
             query += " ORDER BY id DESC"
             rows = conn.execute(query, tuple(params)).fetchall()
-            
-            for row in rows:
-                u_dict = dict(row)
-                u_dict["classLevel"] = row["class_level"]
-                u_dict["class_level"] = row["class_level"]
+            for r in rows:
+                u_dict = dict(r)
+                u_dict["classLevel"] = r["class_level"]
                 users.append(u_dict)
     except Exception as e:
-        print(f"Error fetching users: {e}")
-        
-    return render_template(
-        'admin/control_center.html', 
-        current_user=user, 
-        users=users, 
-        search_query=search_query, 
-        selected_role=selected_role,
-        active_tab='users'
-    )
+        print(f"Error: {e}")
+    return render_template('admin/users_students.html', current_user=get_current_user(), users=users, search_query=search_query, active_tab='students')
+
+
+@app.route('/admin/users/teachers', methods=['GET', 'POST'])
+@admin_required
+def admin_users_teachers():
+    if request.method == 'POST':
+        return handle_user_crud_logic(request.url)
+    
+    search_query = request.args.get('search', '').strip()
+    users = []
+    try:
+        with get_db() as conn:
+            query = "SELECT * FROM users WHERE role = 'teacher'"
+            params = []
+            if search_query:
+                query += " AND (name LIKE %s OR email LIKE %s OR institution LIKE %s)"
+                like_term = f"%{search_query}%"
+                params.extend([like_term, like_term, like_term])
+            query += " ORDER BY id DESC"
+            rows = conn.execute(query, tuple(params)).fetchall()
+            for r in rows:
+                u_dict = dict(r)
+                users.append(u_dict)
+    except Exception as e:
+        print(f"Error: {e}")
+    return render_template('admin/users_teachers.html', current_user=get_current_user(), users=users, search_query=search_query, active_tab='teachers')
+
+
+@app.route('/admin/users/admins', methods=['GET', 'POST'])
+@admin_required
+def admin_users_admins():
+    if request.method == 'POST':
+        return handle_user_crud_logic(request.url)
+    
+    search_query = request.args.get('search', '').strip()
+    users = []
+    try:
+        with get_db() as conn:
+            query = "SELECT * FROM users WHERE role = 'admin'"
+            params = []
+            if search_query:
+                query += " AND (name LIKE %s OR email LIKE %s OR institution LIKE %s)"
+                like_term = f"%{search_query}%"
+                params.extend([like_term, like_term, like_term])
+            query += " ORDER BY id DESC"
+            rows = conn.execute(query, tuple(params)).fetchall()
+            for r in rows:
+                u_dict = dict(r)
+                users.append(u_dict)
+    except Exception as e:
+        print(f"Error: {e}")
+    return render_template('admin/users_admins.html', current_user=get_current_user(), users=users, search_query=search_query, active_tab='admins')
+
+
+@app.route('/admin/users/content-managers', methods=['GET', 'POST'])
+@admin_required
+def admin_users_content_managers():
+    if request.method == 'POST':
+        return handle_user_crud_logic(request.url)
+    
+    search_query = request.args.get('search', '').strip()
+    users = []
+    try:
+        with get_db() as conn:
+            query = "SELECT * FROM users WHERE role = 'content_manager'"
+            params = []
+            if search_query:
+                query += " AND (name LIKE %s OR email LIKE %s OR institution LIKE %s)"
+                like_term = f"%{search_query}%"
+                params.extend([like_term, like_term, like_term])
+            query += " ORDER BY id DESC"
+            rows = conn.execute(query, tuple(params)).fetchall()
+            for r in rows:
+                u_dict = dict(r)
+                users.append(u_dict)
+    except Exception as e:
+        print(f"Error: {e}")
+    return render_template('admin/users_content_managers.html', current_user=get_current_user(), users=users, search_query=search_query, active_tab='content_managers')
 
 
 @app.route('/admin/student-monitoring/<int:user_id>', methods=['GET', 'POST'])
@@ -3145,6 +3181,188 @@ def admin_permissions():
     return render_template('admin/permissions.html', current_user=user, perms=perms, active_tab='permissions')
 
 
+@app.route('/admin/courses', methods=['GET', 'POST'])
+@content_manager_or_admin_required
+def admin_courses():
+    user = get_current_user()
+    if request.method == 'POST':
+        # Handles quick course status toggle or CRUD via form if desired
+        course_id = request.form.get('id')
+        action = request.form.get('action')
+        if action == 'delete':
+            try:
+                with get_db() as conn:
+                    conn.execute("DELETE FROM courses WHERE id = %s", (course_id,))
+                log_audit("delete_course", f"Deleted course ID: {course_id}")
+                flash("Course deleted successfully.", "success")
+            except Exception as e:
+                flash(f"Error deleting course: {e}", "error")
+        elif action == 'create':
+            title = request.form.get('title')
+            description = request.form.get('description')
+            category = request.form.get('category', 'Chemistry')
+            class_level = request.form.get('class_level')
+            subject_id = request.form.get('subject_id')
+            if title:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            INSERT INTO courses (title, description, category, class_level, subject_id, status)
+                            VALUES (%s, %s, %s, %s, %s, 'active')
+                        """, (title, description, category, class_level, subject_id))
+                    log_audit("create_course", f"Created course {title} for Class {class_level}")
+                    flash("Course registered successfully.", "success")
+                except Exception as e:
+                    flash(f"Error creating course: {e}", "error")
+        elif action == 'edit':
+            title = request.form.get('title')
+            description = request.form.get('description')
+            category = request.form.get('category')
+            class_level = request.form.get('class_level')
+            subject_id = request.form.get('subject_id')
+            status = request.form.get('status', 'active')
+            if title and course_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            UPDATE courses 
+                            SET title = %s, description = %s, category = %s, class_level = %s, subject_id = %s, status = %s
+                            WHERE id = %s
+                        """, (title, description, category, class_level, subject_id, status, course_id))
+                    log_audit("update_course", f"Updated course ID: {course_id}")
+                    flash("Course updated successfully.", "success")
+                except Exception as e:
+                    flash(f"Error updating course: {e}", "error")
+        return redirect(url_for('admin_courses'))
+
+    with get_db() as conn:
+        courses = conn.execute("""
+            SELECT c.*, s.name as subject_name 
+            FROM courses c 
+            LEFT JOIN subjects s ON c.subject_id = s.id 
+            ORDER BY c.class_level ASC, c.title ASC
+        """).fetchall()
+        subjects = conn.execute("SELECT * FROM subjects").fetchall()
+    return render_template('admin/courses.html', current_user=user, courses=courses, subjects=subjects, active_tab='courses')
+
+
+@app.route('/admin/chapters', methods=['GET', 'POST'])
+@content_manager_or_admin_required
+def admin_chapters():
+    user = get_current_user()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        chapter_id = request.form.get('id')
+        if action == 'delete':
+            try:
+                with get_db() as conn:
+                    conn.execute("DELETE FROM chapters WHERE id = %s", (chapter_id,))
+                log_audit("delete_chapter", f"Deleted chapter ID: {chapter_id}")
+                flash("Chapter deleted successfully.", "success")
+            except Exception as e:
+                flash(f"Error deleting chapter: {e}", "error")
+        elif action == 'create':
+            title = request.form.get('title')
+            description = request.form.get('description')
+            class_level = request.form.get('class_level')
+            chapter_number = request.form.get('chapter_number')
+            if title:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            INSERT INTO chapters (title, description, class_level, chapter_number, learning_objectives, key_points, important_laws, formulas, constants, important_reactions, notes, real_life_applications, virtual_labs, practice_questions, common_mistakes, chapter_weightage, next_chapter)
+                            VALUES (%s, %s, %s, %s, '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]')
+                        """, (title, description, class_level, chapter_number))
+                    log_audit("create_chapter", f"Created chapter {title} for Class {class_level}")
+                    flash("Chapter registered successfully.", "success")
+                except Exception as e:
+                    flash(f"Error creating chapter: {e}", "error")
+        return redirect(url_for('admin_chapters'))
+
+    with get_db() as conn:
+        chapters = conn.execute("""
+            SELECT ch.*, c.title as course_title 
+            FROM chapters ch 
+            LEFT JOIN courses c ON ch.class_level = c.class_level 
+            ORDER BY ch.class_level ASC, ch.chapter_number ASC
+        """).fetchall()
+        courses = conn.execute("SELECT id, title, class_level FROM courses").fetchall()
+    return render_template('admin/chapters.html', current_user=user, chapters=chapters, courses=courses, active_tab='chapters')
+
+
+@app.route('/admin/chapters/<int:chapter_id>/builder', methods=['GET', 'POST'])
+@content_manager_or_admin_required
+def admin_chapter_builder(chapter_id):
+    user = get_current_user()
+    with get_db() as conn:
+        chapter = conn.execute("SELECT * FROM chapters WHERE id = %s", (chapter_id,)).fetchone()
+        if not chapter:
+            flash("Chapter not found.", "error")
+            return redirect(url_for('admin_chapters'))
+            
+        if request.method == 'POST':
+            # Update chapter data fields
+            title = request.form.get('title')
+            description = request.form.get('description')
+            chapter_number = request.form.get('chapter_number')
+            class_level = request.form.get('class_level')
+            
+            # Form tab fields (stored as JSON)
+            key_points = request.form.get('key_points', '[]')
+            important_reactions = request.form.get('important_reactions', '[]')
+            formulas = request.form.get('formulas', '[]')
+            notes = request.form.get('notes', '[]')
+            practice_questions = request.form.get('practice_questions', '[]')
+            
+            conn.execute("""
+                UPDATE chapters 
+                SET title = %s, description = %s, chapter_number = %s, class_level = %s,
+                    key_points = %s, important_reactions = %s, formulas = %s, notes = %s, practice_questions = %s
+                WHERE id = %s
+            """, (title, description, chapter_number, class_level, 
+                  key_points, important_reactions, formulas, notes, practice_questions, chapter_id))
+            log_audit("update_chapter_builder", f"Updated chapter builder content for chapter {title} (ID: {chapter_id})")
+            flash("Chapter content updated successfully.", "success")
+            return redirect(url_for('admin_chapter_builder', chapter_id=chapter_id))
+
+        quizzes = conn.execute("SELECT * FROM quizzes WHERE chapter_id = %s", (chapter_id,)).fetchall()
+        reactions = conn.execute("SELECT * FROM reactions WHERE chapter_id = %s", (chapter_id,)).fetchall()
+        experiments = conn.execute("SELECT * FROM experiments WHERE chapter_id = %s", (chapter_id,)).fetchall()
+        
+    return render_template(
+        'admin/chapter_builder.html', 
+        current_user=user, 
+        chapter=dict(chapter), 
+        quizzes=quizzes,
+        reactions=reactions,
+        experiments=experiments,
+        active_tab='chapters'
+    )
+
+
+@app.route('/admin/library', methods=['GET', 'POST'])
+@admin_required
+def admin_library():
+    user = get_current_user()
+    if request.method == 'POST':
+        category_name = request.form.get('category_name')
+        access_mode = request.form.get('access_mode')
+        if category_name and access_mode:
+            with get_db() as conn:
+                conn.execute("""
+                    INSERT INTO library_settings (category_name, access_mode) 
+                    VALUES (%s, %s) 
+                    ON DUPLICATE KEY UPDATE access_mode = %s
+                """, (category_name, access_mode, access_mode))
+            log_audit("update_library_settings", f"Updated access mode for {category_name} to {access_mode}")
+            flash(f"Library setting for {category_name} updated successfully.", "success")
+        return redirect(url_for('admin_library'))
+        
+    with get_db() as conn:
+        settings = conn.execute("SELECT * FROM library_settings").fetchall()
+    return render_template('admin/library.html', current_user=user, settings=settings, active_tab='library')
+
+
 # ============================================================
 # STUDENT LMS CATALOG
 # ============================================================
@@ -3336,7 +3554,7 @@ def api_categories():
 @app.route('/api/admin/courses', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def api_admin_courses():
     user = get_current_user()
-    if not user or user['role'] not in ('admin', 'teacher'):
+    if not user or user['role'] not in ('admin', 'teacher', 'content_manager'):
         return jsonify({"error": "Forbidden"}), 403
         
     if request.method == 'GET':
@@ -4697,6 +4915,781 @@ def api_log_event():
     return jsonify({"ok": True})
 
 
+@app.route('/admin/certificates', methods=['GET', 'POST'])
+@admin_required
+def admin_certificates():
+    user = get_current_user()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        cert_id = request.form.get('id')
+        if action == 'delete':
+            try:
+                with get_db() as conn:
+                    conn.execute("DELETE FROM certificates WHERE id = %s", (cert_id,))
+                log_audit("delete_certificate", f"Deleted issued certificate ID: {cert_id}")
+                flash("Certificate deleted.", "success")
+            except Exception as e:
+                flash(f"Error: {e}", "error")
+        elif action == 'create':
+            student_id = request.form.get('student_id')
+            course_id = request.form.get('course_id')
+            import uuid
+            verification_id = str(uuid.uuid4())[:18].upper()
+            if student_id and course_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            INSERT INTO certificates (student_id, course_id, verification_id, status)
+                            VALUES (%s, %s, %s, 'issued')
+                        """, (student_id, course_id, verification_id))
+                    log_audit("create_certificate", f"Issued new certificate for student ID {student_id} for course ID {course_id}")
+                    flash("Certificate issued successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        elif action == 'edit':
+            status = request.form.get('status')
+            if status and cert_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("UPDATE certificates SET status = %s WHERE id = %s", (status, cert_id))
+                    log_audit("update_certificate", f"Updated certificate ID {cert_id} status to {status}")
+                    flash("Certificate updated successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        return redirect(url_for('admin_certificates'))
+
+    with get_db() as conn:
+        certificates = conn.execute("""
+            SELECT cert.*, u.name as student_name, c.title as course_title 
+            FROM certificates cert 
+            JOIN users u ON cert.student_id = u.id 
+            JOIN courses c ON cert.course_id = c.id 
+            ORDER BY cert.id DESC
+        """).fetchall()
+        students = conn.execute("SELECT id, name FROM users WHERE role = 'student'").fetchall()
+        courses = conn.execute("SELECT id, title FROM courses").fetchall()
+    return render_template('admin/certificates.html', current_user=user, certificates=certificates, students=students, courses=courses, active_tab='certificates')
+
+
+@app.route('/admin/achievements', methods=['GET', 'POST'])
+@admin_required
+def admin_achievements():
+    user = get_current_user()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        badge_id = request.form.get('id')
+        if action == 'delete':
+            try:
+                with get_db() as conn:
+                    conn.execute("DELETE FROM badges WHERE id = %s", (badge_id,))
+                log_audit("delete_badge", f"Deleted badge achievement ID: {badge_id}")
+                flash("Achievement deleted.", "success")
+            except Exception as e:
+                flash(f"Error: {e}", "error")
+        elif action == 'create':
+            name = request.form.get('name')
+            description = request.form.get('description')
+            icon = request.form.get('icon', 'military_tech')
+            xp_reward = request.form.get('xp_reward', 50)
+            if name:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            INSERT INTO badges (name, description, icon, xp_reward)
+                            VALUES (%s, %s, %s, %s)
+                        """, (name, description, icon, xp_reward))
+                    log_audit("create_badge", f"Created badge achievement: {name}")
+                    flash("Achievement registered.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        elif action == 'edit':
+            name = request.form.get('name')
+            description = request.form.get('description')
+            icon = request.form.get('icon')
+            xp_reward = request.form.get('xp_reward')
+            if name and badge_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            UPDATE badges 
+                            SET name = %s, description = %s, icon = %s, xp_reward = %s
+                            WHERE id = %s
+                        """, (name, description, icon, xp_reward, badge_id))
+                    log_audit("update_badge", f"Updated badge ID: {badge_id}")
+                    flash("Achievement updated successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        return redirect(url_for('admin_achievements'))
+
+    with get_db() as conn:
+        badges = conn.execute("SELECT * FROM badges ORDER BY id ASC").fetchall()
+    return render_template('admin/achievements.html', current_user=user, badges=badges, active_tab='achievements')
+
+
+@app.route('/admin/leaderboards')
+@admin_required
+def admin_leaderboards():
+    with get_db() as conn:
+        # Fetch leaderboard stats by level and XP
+        students = conn.execute("""
+            SELECT u.id, u.name, u.institution, sp.current_xp, sp.level 
+            FROM users u 
+            JOIN student_profiles sp ON u.id = sp.user_id 
+            ORDER BY sp.current_xp DESC 
+            LIMIT 50
+        """).fetchall()
+    return render_template('admin/leaderboards.html', current_user=get_current_user(), students=students, active_tab='leaderboards')
+
+
+# ============================================================
+# ADMIN — COMMUNICATIONS / ANNOUNCEMENTS
+# ============================================================
+
+@app.route('/admin/communications', methods=['GET', 'POST'])
+@admin_required
+def admin_communications():
+    user = get_current_user()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        ann_id = request.form.get('id')
+        if action == 'delete':
+            try:
+                with get_db() as conn:
+                    conn.execute("DELETE FROM announcements WHERE id = %s", (ann_id,))
+                log_audit("delete_announcement", f"Deleted announcement ID: {ann_id}")
+                flash("Announcement deleted.", "success")
+            except Exception as e:
+                flash(f"Error: {e}", "error")
+        elif action == 'create':
+            title = request.form.get('title')
+            content = request.form.get('content')
+            target_role = request.form.get('target_role', 'all')
+            is_pinned = 1 if request.form.get('is_pinned') else 0
+            if title and content:
+                try:
+                    with get_db() as conn:
+                        conn.execute(
+                            "INSERT INTO announcements (title, content, author_id, target_role, is_pinned, created_at) VALUES (%s, %s, %s, %s, %s, NOW())",
+                            (title, content, user['id'], target_role if target_role != 'all' else None, is_pinned)
+                        )
+                    log_audit("create_announcement", f"Created announcement: {title}")
+                    flash("Announcement published.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        elif action == 'edit':
+            title = request.form.get('title')
+            content = request.form.get('content')
+            is_pinned = 1 if request.form.get('is_pinned') else 0
+            if title and ann_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute(
+                            "UPDATE announcements SET title = %s, content = %s, is_pinned = %s WHERE id = %s",
+                            (title, content, is_pinned, ann_id)
+                        )
+                    log_audit("edit_announcement", f"Updated announcement ID: {ann_id}")
+                    flash("Announcement updated.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        return redirect(url_for('admin_communications'))
+
+    announcements = []
+    try:
+        with get_db() as conn:
+            rows = conn.execute("""
+                SELECT a.*, u.name AS author_name 
+                FROM announcements a 
+                JOIN users u ON a.author_id = u.id 
+                ORDER BY a.is_pinned DESC, a.created_at DESC
+            """).fetchall()
+            announcements = [dict(r) for r in rows]
+            for a in announcements:
+                if isinstance(a.get('created_at'), datetime):
+                    a['created_at'] = a['created_at'].strftime('%Y-%m-%d %H:%M')
+    except Exception as e:
+        print(f"Error loading announcements: {e}")
+    return render_template('admin/communications.html', current_user=user, announcements=announcements, active_tab='communications')
+
+
+# ============================================================
+# ADMIN — ANALYTICS
+# ============================================================
+
+@app.route('/admin/analytics')
+@admin_required
+def admin_analytics():
+    user = get_current_user()
+    stats = {}
+    try:
+        with get_db() as conn:
+            stats['total_users'] = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()['c']
+            stats['total_students'] = conn.execute("SELECT COUNT(*) AS c FROM users WHERE role='student'").fetchone()['c']
+            stats['total_teachers'] = conn.execute("SELECT COUNT(*) AS c FROM users WHERE role='teacher'").fetchone()['c']
+            stats['total_courses'] = conn.execute("SELECT COUNT(*) AS c FROM courses").fetchone()['c']
+            stats['total_chapters'] = conn.execute("SELECT COUNT(*) AS c FROM chapters").fetchone()['c']
+            stats['total_quizzes'] = conn.execute("SELECT COUNT(*) AS c FROM quizzes").fetchone()['c']
+            stats['total_tests'] = conn.execute("SELECT COUNT(*) AS c FROM tests").fetchone()['c']
+            stats['total_certificates'] = conn.execute("SELECT COUNT(*) AS c FROM certificates WHERE status='issued'").fetchone()['c']
+            stats['total_enrollments'] = conn.execute("SELECT COUNT(*) AS c FROM course_enrollments").fetchone()['c']
+            dau = conn.execute("SELECT COUNT(DISTINCT user_id) AS c FROM user_history WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)").fetchone()['c']
+            mau = conn.execute("SELECT COUNT(DISTINCT user_id) AS c FROM user_history WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)").fetchone()['c']
+            stats['dau'] = dau or 0
+            stats['mau'] = mau or 0
+            # Top performing students
+            top_students = conn.execute("""
+                SELECT u.name, sp.current_xp, sp.level 
+                FROM student_profiles sp 
+                JOIN users u ON sp.user_id = u.id 
+                ORDER BY sp.current_xp DESC 
+                LIMIT 10
+            """).fetchall()
+            stats['top_students'] = [dict(r) for r in top_students]
+            # Course enrollment counts
+            top_courses = conn.execute("""
+                SELECT c.title, COUNT(ce.id) AS enrolled_count 
+                FROM courses c 
+                LEFT JOIN course_enrollments ce ON c.id = ce.course_id 
+                GROUP BY c.id, c.title 
+                ORDER BY enrolled_count DESC 
+                LIMIT 10
+            """).fetchall()
+            stats['top_courses'] = [dict(r) for r in top_courses]
+            # Recent signups trend (last 7 days)
+            signup_trend = conn.execute("""
+                SELECT DATE(created_at) AS day, COUNT(*) AS count 
+                FROM users 
+                WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) 
+                GROUP BY DATE(created_at) 
+                ORDER BY day ASC
+            """).fetchall()
+            stats['signup_trend'] = [{'day': str(r['day']), 'count': r['count']} for r in signup_trend]
+    except Exception as e:
+        print(f"Error loading analytics: {e}")
+    return render_template('admin/analytics.html', current_user=user, stats=stats, active_tab='analytics')
+
+
+# ============================================================
+# ADMIN — ACTIVITY LOGS
+# ============================================================
+
+@app.route('/admin/activity')
+@admin_required
+def admin_activity():
+    user = get_current_user()
+    logs = []
+    filters = {
+        'event_type': request.args.get('event_type', ''),
+        'user_id': request.args.get('user_id', ''),
+        'limit': int(request.args.get('limit', 100))
+    }
+    try:
+        with get_db() as conn:
+            query = """
+                SELECT h.*, u.name AS user_name, u.role AS user_role
+                FROM user_history h
+                LEFT JOIN users u ON h.user_id = u.id
+                WHERE 1=1
+            """
+            params = []
+            if filters['event_type']:
+                query += " AND h.event_type = %s"
+                params.append(filters['event_type'])
+            if filters['user_id']:
+                query += " AND h.user_id = %s"
+                params.append(filters['user_id'])
+            query += " ORDER BY h.created_at DESC LIMIT %s"
+            params.append(filters['limit'])
+            rows = conn.execute(query, tuple(params)).fetchall()
+            for r in rows:
+                l_dict = dict(r)
+                if isinstance(l_dict.get('created_at'), datetime):
+                    l_dict['created_at'] = l_dict['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                logs.append(l_dict)
+            # Also pull audit logs
+            audit_rows = conn.execute("""
+                SELECT a.*, u.name AS operator_name 
+                FROM audit_logs a 
+                LEFT JOIN users u ON a.user_id = u.id 
+                ORDER BY a.created_at DESC 
+                LIMIT 200
+            """).fetchall()
+            audit_logs = []
+            for r in audit_rows:
+                a_dict = dict(r)
+                if isinstance(a_dict.get('created_at'), datetime):
+                    a_dict['created_at'] = a_dict['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                audit_logs.append(a_dict)
+    except Exception as e:
+        print(f"Error loading activity logs: {e}")
+        audit_logs = []
+    return render_template('admin/activity.html', current_user=user, logs=logs, audit_logs=audit_logs, filters=filters, active_tab='activity')
+
+
+# ============================================================
+# ADMIN — AI CENTER
+# ============================================================
+
+@app.route('/admin/ai', methods=['GET', 'POST'])
+@admin_required
+def admin_ai():
+    user = get_current_user()
+    ai_config = {
+        'gemini_api_key': os.getenv('GEMINI_API_KEY', ''),
+        'ai_enabled': True,
+        'ai_model': os.getenv('AI_MODEL', 'gemini-2.0-flash'),
+        'max_tokens': 2048,
+        'temperature': 0.7
+    }
+    if request.method == 'POST':
+        # In production, you'd update .env / DB config
+        flash("AI configuration noted. Update the .env file to persist changes.", "success")
+        return redirect(url_for('admin_ai'))
+    return render_template('admin/ai.html', current_user=user, ai_config=ai_config, active_tab='ai')
+
+
+# ============================================================
+# ADMIN — PLATFORM SETTINGS
+# ============================================================
+
+@app.route('/admin/settings', methods=['GET', 'POST'])
+@admin_required
+def admin_settings():
+    user = get_current_user()
+    if request.method == 'POST':
+        action = request.form.get('action', 'update_library')
+        if action == 'update_library':
+            category_name = request.form.get('category_name')
+            access_mode = request.form.get('access_mode')
+            if category_name and access_mode:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            INSERT INTO library_settings (category_name, access_mode) 
+                            VALUES (%s, %s) 
+                            ON DUPLICATE KEY UPDATE access_mode = %s
+                        """, (category_name, access_mode, access_mode))
+                    log_audit("update_library_settings", f"Updated library access for {category_name} → {access_mode}")
+                    flash(f"Library setting for '{category_name}' updated.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        elif action == 'update_permissions':
+            permission_keys = ['can_create_chapters', 'can_edit_courses', 'can_manage_users', 'can_issue_certificates']
+            try:
+                with get_db() as conn:
+                    for pk in permission_keys:
+                        val = 1 if request.form.get(pk) else 0
+                        conn.execute("""
+                            INSERT INTO permissions (role, permission_key, is_granted)
+                            VALUES ('content_manager', %s, %s)
+                            ON DUPLICATE KEY UPDATE is_granted = %s
+                        """, (pk, val, val))
+                log_audit("update_cm_permissions", "Updated Content Manager role permissions")
+                flash("Content Manager permissions updated.", "success")
+            except Exception as e:
+                flash(f"Error: {e}", "error")
+        return redirect(url_for('admin_settings'))
+
+    settings = []
+    cm_perms = {}
+    try:
+        with get_db() as conn:
+            settings = conn.execute("SELECT * FROM library_settings").fetchall()
+            perm_rows = conn.execute("SELECT permission_key, is_granted FROM permissions WHERE role = 'content_manager'").fetchall()
+            for p in perm_rows:
+                cm_perms[p['permission_key']] = bool(p['is_granted'])
+    except Exception as e:
+        print(f"Error loading settings: {e}")
+    return render_template('admin/settings.html', current_user=user, settings=settings, cm_perms=cm_perms, active_tab='settings')
+
+
+# ============================================================
+# ADMIN — SYSTEM TELEMETRY
+# ============================================================
+
+@app.route('/admin/system')
+@admin_required
+def admin_system():
+    user = get_current_user()
+    system_info = {}
+    try:
+        import platform
+        import sys
+        system_info['python_version'] = sys.version
+        system_info['platform'] = platform.platform()
+        system_info['flask_env'] = os.getenv('FLASK_ENV', 'production')
+        system_info['db_host'] = db_config.get('host', 'N/A') if db_config else 'N/A'
+        system_info['db_name'] = db_config.get('database', 'N/A') if db_config else 'N/A'
+        system_info['ai_model'] = os.getenv('AI_MODEL', 'gemini-2.0-flash')
+    except Exception as e:
+        print(f"Error loading system info: {e}")
+
+    db_tables = []
+    db_size = 0
+    try:
+        with get_db() as conn:
+            table_rows = conn.execute("""
+                SELECT table_name, table_rows, 
+                       ROUND((data_length + index_length) / 1024, 2) AS size_kb
+                FROM information_schema.TABLES 
+                WHERE table_schema = %s
+                ORDER BY (data_length + index_length) DESC
+            """, (db_config.get('database', ''),)).fetchall()
+            db_tables = [dict(r) for r in table_rows]
+            size_row = conn.execute("""
+                SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS total_mb 
+                FROM information_schema.TABLES 
+                WHERE table_schema = %s
+            """, (db_config.get('database', ''),)).fetchone()
+            db_size = size_row['total_mb'] if size_row and size_row['total_mb'] else 0
+    except Exception as e:
+        print(f"Error loading DB telemetry: {e}")
+
+    return render_template('admin/system.html', current_user=user, system_info=system_info, db_tables=db_tables, db_size=db_size, active_tab='system')
+
+
+@app.route('/admin/labs', methods=['GET', 'POST'])
+@content_manager_or_admin_required
+def admin_labs():
+    user = get_current_user()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        lab_id = request.form.get('id')
+        if action == 'delete':
+            try:
+                with get_db() as conn:
+                    conn.execute("DELETE FROM labs WHERE id = %s", (lab_id,))
+                log_audit("delete_lab", f"Deleted lab simulation node ID: {lab_id}")
+                flash("Lab deleted successfully.", "success")
+            except Exception as e:
+                flash(f"Error: {e}", "error")
+        elif action == 'create':
+            title = request.form.get('title')
+            chapter_id = request.form.get('chapter_id')
+            description = request.form.get('description')
+            status = request.form.get('status', 'published')
+            if title:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            INSERT INTO labs (title, chapter_id, description, status)
+                            VALUES (%s, %s, %s, %s)
+                        """, (title, chapter_id or None, description, status))
+                    log_audit("create_lab", f"Created lab titration simulation: {title}")
+                    flash("Lab registered successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        elif action == 'edit':
+            title = request.form.get('title')
+            chapter_id = request.form.get('chapter_id')
+            description = request.form.get('description')
+            status = request.form.get('status')
+            if title and lab_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            UPDATE labs 
+                            SET title = %s, chapter_id = %s, description = %s, status = %s
+                            WHERE id = %s
+                        """, (title, chapter_id or None, description, status, lab_id))
+                    log_audit("update_lab", f"Updated titration lab ID: {lab_id}")
+                    flash("Lab updated successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        return redirect(url_for('admin_labs'))
+
+    with get_db() as conn:
+        labs = conn.execute("""
+            SELECT l.*, ch.title as chapter_title 
+            FROM labs l 
+            LEFT JOIN chapters ch ON l.chapter_id = ch.id 
+            ORDER BY l.id DESC
+        """).fetchall()
+        chapters = conn.execute("SELECT id, title FROM chapters").fetchall()
+    return render_template('admin/labs.html', current_user=user, labs=labs, chapters=chapters, active_tab='labs')
+
+
+@app.route('/admin/reactions', methods=['GET', 'POST'])
+@content_manager_or_admin_required
+def admin_reactions():
+    user = get_current_user()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        rxn_id = request.form.get('id')
+        if action == 'delete':
+            try:
+                with get_db() as conn:
+                    conn.execute("DELETE FROM reactions WHERE id = %s", (rxn_id,))
+                log_audit("delete_reaction", f"Deleted reaction equation node ID: {rxn_id}")
+                flash("Reaction deleted successfully.", "success")
+            except Exception as e:
+                flash(f"Error: {e}", "error")
+        elif action == 'create':
+            rxn_id = request.form.get('id')
+            name = request.form.get('name')
+            equation = request.form.get('equation')
+            reaction_type = request.form.get('reaction_type', 'organic')
+            class_level = request.form.get('class_level')
+            chapter_id = request.form.get('chapter_id')
+            reactants = request.form.get('reactants', '[]')
+            products = request.form.get('products', '[]')
+            conditions = request.form.get('conditions')
+            explanation = request.form.get('explanation')
+            if rxn_id and name:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            INSERT INTO reactions (id, name, equation, reaction_type, class_level, chapter_id, reactants, products, conditions, explanation)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (rxn_id, name, equation, reaction_type, class_level, chapter_id or None, reactants, products, conditions, explanation))
+                    log_audit("create_reaction", f"Created reaction node: {name}")
+                    flash("Reaction registered successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        elif action == 'edit':
+            name = request.form.get('name')
+            equation = request.form.get('equation')
+            reaction_type = request.form.get('reaction_type')
+            class_level = request.form.get('class_level')
+            chapter_id = request.form.get('chapter_id')
+            reactants = request.form.get('reactants', '[]')
+            products = request.form.get('products', '[]')
+            conditions = request.form.get('conditions')
+            explanation = request.form.get('explanation')
+            if name and rxn_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            UPDATE reactions 
+                            SET name = %s, equation = %s, reaction_type = %s, class_level = %s, chapter_id = %s, reactants = %s, products = %s, conditions = %s, explanation = %s
+                            WHERE id = %s
+                        """, (name, equation, reaction_type, class_level, chapter_id or None, reactants, products, conditions, explanation, rxn_id))
+                    log_audit("update_reaction", f"Updated reaction node ID: {rxn_id}")
+                    flash("Reaction updated successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        return redirect(url_for('admin_reactions'))
+
+    with get_db() as conn:
+        reactions = conn.execute("""
+            SELECT r.*, ch.title as chapter_title 
+            FROM reactions r 
+            LEFT JOIN chapters ch ON r.chapter_id = ch.id 
+            ORDER BY r.name ASC
+        """).fetchall()
+        chapters = conn.execute("SELECT id, title FROM chapters").fetchall()
+    return render_template('admin/reactions.html', current_user=user, reactions=reactions, chapters=chapters, active_tab='reactions')
+
+
+@app.route('/admin/quizzes', methods=['GET', 'POST'])
+@content_manager_or_admin_required
+def admin_quizzes():
+    user = get_current_user()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        quiz_id = request.form.get('id')
+        if action == 'delete':
+            try:
+                with get_db() as conn:
+                    conn.execute("DELETE FROM quizzes WHERE id = %s", (quiz_id,))
+                log_audit("delete_quiz", f"Deleted quiz node ID: {quiz_id}")
+                flash("Quiz deleted successfully.", "success")
+            except Exception as e:
+                flash(f"Error: {e}", "error")
+        elif action == 'create':
+            chapter_id = request.form.get('chapter_id')
+            title = request.form.get('title')
+            total_marks = request.form.get('total_marks', 100)
+            duration_minutes = request.form.get('duration_minutes', 30)
+            if title and chapter_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            INSERT INTO quizzes (chapter_id, title, total_marks, duration_minutes)
+                            VALUES (%s, %s, %s, %s)
+                        """, (chapter_id, title, total_marks, duration_minutes))
+                    log_audit("create_quiz", f"Created quiz: {title}")
+                    flash("Quiz registered successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        elif action == 'edit':
+            title = request.form.get('title')
+            chapter_id = request.form.get('chapter_id')
+            total_marks = request.form.get('total_marks')
+            duration_minutes = request.form.get('duration_minutes')
+            if title and quiz_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            UPDATE quizzes 
+                            SET title = %s, chapter_id = %s, total_marks = %s, duration_minutes = %s
+                            WHERE id = %s
+                        """, (title, chapter_id, total_marks, duration_minutes, quiz_id))
+                    log_audit("update_quiz", f"Updated quiz ID: {quiz_id}")
+                    flash("Quiz updated successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        return redirect(url_for('admin_quizzes'))
+
+    with get_db() as conn:
+        quizzes = conn.execute("""
+            SELECT q.*, ch.title as chapter_title 
+            FROM quizzes q 
+            LEFT JOIN chapters ch ON q.chapter_id = ch.id 
+            ORDER BY q.id DESC
+        """).fetchall()
+        chapters = conn.execute("SELECT id, title FROM chapters").fetchall()
+    return render_template('admin/quizzes.html', current_user=user, quizzes=quizzes, chapters=chapters, active_tab='quizzes')
+
+
+@app.route('/admin/assignments', methods=['GET', 'POST'])
+@content_manager_or_admin_required
+def admin_assignments():
+    user = get_current_user()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        assignment_id = request.form.get('id')
+        if action == 'delete':
+            try:
+                with get_db() as conn:
+                    conn.execute("DELETE FROM assignments WHERE id = %s", (assignment_id,))
+                log_audit("delete_assignment", f"Deleted assignment node ID: {assignment_id}")
+                flash("Assignment deleted successfully.", "success")
+            except Exception as e:
+                flash(f"Error: {e}", "error")
+        elif action == 'create':
+            title = request.form.get('title')
+            description = request.form.get('description')
+            classroom_id = request.form.get('classroom_id')
+            chapter_id = request.form.get('chapter_id')
+            lab_id = request.form.get('lab_id')
+            marks = request.form.get('marks', 100)
+            due_date = request.form.get('due_date')
+            status = request.form.get('status', 'draft')
+            if title and classroom_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            INSERT INTO assignments (title, description, classroom_id, chapter_id, lab_id, marks, due_date, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (title, description, classroom_id, chapter_id or None, lab_id or None, marks, due_date or None, status))
+                    log_audit("create_assignment", f"Created assignment: {title}")
+                    flash("Assignment registered successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        elif action == 'edit':
+            title = request.form.get('title')
+            description = request.form.get('description')
+            classroom_id = request.form.get('classroom_id')
+            chapter_id = request.form.get('chapter_id')
+            lab_id = request.form.get('lab_id')
+            marks = request.form.get('marks')
+            due_date = request.form.get('due_date')
+            status = request.form.get('status')
+            if title and assignment_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            UPDATE assignments 
+                            SET title = %s, description = %s, classroom_id = %s, chapter_id = %s, lab_id = %s, marks = %s, due_date = %s, status = %s
+                            WHERE id = %s
+                        """, (title, description, classroom_id, chapter_id or None, lab_id or None, marks, due_date or None, status, assignment_id))
+                    log_audit("update_assignment", f"Updated assignment ID: {assignment_id}")
+                    flash("Assignment updated successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        return redirect(url_for('admin_assignments'))
+
+    with get_db() as conn:
+        assignments = conn.execute("""
+            SELECT a.*, cl.name as classroom_name, ch.title as chapter_title, l.title as lab_title 
+            FROM assignments a 
+            LEFT JOIN classrooms cl ON a.classroom_id = cl.id
+            LEFT JOIN chapters ch ON a.chapter_id = ch.id
+            LEFT JOIN labs l ON a.lab_id = l.id
+            ORDER BY a.id DESC
+        """).fetchall()
+        classrooms = conn.execute("SELECT id, name FROM classrooms").fetchall()
+        chapters = conn.execute("SELECT id, title FROM chapters").fetchall()
+        labs = conn.execute("SELECT id, title FROM labs").fetchall()
+    return render_template('admin/assignments.html', current_user=user, assignments=assignments, classrooms=classrooms, chapters=chapters, labs=labs, active_tab='assignments')
+
+
+@app.route('/admin/tests', methods=['GET', 'POST'])
+@content_manager_or_admin_required
+def admin_tests():
+    user = get_current_user()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        test_id = request.form.get('id')
+        if action == 'delete':
+            try:
+                with get_db() as conn:
+                    conn.execute("DELETE FROM tests WHERE id = %s", (test_id,))
+                log_audit("delete_test", f"Deleted test node ID: {test_id}")
+                flash("Test deleted successfully.", "success")
+            except Exception as e:
+                flash(f"Error: {e}", "error")
+        elif action == 'create':
+            title = request.form.get('title')
+            classroom_id = request.form.get('classroom_id')
+            chapter_id = request.form.get('chapter_id')
+            quiz_content_id = request.form.get('quiz_content_id')
+            duration_minutes = request.form.get('duration_minutes', 30)
+            total_marks = request.form.get('total_marks', 100)
+            start_date = request.form.get('start_date')
+            end_date = request.form.get('end_date')
+            difficulty = request.form.get('difficulty', 'medium')
+            status = request.form.get('status', 'scheduled')
+            if title and classroom_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            INSERT INTO tests (title, classroom_id, chapter_id, quiz_content_id, duration_minutes, total_marks, start_date, end_date, difficulty, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (title, classroom_id, chapter_id or None, quiz_content_id or None, duration_minutes, total_marks, start_date or None, end_date or None, difficulty, status))
+                    log_audit("create_test", f"Scheduled exam test: {title}")
+                    flash("Test registered successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        elif action == 'edit':
+            title = request.form.get('title')
+            classroom_id = request.form.get('classroom_id')
+            chapter_id = request.form.get('chapter_id')
+            quiz_content_id = request.form.get('quiz_content_id')
+            duration_minutes = request.form.get('duration_minutes')
+            total_marks = request.form.get('total_marks')
+            start_date = request.form.get('start_date')
+            end_date = request.form.get('end_date')
+            difficulty = request.form.get('difficulty')
+            status = request.form.get('status')
+            if title and test_id:
+                try:
+                    with get_db() as conn:
+                        conn.execute("""
+                            UPDATE tests 
+                            SET title = %s, classroom_id = %s, chapter_id = %s, quiz_content_id = %s, duration_minutes = %s, total_marks = %s, start_date = %s, end_date = %s, difficulty = %s, status = %s
+                            WHERE id = %s
+                        """, (title, classroom_id, chapter_id or None, quiz_content_id or None, duration_minutes, total_marks, start_date or None, end_date or None, difficulty, status, test_id))
+                    log_audit("update_test", f"Updated test ID: {test_id}")
+                    flash("Test updated successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        return redirect(url_for('admin_tests'))
+
+    with get_db() as conn:
+        tests = conn.execute("""
+            SELECT t.*, cl.name as classroom_name, ch.title as chapter_title 
+            FROM tests t 
+            LEFT JOIN classrooms cl ON t.classroom_id = cl.id
+            LEFT JOIN chapters ch ON t.chapter_id = ch.id
+            ORDER BY t.id DESC
+        """).fetchall()
+        classrooms = conn.execute("SELECT id, name FROM classrooms").fetchall()
+        chapters = conn.execute("SELECT id, title FROM chapters").fetchall()
+        quizzes = conn.execute("SELECT id, title FROM quizzes").fetchall()
+    return render_template('admin/tests.html', current_user=user, tests=tests, classrooms=classrooms, chapters=chapters, quizzes=quizzes, active_tab='tests')
+
+
 # ============================================================
 # API — CONTENT MANAGEMENT (Admin/Teacher)
 # ============================================================
@@ -4704,7 +5697,7 @@ def api_log_event():
 @app.route('/api/admin/chapters', methods=['POST', 'PUT', 'DELETE'])
 def api_admin_chapters():
     user = get_current_user()
-    if not user or user['role'] not in ('admin', 'teacher'):
+    if not user or user['role'] not in ('admin', 'teacher', 'content_manager'):
         return jsonify({"error": "Forbidden"}), 403
         
     if request.method == 'POST':
@@ -4960,7 +5953,7 @@ def admin_debug_chapter(chapter_id):
 @app.route('/api/admin/reactions', methods=['POST', 'PUT', 'DELETE'])
 def api_admin_reactions():
     user = get_current_user()
-    if not user or user['role'] not in ('admin', 'teacher'):
+    if not user or user['role'] not in ('admin', 'teacher', 'content_manager'):
         return jsonify({"error": "Forbidden"}), 403
         
     if request.method == 'POST':
@@ -5064,7 +6057,7 @@ def api_admin_reactions():
 @app.route('/api/admin/quizzes', methods=['POST', 'PUT', 'DELETE'])
 def api_admin_quizzes():
     user = get_current_user()
-    if not user or user['role'] not in ('admin', 'teacher'):
+    if not user or user['role'] not in ('admin', 'teacher', 'content_manager'):
         return jsonify({"error": "Forbidden"}), 403
         
     if request.method == 'POST':
@@ -5154,7 +6147,7 @@ def api_admin_quizzes():
 @app.route('/api/admin/experiments', methods=['POST', 'PUT', 'DELETE'])
 def api_admin_experiments():
     user = get_current_user()
-    if not user or user['role'] not in ('admin', 'teacher'):
+    if not user or user['role'] not in ('admin', 'teacher', 'content_manager'):
         return jsonify({"error": "Forbidden"}), 403
         
     if request.method == 'POST':

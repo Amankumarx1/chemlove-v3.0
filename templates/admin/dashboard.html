@@ -1,13 +1,14 @@
-{% extends 'layouts/dashboard_base.html' %}
+﻿{% extends 'layouts/admin_base.html' %}
 
 {% block title %}ChemLove | Executive Dashboard{% endblock %}
+{% block breadcrumb_active %}Dashboard{% endblock %}
 
-{% block dashboard_content %}
+{% block admin_content %}
     <!-- Page Header -->
     <div class="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-            <div class="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4 border border-emerald-500/10">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 live-pulse"></span>
+            <div class="inline-flex items-center gap-2 bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4 border border-cyan-500/10">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 live-pulse"></span>
                 Executive Console
             </div>
             <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase text-white">System Telemetry</h1>
@@ -17,8 +18,8 @@
         <!-- System Status Summary Badge -->
         <div class="flex items-center gap-4 bg-slate-900/40 border border-white/5 px-6 py-3.5 rounded-2xl backdrop-blur-md">
             <div class="relative w-3.5 h-3.5 flex items-center justify-center">
-                <span class="absolute w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
-                <span class="relative w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span class="absolute w-3 h-3 rounded-full bg-cyan-500 animate-ping"></span>
+                <span class="relative w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
             </div>
             <div>
                 <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">System Nodes</div>
@@ -47,8 +48,8 @@
         </div>
         <!-- Card 3 -->
         <div class="glass-morphism p-6 rounded-3xl relative overflow-hidden">
-            <div class="absolute -right-8 -top-8 w-24 h-24 bg-emerald-400/5 rounded-full blur-xl"></div>
-            <span class="material-symbols-outlined text-3xl text-emerald-400 mb-4">workspace_premium</span>
+            <div class="absolute -right-8 -top-8 w-24 h-24 bg-cyan-400/5 rounded-full blur-xl"></div>
+            <span class="material-symbols-outlined text-3xl text-cyan-400 mb-4">workspace_premium</span>
             <div class="text-3xl font-black text-white tracking-tight leading-none mb-1">{{ stats.total_certificates }}</div>
             <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">Certificates Issued</div>
             <p class="text-[9px] text-slate-500 mt-2">Verifiable Credentials</p>
@@ -95,10 +96,10 @@
                     <div>
                         <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
                             <span class="text-slate-500">Server Response latency</span>
-                            <span class="text-emerald-400">14 ms (Ideal)</span>
+                            <span class="text-cyan-400">14 ms (Ideal)</span>
                         </div>
                         <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
-                            <div class="h-full bg-emerald-400 rounded-full" style="width: 5%"></div>
+                            <div class="h-full bg-cyan-400 rounded-full" style="width: 5%"></div>
                         </div>
                     </div>
                     <div>
@@ -148,7 +149,7 @@
                         <tr class="text-xs hover:bg-white/5 transition-colors">
                             <td class="py-3.5 px-4 font-black text-white">{{ log.operator_name or 'System' }} <span class="text-[9px] font-medium text-slate-500">({{ log.role|upper }})</span></td>
                             <td class="py-3.5 px-4">
-                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border {% if 'delete' in log.action or 'suspend' in log.action %}border-red-500/20 bg-red-500/10 text-red-300{% elif 'create' in log.action or 'publish' in log.action %}border-emerald-500/20 bg-emerald-500/10 text-emerald-300{% else %}border-cyan-500/20 bg-cyan-500/10 text-cyan-300{% endif %}">
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border {% if 'delete' in log.action or 'suspend' in log.action %}border-red-500/20 bg-red-500/10 text-red-300{% elif 'create' in log.action or 'publish' in log.action %}border-cyan-500/20 bg-cyan-500/10 text-cyan-300{% else %}border-cyan-500/20 bg-cyan-500/10 text-cyan-300{% endif %}">
                                     {{ log.action }}
                                 </span>
                             </td>
@@ -218,3 +219,5 @@
     });
 </script>
 {% endblock %}
+
+

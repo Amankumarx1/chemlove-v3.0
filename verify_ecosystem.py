@@ -7,7 +7,7 @@ import sys
 from dotenv import load_dotenv
 import mysql.connector
 
-BASE_URL = "http://localhost:5000"
+BASE_URL = "http://127.0.0.1:5000"
 
 class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, hdrs, newurl):
@@ -38,7 +38,8 @@ class ChemLoveClient:
         opener = self.opener if follow_redirects else self.no_redirect_opener
 
         try:
-            with opener.open(req) as response:
+            with opener.open(req, timeout=10) as response:
+                self.cookie_jar.extract_cookies(response, req)
                 body = response.read().decode('utf-8')
                 resp_json = None
                 if 'application/json' in response.headers.get('Content-Type', ''):

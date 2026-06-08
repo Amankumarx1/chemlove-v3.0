@@ -1,0 +1,230 @@
+﻿{% extends 'layouts/admin_base.html' %}
+
+{% block title %}ChemLove Admin | Chapter Builder{% endblock %}
+
+{% block breadcrumbs %}
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<a href="/admin/dashboard" class="hover:text-cyan-400">Control Panel</a>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<a href="/admin/chapters" class="hover:text-cyan-400">Chapters</a>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-slate-300">Builder Workspace ({{ chapter.title }})</span>
+{% endblock %}
+
+{% block admin_content %}
+    <!-- Header banner -->
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-black uppercase tracking-tight text-white leading-none">Curriculum Builder</h1>
+            <p class="text-xs text-cyan-400 mt-2 font-black uppercase tracking-wider">Chapter: {{ chapter.title }} (Class {{ chapter.class_level }})</p>
+        </div>
+        <a href="/admin/chapters" class="px-4 py-2 border border-white/5 rounded-xl bg-slate-900 text-slate-400 hover:text-white transition-all text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-sm">arrow_back</span> Back to Registry
+        </a>
+    </div>
+
+    <!-- Main Workspace Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        
+        <!-- Navigation Menu Tabs Sidebar (Sticky) -->
+        <div class="lg:col-span-1 space-y-2">
+            <div class="glass-morphism p-4 rounded-3xl space-y-1">
+                <button onclick="switchTab('tab-overview')" id="btn-tab-overview" class="builder-tab-btn w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 bg-cyan-950/20 text-cyan-400 border border-cyan-500/10 font-black">
+                    <span class="material-symbols-outlined text-sm">info</span> Overview
+                </button>
+                <button onclick="switchTab('tab-key-points')" id="btn-tab-key-points" class="builder-tab-btn w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 text-slate-400 hover:bg-slate-800/20 hover:text-white">
+                    <span class="material-symbols-outlined text-sm">label_important</span> Key Points
+                </button>
+                <button onclick="switchTab('tab-formulas')" id="btn-tab-formulas" class="builder-tab-btn w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 text-slate-400 hover:bg-slate-800/20 hover:text-white">
+                    <span class="material-symbols-outlined text-sm">calculate</span> Formulas
+                </button>
+                <button onclick="switchTab('tab-reactions')" id="btn-tab-reactions" class="builder-tab-btn w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 text-slate-400 hover:bg-slate-800/20 hover:text-white">
+                    <span class="material-symbols-outlined text-sm">science</span> Reactions
+                </button>
+                <button onclick="switchTab('tab-experiments')" id="btn-tab-experiments" class="builder-tab-btn w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 text-slate-400 hover:bg-slate-800/20 hover:text-white">
+                    <span class="material-symbols-outlined text-sm">biotech</span> Experiments
+                </button>
+                <button onclick="switchTab('tab-practice')" id="btn-tab-practice" class="builder-tab-btn w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 text-slate-400 hover:bg-slate-800/20 hover:text-white">
+                    <span class="material-symbols-outlined text-sm">edit_note</span> Practice
+                </button>
+                <button onclick="switchTab('tab-quiz')" id="btn-tab-quiz" class="builder-tab-btn w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 text-slate-400 hover:bg-slate-800/20 hover:text-white">
+                    <span class="material-symbols-outlined text-sm">quiz</span> Quiz
+                </button>
+            </div>
+        </div>
+
+        <!-- Content Workspace -->
+        <div class="lg:col-span-3">
+            <form method="POST" action="/admin/chapters/{{ chapter.id }}/builder" class="space-y-6">
+                <!-- Overview Content -->
+                <div id="tab-overview" class="builder-tab-pane glass-morphism p-6 rounded-3xl space-y-4">
+                    <h3 class="text-sm font-black uppercase tracking-widest text-white mb-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-cyan-400">info</span> Chapter Parameters
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Chapter Title</label>
+                            <input type="text" name="title" value="{{ chapter.title }}" required class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Chapter Sequence Number</label>
+                            <input type="number" name="chapter_number" value="{{ chapter.chapter_number }}" required class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Description Outline</label>
+                        <textarea name="description" rows="4" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">{{ chapter.description or '' }}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Grade Syllabus Level</label>
+                        <select name="class_level" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                            <option value="9" {% if chapter.class_level == '9' %}selected{% endif %}>Class 9</option>
+                            <option value="10" {% if chapter.class_level == '10' %}selected{% endif %}>Class 10</option>
+                            <option value="11" {% if chapter.class_level == '11' %}selected{% endif %}>Class 11</option>
+                            <option value="12" {% if chapter.class_level == '12' %}selected{% endif %}>Class 12</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Key Points Content -->
+                <div id="tab-key-points" class="builder-tab-pane glass-morphism p-6 rounded-3xl space-y-4 hidden">
+                    <h3 class="text-sm font-black uppercase tracking-widest text-white mb-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-cyan-400">label_important</span> Key Study Points
+                    </h3>
+                    <p class="text-[10px] text-slate-500">Provide an array of key concepts in raw JSON format to be served dynamically.</p>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">JSON Array Payload</label>
+                        <textarea name="key_points" rows="8" placeholder='["Point 1: ...", "Point 2: ..."]' class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs font-mono text-cyan-400 focus:border-cyan-500 focus:ring-0">{{ chapter.key_points or '[]' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Formulas Content -->
+                <div id="tab-formulas" class="builder-tab-pane glass-morphism p-6 rounded-3xl space-y-4 hidden">
+                    <h3 class="text-sm font-black uppercase tracking-widest text-white mb-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-cyan-400">calculate</span> Mathematical Formulas & Constants
+                    </h3>
+                    <p class="text-[10px] text-slate-500">Provide an array of equations in JSON format.</p>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">JSON Payload</label>
+                        <textarea name="formulas" rows="8" placeholder='[{"name": "Rate Law", "expr": "r = k[A]^x[B]^y"}]' class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs font-mono text-cyan-400 focus:border-cyan-500 focus:ring-0">{{ chapter.formulas or '[]' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Reactions Content -->
+                <div id="tab-reactions" class="builder-tab-pane glass-morphism p-6 rounded-3xl space-y-4 hidden">
+                    <h3 class="text-sm font-black uppercase tracking-widest text-white mb-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-cyan-400">science</span> Chemical Equations & Mechanisms
+                    </h3>
+                    <p class="text-[10px] text-slate-500">Configure equations associated with this chapter registry.</p>
+                    <div class="space-y-2 max-h-60 overflow-y-auto scrollbar-thin">
+                        {% for r in reactions %}
+                        <div class="p-3 rounded-2xl bg-white/5 border border-white/5 flex justify-between items-center text-xs">
+                            <div>
+                                <span class="font-bold text-white">{{ r.name }}</span>
+                                <span class="font-mono text-slate-500 ml-2">({{ r.equation }})</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-lg bg-slate-900 border border-white/5 text-[9px] text-cyan-400">{{ r.reaction_type }}</span>
+                        </div>
+                        {% else %}
+                        <div class="p-4 text-center text-slate-500 text-xs italic">No equations linked to this chapter node.</div>
+                        {% endfor %}
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Quick Equations JSON Configuration</label>
+                        <textarea name="important_reactions" rows="6" placeholder='["HCl + NaOH -> NaCl + H2O"]' class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs font-mono text-cyan-400 focus:border-cyan-500 focus:ring-0">{{ chapter.important_reactions or '[]' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Experiments Content -->
+                <div id="tab-experiments" class="builder-tab-pane glass-morphism p-6 rounded-3xl space-y-4 hidden">
+                    <h3 class="text-sm font-black uppercase tracking-widest text-white mb-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-cyan-400">biotech</span> Laboratory Experiments & Simulations
+                    </h3>
+                    <div class="space-y-2 max-h-60 overflow-y-auto scrollbar-thin">
+                        {% for exp in experiments %}
+                        <div class="p-3 rounded-2xl bg-white/5 border border-white/5 flex justify-between items-center text-xs">
+                            <div>
+                                <span class="font-bold text-white">{{ exp.title }}</span>
+                            </div>
+                            <a href="/admin/labs" class="text-[9px] font-bold text-cyan-400 hover:underline">Manage Simulation</a>
+                        </div>
+                        {% else %}
+                        <div class="p-4 text-center text-slate-500 text-xs italic">No simulation models linked to this chapter node.</div>
+                        {% endfor %}
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Additional Notes (JSON)</label>
+                        <textarea name="notes" rows="6" placeholder='["Safety instructions..."]' class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs font-mono text-cyan-400 focus:border-cyan-500 focus:ring-0">{{ chapter.notes or '[]' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Practice Content -->
+                <div id="tab-practice" class="builder-tab-pane glass-morphism p-6 rounded-3xl space-y-4 hidden">
+                    <h3 class="text-sm font-black uppercase tracking-widest text-white mb-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-cyan-400">edit_note</span> Practice Assignments & Questions
+                    </h3>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Practice Questions JSON</label>
+                        <textarea name="practice_questions" rows="10" placeholder='[{"question": "Calculate ...", "answer": "..."}]' class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs font-mono text-cyan-400 focus:border-cyan-500 focus:ring-0">{{ chapter.practice_questions or '[]' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Quiz Content -->
+                <div id="tab-quiz" class="builder-tab-pane glass-morphism p-6 rounded-3xl space-y-4 hidden">
+                    <h3 class="text-sm font-black uppercase tracking-widest text-white mb-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-cyan-400">quiz</span> Linked Chapter Quiz Modules
+                    </h3>
+                    <div class="space-y-2">
+                        {% for qz in quizzes %}
+                        <div class="p-3 rounded-2xl bg-white/5 border border-white/5 flex justify-between items-center text-xs">
+                            <div>
+                                <span class="font-bold text-white">{{ qz.title }}</span>
+                                <span class="text-slate-500 ml-2">({{ qz.duration_minutes }} mins, {{ qz.total_marks }} marks)</span>
+                            </div>
+                            <a href="/admin/quizzes" class="text-[9px] font-bold text-cyan-400 hover:underline">Edit Quiz Builder</a>
+                        </div>
+                        {% else %}
+                        <div class="p-4 text-center text-slate-500 text-xs italic">No quizzes linked to this chapter node. Go to quizzes section to add a quiz.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button type="submit" class="bg-cyan-600 hover:bg-cyan-500 text-[#001f26] font-black uppercase tracking-widest text-xs px-6 py-3.5 rounded-2xl flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg">
+                        <span class="material-symbols-outlined text-sm">save</span> Commit Builder Content
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function switchTab(tabId) {
+        // Hide all panes
+        const panes = document.querySelectorAll('.builder-tab-pane');
+        panes.forEach(pane => pane.classList.add('hidden'));
+
+        // Show active pane
+        const activePane = document.getElementById(tabId);
+        if (activePane) activePane.classList.remove('hidden');
+
+        // Toggle button states
+        const buttons = document.querySelectorAll('.builder-tab-btn');
+        buttons.forEach(btn => {
+            btn.classList.remove('bg-cyan-950/20', 'text-cyan-400', 'border', 'border-cyan-500/10', 'font-black');
+            btn.classList.add('text-slate-400', 'hover:bg-slate-800/20', 'hover:text-white');
+        });
+
+        const activeBtn = document.getElementById('btn-' + tabId);
+        if (activeBtn) {
+            activeBtn.classList.remove('text-slate-400', 'hover:bg-slate-800/20', 'hover:text-white');
+            activeBtn.classList.add('bg-cyan-950/20', 'text-cyan-400', 'border', 'border-cyan-500/10', 'font-black');
+        }
+    }
+</script>
+{% endblock %}
+
+
+

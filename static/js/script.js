@@ -15,7 +15,7 @@ fetch('/api/reactions')
     }
     if (typeof filterReactions === 'function') {
       filterReactions();
-    }
+    } 
   })
   .catch(err => console.error("Error loading reactions from database:", err));
 // ============================================================

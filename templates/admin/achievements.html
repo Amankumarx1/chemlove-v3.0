@@ -1,0 +1,159 @@
+﻿{% extends "layouts/admin_base.html" %}
+{% block title %}Achievements | ChemLove Admin{% endblock %}
+{% block breadcrumb_active %}Achievements & Badges{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-black text-white tracking-tight">Achievements & Badges</h1>
+      <p class="text-xs text-slate-500 mt-1">Create and manage gamification badges and achievement rewards</p>
+    </div>
+    <button onclick="document.getElementById('modal-create').classList.remove('hidden')"
+      class="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-[#001f26] px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-cyan-900/30">
+      <span class="material-symbols-outlined text-base">add</span>
+      New Badge
+    </button>
+  </div>
+
+  <!-- Badge Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for badge in badges %}
+    <div class="bg-surface-container border border-white/5 rounded-2xl p-5 flex flex-col gap-3 hover:border-cyan-500/20 transition-all">
+      <div class="flex items-start justify-between">
+        <div class="w-12 h-12 rounded-xl bg-amber-950/30 border border-amber-500/20 flex items-center justify-center">
+          <span class="material-symbols-outlined text-amber-400 text-2xl">{{ badge.icon or 'military_tech' }}</span>
+        </div>
+        <div class="flex gap-1.5">
+          <button onclick="openEditBadge({{ badge.id }}, '{{ badge.name|e }}', '{{ badge.description|e }}', '{{ badge.icon|e }}', {{ badge.xp_reward or 0 }})"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-cyan-950/20 transition-all">
+            <span class="material-symbols-outlined text-sm">edit</span>
+          </button>
+          <form method="POST" onsubmit="return confirm('Delete this badge?')">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" value="{{ badge.id }}">
+            <button type="submit" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 transition-all">
+              <span class="material-symbols-outlined text-sm">delete</span>
+            </button>
+          </form>
+        </div>
+      </div>
+      <div>
+        <div class="text-sm font-black text-white">{{ badge.name }}</div>
+        <div class="text-xs text-slate-500 mt-0.5">{{ badge.description }}</div>
+      </div>
+      <div class="flex items-center gap-1.5 mt-auto">
+        <span class="material-symbols-outlined text-amber-400 text-sm">bolt</span>
+        <span class="text-xs font-bold text-amber-400">{{ badge.xp_reward or 0 }} XP</span>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-span-3 text-center py-16 text-slate-600">No badges defined yet. Create your first badge!</div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Create Badge Modal -->
+<div id="modal-create" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-[#0d1315] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl">
+    <div class="flex justify-between items-center p-5 border-b border-white/5">
+      <h3 class="text-sm font-black uppercase tracking-wider text-white">Create Badge</h3>
+      <button onclick="document.getElementById('modal-create').classList.add('hidden')" class="text-slate-500 hover:text-white">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <form method="POST" class="p-5 space-y-4">
+      <input type="hidden" name="action" value="create">
+      <div>
+        <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1.5">Badge Name</label>
+        <input type="text" name="name" required placeholder="e.g. Chemistry Champion"
+          class="w-full bg-[#090d0e] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:ring-0 placeholder:text-slate-600">
+      </div>
+      <div>
+        <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1.5">Description</label>
+        <textarea name="description" rows="2" placeholder="What earns this badge?"
+          class="w-full bg-[#090d0e] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:ring-0 placeholder:text-slate-600 resize-none"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1.5">Icon (Material Symbol)</label>
+          <input type="text" name="icon" value="military_tech" placeholder="military_tech"
+            class="w-full bg-[#090d0e] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:ring-0">
+        </div>
+        <div>
+          <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1.5">XP Reward</label>
+          <input type="number" name="xp_reward" value="50" min="0"
+            class="w-full bg-[#090d0e] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:ring-0">
+        </div>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="button" onclick="document.getElementById('modal-create').classList.add('hidden')"
+          class="flex-1 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-slate-400 hover:bg-white/5 transition-all">Cancel</button>
+        <button type="submit"
+          class="flex-1 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-[#001f26] text-xs font-bold uppercase tracking-wider transition-all">Create Badge</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Badge Modal -->
+<div id="modal-edit" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-[#0d1315] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl">
+    <div class="flex justify-between items-center p-5 border-b border-white/5">
+      <h3 class="text-sm font-black uppercase tracking-wider text-white">Edit Badge</h3>
+      <button onclick="document.getElementById('modal-edit').classList.add('hidden')" class="text-slate-500 hover:text-white">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <form method="POST" id="edit-badge-form" class="p-5 space-y-4">
+      <input type="hidden" name="action" value="edit">
+      <input type="hidden" name="id" id="edit-badge-id">
+      <div>
+        <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1.5">Badge Name</label>
+        <input type="text" name="name" id="edit-badge-name" required
+          class="w-full bg-[#090d0e] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:ring-0">
+      </div>
+      <div>
+        <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1.5">Description</label>
+        <textarea name="description" id="edit-badge-desc" rows="2"
+          class="w-full bg-[#090d0e] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:ring-0 resize-none"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1.5">Icon</label>
+          <input type="text" name="icon" id="edit-badge-icon"
+            class="w-full bg-[#090d0e] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:ring-0">
+        </div>
+        <div>
+          <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1.5">XP Reward</label>
+          <input type="number" name="xp_reward" id="edit-badge-xp" min="0"
+            class="w-full bg-[#090d0e] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:ring-0">
+        </div>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="button" onclick="document.getElementById('modal-edit').classList.add('hidden')"
+          class="flex-1 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-slate-400 hover:bg-white/5 transition-all">Cancel</button>
+        <button type="submit"
+          class="flex-1 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-[#001f26] text-xs font-bold uppercase tracking-wider transition-all">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEditBadge(id, name, desc, icon, xp) {
+  document.getElementById('edit-badge-id').value = id;
+  document.getElementById('edit-badge-name').value = name;
+  document.getElementById('edit-badge-desc').value = desc;
+  document.getElementById('edit-badge-icon').value = icon;
+  document.getElementById('edit-badge-xp').value = xp;
+  document.getElementById('modal-edit').classList.remove('hidden');
+}
+</script>
+{% endblock %}
+
+
+

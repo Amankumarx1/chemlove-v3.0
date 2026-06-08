@@ -697,4 +697,42 @@ body {
     white-space: nowrap;
 }
 
+/* --- FIX SIDEBAR FLASHING OUTLINE / FOCUS RING ISSUE --- */
+#admin-sidebar a,
+#admin-sidebar button,
+#dashboard-sidebar a,
+#dashboard-sidebar button,
+.sidebar-link,
+.nav-link,
+.sidebar-item {
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent; /* Remove mobile tap highlight flash */
+}
+
+#admin-sidebar a:focus,
+#admin-sidebar a:focus-visible,
+#admin-sidebar a:active,
+#admin-sidebar button:focus,
+#admin-sidebar button:focus-visible,
+#admin-sidebar button:active,
+#dashboard-sidebar a:focus,
+#dashboard-sidebar a:focus-visible,
+#dashboard-sidebar a:active,
+#dashboard-sidebar button:focus,
+#dashboard-sidebar button:focus-visible,
+#dashboard-sidebar button:active,
+.sidebar-link:focus,
+.sidebar-link:focus-visible,
+.sidebar-link:active,
+.nav-link:focus,
+.nav-link:focus-visible,
+.nav-link:active,
+.sidebar-item:focus,
+.sidebar-item:focus-visible,
+.sidebar-item:active {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 

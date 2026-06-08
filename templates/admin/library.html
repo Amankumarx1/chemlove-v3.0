@@ -1,0 +1,70 @@
+﻿{% extends 'layouts/admin_base.html' %}
+
+{% block title %}ChemLove Admin | Universal Library Control{% endblock %}
+
+{% block breadcrumbs %}
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<a href="/admin/dashboard" class="hover:text-cyan-400">Control Panel</a>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-slate-300">Universal Learning Library</span>
+{% endblock %}
+
+{% block admin_content %}
+    <!-- Header banner -->
+    <div class="mb-10">
+        <h1 class="text-3xl font-black uppercase tracking-tight text-white leading-none">Universal Learning Library</h1>
+        <p class="text-xs text-slate-400 mt-2">Configure visual access permissions, restriction protocols, and active grade categories across the platform.</p>
+    </div>
+
+    <!-- Configuration Table -->
+    <div class="glass-morphism p-6 rounded-3xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-white/5 text-[9px] uppercase tracking-widest text-slate-500">
+                        <th class="py-3 px-4">Library Category</th>
+                        <th class="py-3 px-4">Current Access Mode</th>
+                        <th class="py-3 px-4 text-center">Update Configuration</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% for s in settings %}
+                        <tr class="text-xs hover:bg-white/5 transition-colors">
+                            <td class="py-4 px-4 font-black text-white text-sm">
+                                {{ s.category_name }}
+                            </td>
+                            <td class="py-4 px-4 font-semibold text-slate-300">
+                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border 
+                                {% if s.access_mode == 'OPEN' %}border-cyan-500/30 bg-cyan-500/10 text-cyan-300
+                                {% elif s.access_mode == 'EXPLORE' %}border-cyan-500/30 bg-cyan-500/10 text-cyan-300
+                                {% else %}border-rose-500/30 bg-rose-500/10 text-rose-300{% endif %}">
+                                    {{ s.access_mode }}
+                                </span>
+                            </td>
+                            <td class="py-4 px-4">
+                                <form method="POST" action="/admin/library" class="flex items-center justify-center gap-2 max-w-xs mx-auto">
+                                    <input type="hidden" name="category_name" value="{{ s.category_name }}">
+                                    <select name="access_mode" class="px-3 py-1.5 rounded-xl bg-slate-950 border border-white/5 text-[10px] text-white focus:border-cyan-500 focus:ring-0">
+                                        <option value="OPEN" {% if s.access_mode == 'OPEN' %}selected{% endif %}>OPEN (Unrestricted)</option>
+                                        <option value="EXPLORE" {% if s.access_mode == 'EXPLORE' %}selected{% endif %}>EXPLORE (Enrollable)</option>
+                                        <option value="STRICT" {% if s.access_mode == 'STRICT' %}selected{% endif %}>STRICT (Guided-Only)</option>
+                                    </select>
+                                    <button type="submit" class="bg-cyan-600 hover:bg-cyan-500 text-[#001f26] font-black uppercase tracking-widest text-[9px] px-3 py-2 rounded-xl transition-all hover:scale-105 active:scale-95 flex items-center gap-1 whitespace-nowrap">
+                                        <span class="material-symbols-outlined text-xs">sync</span> Apply
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="py-12 text-center text-xs text-slate-500">No active category tracks configured.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+
+

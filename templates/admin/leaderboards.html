@@ -1,0 +1,109 @@
+﻿{% extends "layouts/admin_base.html" %}
+{% block title %}Leaderboards | ChemLove Admin{% endblock %}
+{% block breadcrumb_active %}Leaderboards{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-black text-white tracking-tight">Leaderboards</h1>
+    <p class="text-xs text-slate-500 mt-1">Platform-wide XP rankings — top performing students across all classes</p>
+  </div>
+
+  <!-- Top 3 Podium -->
+  {% if students|length >= 3 %}
+  <div class="grid grid-cols-3 gap-4 max-w-lg mx-auto">
+    <!-- 2nd Place -->
+    <div class="flex flex-col items-center gap-2 pt-6">
+      <div class="w-14 h-14 rounded-full bg-slate-700/50 border-2 border-slate-500/40 flex items-center justify-center text-xl font-black text-slate-300">
+        {{ students[1].name[0]|upper if students|length > 1 else '?' }}
+      </div>
+      <div class="text-center">
+        <div class="text-xs font-black text-slate-300 truncate max-w-[80px]">{{ students[1].name if students|length > 1 else '—' }}</div>
+        <div class="text-[10px] text-slate-500">{{ students[1].current_xp if students|length > 1 else 0 }} XP</div>
+      </div>
+      <div class="w-full h-16 bg-slate-700/30 border border-slate-600/30 rounded-t-xl flex items-center justify-center">
+        <span class="text-2xl font-black text-slate-400">2</span>
+      </div>
+    </div>
+    <!-- 1st Place -->
+    <div class="flex flex-col items-center gap-2">
+      <span class="material-symbols-outlined text-amber-400 text-2xl">emoji_events</span>
+      <div class="w-16 h-16 rounded-full bg-amber-950/50 border-2 border-amber-500/40 flex items-center justify-center text-2xl font-black text-amber-300">
+        {{ students[0].name[0]|upper }}
+      </div>
+      <div class="text-center">
+        <div class="text-xs font-black text-white truncate max-w-[90px]">{{ students[0].name }}</div>
+        <div class="text-[10px] text-amber-400 font-bold">{{ students[0].current_xp }} XP</div>
+      </div>
+      <div class="w-full h-24 bg-amber-950/30 border border-amber-500/20 rounded-t-xl flex items-center justify-center">
+        <span class="text-3xl font-black text-amber-400">1</span>
+      </div>
+    </div>
+    <!-- 3rd Place -->
+    <div class="flex flex-col items-center gap-2 pt-8">
+      <div class="w-12 h-12 rounded-full bg-amber-900/20 border-2 border-amber-700/30 flex items-center justify-center text-lg font-black text-amber-600">
+        {{ students[2].name[0]|upper if students|length > 2 else '?' }}
+      </div>
+      <div class="text-center">
+        <div class="text-xs font-black text-slate-400 truncate max-w-[80px]">{{ students[2].name if students|length > 2 else '—' }}</div>
+        <div class="text-[10px] text-slate-500">{{ students[2].current_xp if students|length > 2 else 0 }} XP</div>
+      </div>
+      <div class="w-full h-12 bg-amber-900/20 border border-amber-700/20 rounded-t-xl flex items-center justify-center">
+        <span class="text-xl font-black text-amber-700">3</span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Full Rankings Table -->
+  <div class="bg-surface-container border border-white/5 rounded-2xl overflow-hidden">
+    <div class="p-4 border-b border-white/5 flex items-center gap-2">
+      <span class="material-symbols-outlined text-cyan-400 text-base">leaderboard</span>
+      <span class="text-xs font-black uppercase tracking-widest text-slate-300">Full Rankings</span>
+      <span class="ml-auto text-[10px] text-slate-500">Top {{ students|length }} Students</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead class="bg-surface-container-high">
+          <tr>
+            <th class="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-500 w-16">Rank</th>
+            <th class="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-500">Student</th>
+            <th class="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-500">Institution</th>
+            <th class="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-500">Level</th>
+            <th class="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-500">XP</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5">
+          {% for s in students %}
+          <tr class="hover:bg-white/[0.02] transition-colors {% if loop.index <= 3 %}bg-amber-950/5{% endif %}">
+            <td class="px-4 py-3">
+              {% if loop.index == 1 %}
+                <span class="text-amber-400 font-black">🥇 1</span>
+              {% elif loop.index == 2 %}
+                <span class="text-slate-300 font-black">🥈 2</span>
+              {% elif loop.index == 3 %}
+                <span class="text-amber-700 font-black">🥉 3</span>
+              {% else %}
+                <span class="text-slate-500">#{{ loop.index }}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 font-bold text-white">{{ s.name }}</td>
+            <td class="px-4 py-3 text-slate-400">{{ s.institution or '—' }}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-cyan-950/40 text-cyan-400 border border-cyan-500/20">
+                Lv. {{ s.level }}
+              </span>
+            </td>
+            <td class="px-4 py-3 font-black text-amber-400">{{ s.current_xp }} XP</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="px-4 py-12 text-center text-slate-600">No students enrolled yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

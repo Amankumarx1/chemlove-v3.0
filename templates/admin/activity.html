@@ -1,0 +1,101 @@
+﻿{% extends "layouts/admin_base.html" %}
+{% block title %}Activity Logs | ChemLove Admin{% endblock %}
+{% block breadcrumb_active %}Activity Logs{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-black text-white tracking-tight">Activity Logs</h1>
+      <p class="text-xs text-slate-500 mt-1">Full audit trail of all user actions and platform events</p>
+    </div>
+    <!-- Filter Form -->
+    <form method="GET" class="flex items-center gap-2">
+      <select name="event_type" class="bg-[#0e1416] border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-300 focus:border-cyan-500 focus:ring-0">
+        <option value="" {% if not filters.event_type %}selected{% endif %}>All Events</option>
+        <option value="login_success" {% if filters.event_type == 'login_success' %}selected{% endif %}>Login</option>
+        <option value="signup_success" {% if filters.event_type == 'signup_success' %}selected{% endif %}>Signup</option>
+        <option value="quiz_attempt" {% if filters.event_type == 'quiz_attempt' %}selected{% endif %}>Quiz Attempt</option>
+        <option value="badge_unlocked" {% if filters.event_type == 'badge_unlocked' %}selected{% endif %}>Badge Unlocked</option>
+      </select>
+      <select name="limit" class="bg-[#0e1416] border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-300 focus:border-cyan-500 focus:ring-0">
+        <option value="50" {% if filters.limit == 50 %}selected{% endif %}>Last 50</option>
+        <option value="100" {% if filters.limit == 100 %}selected{% endif %}>Last 100</option>
+        <option value="250" {% if filters.limit == 250 %}selected{% endif %}>Last 250</option>
+      </select>
+      <button type="submit" class="bg-cyan-600 hover:bg-cyan-500 text-[#001f26] px-3 py-2 rounded-xl text-xs font-bold transition-all">Filter</button>
+    </form>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- User Activity Log -->
+    <div class="bg-surface-container border border-white/5 rounded-2xl overflow-hidden">
+      <div class="p-4 border-b border-white/5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-sky-400 text-base">person_check</span>
+        <span class="text-xs font-black uppercase tracking-widest text-slate-300">User Events</span>
+        <span class="ml-auto text-[10px] text-slate-600">{{ logs|length }} records</span>
+      </div>
+      <div class="divide-y divide-white/5 max-h-[500px] overflow-y-auto scrollbar-thin">
+        {% for log in logs %}
+        <div class="px-4 py-2.5 hover:bg-white/[0.02] transition-colors">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0
+                {% if 'login' in (log.event_type or '') %}bg-cyan-400
+                {% elif 'signup' in (log.event_type or '') %}bg-sky-400
+                {% elif 'quiz' in (log.event_type or '') %}bg-amber-400
+                {% elif 'badge' in (log.event_type or '') %}bg-violet-400
+                {% else %}bg-slate-500{% endif %}"></span>
+              <div class="min-w-0">
+                <div class="text-[10px] font-black text-white truncate">
+                  {{ log.event_type or 'unknown' }}
+                </div>
+                <div class="text-[9px] text-slate-500 truncate">
+                  {{ log.user_name or 'System' }}
+                  {% if log.user_role %}<span class="text-slate-600">({{ log.user_role }})</span>{% endif %}
+                </div>
+                {% if log.meta %}
+                <div class="text-[9px] text-slate-600 truncate max-w-[200px]">{{ log.meta }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="text-[9px] text-slate-600 shrink-0">{{ log.created_at }}</div>
+          </div>
+        </div>
+        {% else %}
+        <div class="px-4 py-12 text-center text-slate-600 text-xs">No user events recorded</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Audit Log -->
+    <div class="bg-surface-container border border-white/5 rounded-2xl overflow-hidden">
+      <div class="p-4 border-b border-white/5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-amber-400 text-base">policy</span>
+        <span class="text-xs font-black uppercase tracking-widest text-slate-300">Admin Audit Trail</span>
+        <span class="ml-auto text-[10px] text-slate-600">{{ audit_logs|length }} records</span>
+      </div>
+      <div class="divide-y divide-white/5 max-h-[500px] overflow-y-auto scrollbar-thin">
+        {% for log in audit_logs %}
+        <div class="px-4 py-2.5 hover:bg-white/[0.02] transition-colors">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="text-[10px] font-black text-white truncate">{{ log.action }}</div>
+              <div class="text-[9px] text-slate-400 truncate">{{ log.details or '' }}</div>
+              <div class="text-[9px] text-slate-600">{{ log.operator_name or 'Admin' }}</div>
+            </div>
+            <div class="text-[9px] text-slate-600 shrink-0">{{ log.created_at }}</div>
+          </div>
+        </div>
+        {% else %}
+        <div class="px-4 py-12 text-center text-slate-600 text-xs">No admin actions recorded</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+

@@ -1,0 +1,239 @@
+﻿{% extends 'layouts/admin_base.html' %}
+
+{% block title %}ChemLove Admin | Content Manager Control{% endblock %}
+
+{% block breadcrumbs %}
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<a href="/admin/dashboard" class="hover:text-cyan-400">Control Panel</a>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-slate-300">Content Managers Registry</span>
+{% endblock %}
+
+{% block admin_content %}
+    <!-- Header banner -->
+    <div class="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-black uppercase tracking-tight text-white leading-none">Content Managers</h1>
+            <p class="text-xs text-slate-400 mt-2">Manage content creators, issue curriculum access permissions, update settings, and track editing workloads.</p>
+        </div>
+        <button onclick="toggleModal('create-user-modal', true)" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-gradient-to-r hover:from-cyan-500 hover:to-[#4cd7f6] hover:text-on-primary hover:border-transparent text-xs font-black uppercase tracking-widest px-5 py-3 rounded-2xl flex items-center gap-2 hover:scale-[1.03] active:scale-95 transition-all duration-300 whitespace-nowrap shrink-0">
+            <span class="material-symbols-outlined text-base">person_add</span> Register Content Manager
+        </button>
+    </div>
+
+    <!-- Filters and search -->
+    <div class="glass-morphism p-5 rounded-3xl mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <!-- Search bar -->
+        <form method="GET" class="w-full md:w-auto flex-grow max-w-md relative">
+            <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-lg">search</span>
+            <input type="text" name="search" value="{{ search_query or '' }}" placeholder="Search manager name, email, or institution..." 
+                   class="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-slate-950 border border-white/5 text-xs font-semibold text-white focus:border-cyan-500 focus:ring-0 placeholder:text-slate-600 transition-all">
+        </form>
+    </div>
+
+    <!-- Users table -->
+    <div class="glass-morphism p-6 rounded-3xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-white/5 text-[9px] uppercase tracking-widest text-slate-500">
+                        <th class="py-3 px-4">Profile</th>
+                        <th class="py-3 px-4">Institution</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% for u in users %}
+                        <tr class="text-xs hover:bg-white/5 transition-colors">
+                            <td class="py-4 px-4">
+                                <div class="font-black text-white text-sm">{{ u.name }}</div>
+                                <div class="text-[10px] text-slate-500 font-mono mt-0.5">{{ u.email }}</div>
+                            </td>
+                            <td class="py-4 px-4">
+                                <div class="font-bold text-slate-300">{{ u.institution }}</div>
+                            </td>
+                            <td class="py-4 px-4">
+                                <span class="flex items-center gap-1.5 font-bold {% if u.status == 'active' %}text-cyan-400{% else %}text-rose-400{% endif %}">
+                                    <span class="w-1.5 h-1.5 rounded-full {% if u.status == 'active' %}bg-cyan-400{% else %}bg-rose-400{% endif %}"></span>
+                                    {{ u.status|capitalize }}
+                                </span>
+                            </td>
+                            <td class="py-4 px-4">
+                                <div class="flex items-center justify-center gap-2">
+                                    <!-- Edit button -->
+                                    <button onclick='openEditModal({{ u|tojson|safe }})' title="Edit Details" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-white hover:bg-slate-800 transition-all flex items-center">
+                                        <span class="material-symbols-outlined text-sm">edit</span>
+                                    </button>
+                                    <!-- Password reset button -->
+                                    <button onclick="openPasswordResetModal({{ u.id }}, '{{ u.name }}')" title="Reset Password" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-amber-400 hover:bg-amber-950/20 hover:border-amber-500/20 transition-all flex items-center">
+                                        <span class="material-symbols-outlined text-sm">lock_reset</span>
+                                    </button>
+                                    <!-- Delete form/button -->
+                                    <form method="POST" action="/admin/users/content-managers" onsubmit="return confirm('Are you absolutely sure you want to delete this content manager?');" class="inline">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id" value="{{ u.id }}">
+                                        <button type="submit" title="Purge Account" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-rose-500 hover:bg-rose-950/20 hover:border-rose-500/20 transition-all flex items-center">
+                                            <span class="material-symbols-outlined text-sm">delete</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="py-12 text-center text-xs text-slate-500">No content manager accounts registered.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- CREATE USER MODAL -->
+    <div id="create-user-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden">
+        <div class="w-full max-w-md glass-morphism p-8 rounded-3xl border border-white/5 relative overflow-hidden animate-[fadeIn_0.25s_ease-out]">
+            <div class="flex justify-between items-start mb-6">
+                <h3 class="text-xl font-bold uppercase tracking-tight text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-cyan-400">person_add</span> Register Content Manager
+                </h3>
+                <button onclick="toggleModal('create-user-modal', false)" class="text-slate-400 hover:text-white flex items-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <form method="POST" action="/admin/users/content-managers" class="space-y-4">
+                <input type="hidden" name="action" value="create">
+                <input type="hidden" name="role" value="content_manager">
+                
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Full Name</label>
+                    <input type="text" name="name" required placeholder="e.g. John Doe" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Email Address</label>
+                    <input type="email" name="email" required placeholder="e.g. content@chemlove.com" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Institution Code</label>
+                    <input type="text" name="institution" required placeholder="e.g. Content Dept" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Password</label>
+                    <input type="password" name="password" required placeholder="••••••••" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                </div>
+
+                <button type="submit" class="w-full mt-4 bg-cyan-600 hover:bg-cyan-500 text-[#001f26] py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all">
+                    Register Manager
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- EDIT USER MODAL -->
+    <div id="edit-user-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden">
+        <div class="w-full max-w-md glass-morphism p-8 rounded-3xl border border-white/5 relative overflow-hidden animate-[fadeIn_0.25s_ease-out]">
+            <div class="flex justify-between items-start mb-6">
+                <h3 class="text-xl font-bold uppercase tracking-tight text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-cyan-400">edit_attributes</span> Adjust Parameters
+                </h3>
+                <button onclick="toggleModal('edit-user-modal', false)" class="text-slate-400 hover:text-white flex items-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <form method="POST" action="/admin/users/content-managers" class="space-y-4">
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="id" id="edit-user-id">
+                <input type="hidden" name="role" value="content_manager">
+                
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Full Name</label>
+                    <input type="text" name="name" id="edit-user-name" required class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Institution Code</label>
+                    <input type="text" name="institution" id="edit-user-institution" required class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Account Status</label>
+                    <select name="status" id="edit-user-status" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full mt-4 bg-cyan-600 hover:bg-cyan-500 text-[#001f26] py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all">
+                    Commit Updates
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- PASSWORD RESET MODAL -->
+    <div id="password-reset-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden">
+        <div class="w-full max-w-md glass-morphism p-8 rounded-3xl border border-white/5 relative overflow-hidden animate-[fadeIn_0.25s_ease-out]">
+            <div class="flex justify-between items-start mb-6">
+                <h3 class="text-xl font-bold uppercase tracking-tight text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-amber-400">lock_reset</span> Reset Manager Password
+                </h3>
+                <button onclick="toggleModal('password-reset-modal', false)" class="text-slate-400 hover:text-white flex items-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <form method="POST" action="/admin/users/content-managers" class="space-y-4">
+                <input type="hidden" name="action" value="reset_password">
+                <input type="hidden" name="id" id="reset-user-id">
+                
+                <div>
+                    <p class="text-xs text-slate-400 mb-4">Resetting credentials for: <strong id="reset-user-name-display" class="text-white"></strong></p>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">New Password</label>
+                    <input type="password" name="password" required placeholder="••••••••" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                </div>
+
+                <button type="submit" class="w-full mt-4 bg-cyan-600 hover:bg-cyan-500 text-[#001f26] py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all">
+                    Apply New Password
+                </button>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleModal(modalId, isVisible) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            if (isVisible) {
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+    }
+
+    function openEditModal(user) {
+        document.getElementById('edit-user-id').value = user.id;
+        document.getElementById('edit-user-name').value = user.name;
+        document.getElementById('edit-user-institution').value = user.institution;
+        document.getElementById('edit-user-status').value = user.status || 'active';
+        
+        toggleModal('edit-user-modal', true);
+    }
+
+    function openPasswordResetModal(uid, uname) {
+        document.getElementById('reset-user-id').value = uid;
+        document.getElementById('reset-user-name-display').textContent = uname;
+        toggleModal('password-reset-modal', true);
+    }
+</script>
+{% endblock %}
+
+
+

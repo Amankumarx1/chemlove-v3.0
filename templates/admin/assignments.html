@@ -1,0 +1,282 @@
+﻿{% extends 'layouts/admin_base.html' %}
+
+{% block title %}ChemLove Admin | Assignments Control{% endblock %}
+
+{% block breadcrumbs %}
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<a href="/admin/dashboard" class="hover:text-cyan-400">Control Panel</a>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-slate-300">Assignments Registry</span>
+{% endblock %}
+
+{% block admin_content %}
+    <!-- Header banner -->
+    <div class="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-black uppercase tracking-tight text-white leading-none">Assignments Registry</h1>
+            <p class="text-xs text-slate-400 mt-2">Manage course worksheets, select active classrooms, assign laboratory simulation workflows, and set due dates.</p>
+        </div>
+        <button onclick="toggleModal('create-assignment-modal', true)" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-gradient-to-r hover:from-cyan-500 hover:to-[#4cd7f6] hover:text-on-primary hover:border-transparent text-xs font-black uppercase tracking-widest px-5 py-3 rounded-2xl flex items-center gap-2 hover:scale-[1.03] active:scale-95 transition-all duration-300 whitespace-nowrap shrink-0">
+            <span class="material-symbols-outlined text-base">add_circle</span> Register Assignment
+        </button>
+    </div>
+
+    <!-- Assignments table -->
+    <div class="glass-morphism p-6 rounded-3xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-white/5 text-[9px] uppercase tracking-widest text-slate-500">
+                        <th class="py-3 px-4">Title</th>
+                        <th class="py-3 px-4">Classroom</th>
+                        <th class="py-3 px-4">Due Date</th>
+                        <th class="py-3 px-4">Marks</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% for a in assignments %}
+                        <tr class="text-xs hover:bg-white/5 transition-colors">
+                            <td class="py-4 px-4 font-black text-white text-sm">
+                                {{ a.title }}
+                            </td>
+                            <td class="py-4 px-4 font-bold text-slate-300">
+                                {{ a.classroom_name }}
+                            </td>
+                            <td class="py-4 px-4 text-slate-400 font-mono">
+                                {{ a.due_date or 'No Deadline' }}
+                            </td>
+                            <td class="py-4 px-4 font-bold text-cyan-400">
+                                {{ a.marks }} Marks
+                            </td>
+                            <td class="py-4 px-4">
+                                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border {% if a.status == 'published' %}border-cyan-500/30 bg-cyan-500/10 text-cyan-300{% else %}border-rose-500/30 bg-rose-500/10 text-rose-300{% endif %}">
+                                    {{ a.status }}
+                                </span>
+                            </td>
+                            <td class="py-4 px-4">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick='openEditModal({{ a|tojson|safe }})' title="Edit Details" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-white hover:bg-slate-800 transition-all flex items-center">
+                                        <span class="material-symbols-outlined text-sm">edit</span>
+                                    </button>
+                                    <form method="POST" action="/admin/assignments" onsubmit="return confirm('Are you sure you want to delete this assignment?');" class="inline">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id" value="{{ a.id }}">
+                                        <button type="submit" title="Delete Assignment" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-rose-500 hover:bg-rose-950/20 hover:border-rose-500/20 transition-all flex items-center">
+                                            <span class="material-symbols-outlined text-sm">delete</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="py-12 text-center text-xs text-slate-500">No classroom assignments registered.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- CREATE ASSIGNMENT MODAL -->
+    <div id="create-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden">
+        <div class="w-full max-w-md glass-morphism p-8 rounded-3xl border border-white/5 relative overflow-hidden animate-[fadeIn_0.25s_ease-out]">
+            <div class="flex justify-between items-start mb-6">
+                <h3 class="text-xl font-bold uppercase tracking-tight text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-cyan-400">add_circle</span> Register Assignment
+                </h3>
+                <button onclick="toggleModal('create-assignment-modal', false)" class="text-slate-400 hover:text-white flex items-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <form method="POST" action="/admin/assignments" class="space-y-4">
+                <input type="hidden" name="action" value="create">
+                
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Assignment Title</label>
+                    <input type="text" name="title" required placeholder="e.g. Kinetics Exercise Worksheet" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Description Outline</label>
+                    <textarea name="description" placeholder="Short description..." rows="2" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Link Classroom</label>
+                    <select name="classroom_id" required class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                        {% for cl in classrooms %}
+                        <option value="{{ cl.id }}">{{ cl.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Link Chapter Module</label>
+                        <select name="chapter_id" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                            <option value="">None</option>
+                            {% for ch in chapters %}
+                            <option value="{{ ch.id }}">{{ ch.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Link Lab titrations</label>
+                        <select name="lab_id" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                            <option value="">None</option>
+                            {% for l in labs %}
+                            <option value="{{ l.id }}">{{ l.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Marks</label>
+                        <input type="number" name="marks" required placeholder="100" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Status</label>
+                        <select name="status" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                            <option value="draft">Draft</option>
+                            <option value="published">Published</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Due Date</label>
+                    <input type="datetime-local" name="due_date" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                </div>
+
+                <button type="submit" class="w-full mt-4 bg-cyan-600 hover:bg-cyan-500 text-[#001f26] py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all">
+                    Register Assignment
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- EDIT ASSIGNMENT MODAL -->
+    <div id="edit-assignment-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden">
+        <div class="w-full max-w-md glass-morphism p-8 rounded-3xl border border-white/5 relative overflow-hidden animate-[fadeIn_0.25s_ease-out]">
+            <div class="flex justify-between items-start mb-6">
+                <h3 class="text-xl font-bold uppercase tracking-tight text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-cyan-400">edit</span> Adjust Parameters
+                </h3>
+                <button onclick="toggleModal('edit-assignment-modal', false)" class="text-slate-400 hover:text-white flex items-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <form method="POST" action="/admin/assignments" class="space-y-4">
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="id" id="edit-assignment-id">
+                
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Assignment Title</label>
+                    <input type="text" name="title" id="edit-assignment-title" required class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Description Outline</label>
+                    <textarea name="description" id="edit-assignment-description" rows="2" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Link Classroom</label>
+                    <select name="classroom_id" id="edit-assignment-classroom-id" required class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                        {% for cl in classrooms %}
+                        <option value="{{ cl.id }}">{{ cl.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Link Chapter Module</label>
+                        <select name="chapter_id" id="edit-assignment-chapter-id" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                            <option value="">None</option>
+                            {% for ch in chapters %}
+                            <option value="{{ ch.id }}">{{ ch.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Link Lab titrations</label>
+                        <select name="lab_id" id="edit-assignment-lab-id" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                            <option value="">None</option>
+                            {% for l in labs %}
+                            <option value="{{ l.id }}">{{ l.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Marks</label>
+                        <input type="number" name="marks" id="edit-assignment-marks" required class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Status</label>
+                        <select name="status" id="edit-assignment-status" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                            <option value="draft">Draft</option>
+                            <option value="published">Published</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Due Date</label>
+                    <input type="datetime-local" name="due_date" id="edit-assignment-due-date" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-white focus:border-cyan-500 focus:ring-0">
+                </div>
+
+                <button type="submit" class="w-full mt-4 bg-cyan-600 hover:bg-cyan-500 text-[#001f26] py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all">
+                    Commit Changes
+                </button>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleModal(modalId, isVisible) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            if (isVisible) {
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+    }
+
+    function openEditModal(asm) {
+        document.getElementById('edit-assignment-id').value = asm.id;
+        document.getElementById('edit-assignment-title').value = asm.title;
+        document.getElementById('edit-assignment-description').value = asm.description || '';
+        document.getElementById('edit-assignment-classroom-id').value = asm.classroom_id;
+        document.getElementById('edit-assignment-chapter-id').value = asm.chapter_id || '';
+        document.getElementById('edit-assignment-lab-id').value = asm.lab_id || '';
+        document.getElementById('edit-assignment-marks').value = asm.marks;
+        document.getElementById('edit-assignment-status').value = asm.status || 'draft';
+        if (asm.due_date) {
+            // Convert to format required by datetime-local input
+            const d = new Date(asm.due_date);
+            const iso = d.toISOString().slice(0, 16);
+            document.getElementById('edit-assignment-due-date').value = iso;
+        }
+        
+        toggleModal('edit-assignment-modal', true);
+    }
+</script>
+{% endblock %}
+
+
+

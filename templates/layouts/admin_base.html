@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>{% block title %}ChemLove | Admin Platform{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/interaction-system.css') }}">
+    <script src="{{ url_for('static', filename='js/interaction-tracker.js') }}"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#4cd7f6", /* Cyan theme for admin */
+                        "on-primary": "#001f26",
+                        "secondary": "#a1cedb",
+                        "tertiary": "#ffb0cd",
+                        "background": "#090d0e",
+                        "surface": "#0d1315",
+                        "primary-container": "#06b6d4",
+                        "tertiary-container": "#ff79b4",
+                        "surface-container": "#11181b",
+                        "surface-container-low": "#0e1416",
+                        "surface-container-high": "#162023",
+                        "on-surface": "#dee3e6",
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Modern scrollbar styling */
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.01);
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Prevent flashing outline / focus ring on sidebar menu items */
+        #admin-sidebar a,
+        #admin-sidebar button,
+        #sidebar-nav a,
+        #sidebar-nav button,
+        .sidebar-link,
+        .nav-link {
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #admin-sidebar a:focus,
+        #admin-sidebar a:focus-visible,
+        #admin-sidebar a:active,
+        #admin-sidebar button:focus,
+        #admin-sidebar button:focus-visible,
+        #admin-sidebar button:active,
+        #sidebar-nav a:focus,
+        #sidebar-nav a:focus-visible,
+        #sidebar-nav a:active,
+        #sidebar-nav button:focus,
+        #sidebar-nav button:focus-visible,
+        #sidebar-nav button:active,
+        .sidebar-link:focus,
+        .sidebar-link:focus-visible,
+        .sidebar-link:active,
+        .nav-link:focus,
+        .nav-link:focus-visible,
+        .nav-link:active {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body grid-bg min-h-screen relative overflow-x-hidden flex flex-col">
+    {% if current_user and current_user.is_impersonating %}
+    <div class="bg-gradient-to-r from-rose-600 to-pink-600 text-white py-3 px-4 text-center text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-3 relative z-50 shadow-md">
+        <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+        <span>Impersonation Session: Viewing as <strong>{{ current_user.name }}</strong> ({{ current_user.role|upper }})</span>
+        <a href="/auth/stop-impersonation" class="bg-white/20 hover:bg-white/30 active:bg-white/40 border border-white/20 px-3 py-1.5 rounded-lg transition-all text-[10px] font-black uppercase tracking-widest ml-4">Stop Impersonation</a>
+    </div>
+    {% endif %}
+
+    <!-- Background glow elements -->
+    <div class="absolute top-1/4 -right-20 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-0 -left-20 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+
+    <div class="flex flex-grow min-h-screen">
+        <!-- Sidebar Navigation -->
+        <aside id="admin-sidebar"
+            class="fixed left-0 top-0 z-30 h-screen w-64 border-r border-white/5 bg-[#0b0f10]/80 backdrop-blur-xl flex flex-col pt-6 px-4 -translate-x-full md:translate-x-0 transition-transform duration-300">
+            
+            <!-- Brand Logo -->
+            <div class="px-3 pb-4 mb-4 border-b border-white/5 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-cyan-400 text-3xl animate-pulse">science</span>
+                    <div>
+                        <div class="font-black text-lg tracking-tight text-white uppercase leading-none">Chem<span class="text-cyan-400">Love</span></div>
+                        <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight mt-1">
+                            Educational OS
+                        </div>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar(false)" class="md:hidden text-slate-400 hover:text-white flex items-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <!-- Navigation Links -->
+            <div id="sidebar-nav" class="flex-grow overflow-y-auto pr-1 space-y-5 scrollbar-thin">
+                <div class="space-y-1">
+                    <a href="/admin/dashboard"
+                        class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/dashboard' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                        <span class="material-symbols-outlined text-base">dashboard</span>
+                        Dashboard
+                    </a>
+                </div>
+
+                {% if current_user.role == 'admin' %}
+                <!-- Category 1: User Management -->
+                <div>
+                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 px-3 mb-1.5">User Control</div>
+                    <div class="space-y-1">
+                        <a href="/admin/users/students"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/users/students' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">school</span>
+                            Students
+                        </a>
+                        <a href="/admin/users/teachers"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/users/teachers' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">co_present</span>
+                            Teachers
+                        </a>
+                        <a href="/admin/users/admins"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/users/admins' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">admin_panel_settings</span>
+                            Admins
+                        </a>
+                        <a href="/admin/users/content-managers"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/users/content-managers' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">badge</span>
+                            Content Managers
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Category 2: Academics -->
+                <div>
+                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 px-3 mb-1.5">Academics & Content</div>
+                    <div class="space-y-1">
+                        <a href="/admin/courses"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/courses' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">collections_bookmark</span>
+                            Courses
+                        </a>
+                        <a href="/admin/chapters"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/chapters' or '/admin/chapters/' in request.path %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">menu_book</span>
+                            Chapters
+                        </a>
+                        {% if current_user.role == 'admin' %}
+                        <a href="/admin/library"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/library' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">library_books</span>
+                            Universal Library
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Category 3: Interactive Labs -->
+                <div>
+                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 px-3 mb-1.5">Interactive Engine</div>
+                    <div class="space-y-1">
+                        <a href="/admin/labs"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/labs' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">biotech</span>
+                            Labs & Simulator
+                        </a>
+                        <a href="/admin/reactions"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/reactions' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">science</span>
+                            Reactions
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Category 4: Evaluation -->
+                <div>
+                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 px-3 mb-1.5">Assessments</div>
+                    <div class="space-y-1">
+                        <a href="/admin/quizzes"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/quizzes' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">quiz</span>
+                            Quizzes
+                        </a>
+                        <a href="/admin/assignments"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/assignments' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">assignment</span>
+                            Assignments
+                        </a>
+                        <a href="/admin/tests"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/tests' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">fact_check</span>
+                            Tests & Exams
+                        </a>
+                    </div>
+                </div>
+
+                {% if current_user.role == 'admin' %}
+                <!-- Category 5: Gamification & Rewards -->
+                <div>
+                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 px-3 mb-1.5">Rewards & Gamification</div>
+                    <div class="space-y-1">
+                        <a href="/admin/certificates"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/certificates' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">workspace_premium</span>
+                            Certificates
+                        </a>
+                        <a href="/admin/achievements"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/achievements' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">military_tech</span>
+                            Achievements
+                        </a>
+                        <a href="/admin/leaderboards"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/leaderboards' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">leaderboard</span>
+                            Leaderboards
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Category 6: Communications -->
+                <div>
+                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 px-3 mb-1.5">System Comms</div>
+                    <div class="space-y-1">
+                        <a href="/admin/communications"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/communications' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">forum</span>
+                            Announcements
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Category 7: Reports & Telemetry -->
+                <div>
+                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 px-3 mb-1.5">Reports & Health</div>
+                    <div class="space-y-1">
+                        <a href="/admin/analytics"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/analytics' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">analytics</span>
+                            Analytics
+                        </a>
+                        <a href="/admin/activity"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/activity' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">history</span>
+                            Activity Logs
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Category 8: Media Library -->
+                <div>
+                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 px-3 mb-1.5">Media Library</div>
+                    <div class="space-y-1">
+                        <a href="/admin/content"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/content' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">folder_shared</span>
+                            Media Library
+                        </a>
+                    </div>
+                </div>
+
+                {% if current_user.role == 'admin' %}
+                <!-- Category 9: AI Systems -->
+                <div>
+                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 px-3 mb-1.5">AI Gateway</div>
+                    <div class="space-y-1">
+                        <a href="/admin/ai"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/ai' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">psychology</span>
+                            AI Center
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Category 10: Configuration -->
+                <div>
+                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 px-3 mb-1.5">Platform & System</div>
+                    <div class="space-y-1">
+                        <a href="/admin/settings"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/settings' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">settings</span>
+                            Platform Settings
+                        </a>
+                        <a href="/admin/system"
+                            class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/admin/system' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                            <span class="material-symbols-outlined text-base">dns</span>
+                            System Telemetry
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="border-t border-white/5 my-4"></div>
+
+                <!-- Profile and Logout -->
+                <div class="space-y-1">
+                    <a href="/profile"
+                        class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-400 border border-transparent transition-colors duration-200 {% if request.path == '/profile' %}bg-cyan-950/20 text-cyan-400 border-cyan-500/10{% endif %}">
+                        <span class="material-symbols-outlined text-base">account_circle</span>
+                        My Profile
+                    </a>
+                    <form method="POST" action="/logout" class="block w-full">
+                        <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-rose-400 hover:bg-rose-950/20 transition-colors duration-200 text-left">
+                            <span class="material-symbols-outlined text-base">logout</span>
+                            Logout
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="flex-grow md:pl-64 w-full flex flex-col min-h-screen">
+            <!-- Header Navbar -->
+            <header class="h-16 border-b border-white/5 bg-[#090d0e]/40 backdrop-blur-md px-6 md:px-8 flex justify-between items-center relative z-20 shrink-0">
+                <!-- Mobile Sidebar Trigger & Breadcrumbs -->
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar(true)" class="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-lg">menu</span>
+                    </button>
+                    <!-- Dynamic Breadcrumbs -->
+                    <div class="hidden sm:flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <a href="/admin/dashboard" class="hover:text-cyan-400 transition-colors">Admin</a>
+                        {% block breadcrumbs %}
+                        <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                        <span id="admin-breadcrumb-text" class="text-slate-300">{% block breadcrumb_active %}Control Panel{% endblock %}</span>
+                        {% endblock %}
+                    </div>
+                </div>
+
+                <!-- Header Actions -->
+                <div class="flex items-center gap-4">
+                    <!-- Global Search -->
+                    <div class="relative max-w-[200px] sm:max-w-xs">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-base">search</span>
+                        <input type="text" id="admin-global-search" placeholder="Search components..." 
+                               class="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-950 border border-white/5 text-[10px] font-bold text-white focus:border-cyan-500 focus:ring-0 placeholder:text-slate-600 transition-all">
+                    </div>
+
+                    <!-- Theme Toggle -->
+                    <button onclick="toggleTheme()" class="p-2 border border-white/5 rounded-xl bg-[#0e1416]/40 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/20 hover:bg-cyan-950/10 transition-all flex items-center justify-center" title="Toggle Visual Mode">
+                        <span class="material-symbols-outlined text-base" id="theme-toggle-icon">dark_mode</span>
+                    </button>
+
+                    <!-- Notifications Bell -->
+                    <div class="relative" id="admin-notification-container">
+                        <button id="admin-notification-btn" class="p-2 border border-white/5 rounded-xl bg-[#0e1416]/40 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/20 hover:bg-cyan-950/10 transition-all flex items-center justify-center relative" title="Notifications">
+                            <span class="material-symbols-outlined text-base">notifications</span>
+                            <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                        </button>
+                        <!-- Notifications Dropdown -->
+                        <div id="admin-notification-dropdown" class="hidden absolute right-0 mt-2.5 w-80 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-4 z-50 animate-[fadeIn_0.2s_ease-out]">
+                            <div class="flex justify-between items-center pb-2.5 border-b border-white/5 mb-2.5">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Recent Logs & Alerts</span>
+                                <a href="/admin/activity" class="text-[9px] font-bold text-cyan-400 hover:underline">View All</a>
+                            </div>
+                            <div class="space-y-2 max-h-60 overflow-y-auto scrollbar-thin text-[10px] text-slate-300" id="notification-list">
+                                <!-- Dummy Notification items -->
+                                <div class="p-2 rounded-xl bg-white/5 border border-white/5">
+                                    <div class="font-bold text-white">System Database Updated</div>
+                                    <div class="text-[8px] text-slate-500 mt-0.5">Just now</div>
+                                </div>
+                                <div class="p-2 rounded-xl bg-white/5 border border-white/5">
+                                    <div class="font-bold text-white">New user registered: student1</div>
+                                    <div class="text-[8px] text-slate-500 mt-0.5">5 mins ago</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Menu Dropdown -->
+                    <div class="relative" id="admin-user-menu-container">
+                        <button id="admin-user-menu-btn" class="flex items-center gap-2 bg-[#0e1416]/40 hover:bg-slate-800/40 border border-white/5 px-3 py-1.5 rounded-xl text-xs font-bold uppercase transition-all shadow-md">
+                            <span class="material-symbols-outlined text-base text-cyan-400">account_circle</span>
+                            <span class="text-white hidden md:inline">{{ current_user.name }}</span>
+                            <span class="material-symbols-outlined text-[10px] text-slate-500">keyboard_arrow_down</span>
+                        </button>
+                        <div id="admin-user-menu-dropdown" class="hidden absolute right-0 mt-2.5 w-48 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
+                            <a href="/profile" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                <span class="material-symbols-outlined text-sm">person</span> Profile
+                            </a>
+                            <a href="/admin/dashboard" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-cyan-950/20 hover:text-cyan-400 transition-all text-left">
+                                <span class="material-symbols-outlined text-sm">space_dashboard</span> Command Center
+                            </a>
+                            <div class="border-t border-white/5 my-1"></div>
+                            <form method="POST" action="/logout" class="block w-full">
+                                <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-950/20 transition-all text-left">
+                                    <span class="material-symbols-outlined text-sm">logout</span> Logout
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Scrollable Content Area -->
+            <main id="admin-main" class="p-6 md:p-8 max-w-7xl mx-auto w-full relative z-10 flex-grow">
+                {% block admin_content %}{% endblock %}
+                <!-- Include block scripts inside admin-main to make SPA run them automatically -->
+                {% block scripts %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Toast Messages -->
+    <div id="flash-container" class="fixed bottom-6 right-6 z-50 space-y-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flex items-center gap-3 p-4 rounded-xl border {% if category == 'error' %}bg-red-950/40 border-red-500/30 text-red-200{% else %}bg-cyan-950/40 border-cyan-500/30 text-emerald-200{% endif %} shadow-lg backdrop-blur-md animate-[slideIn_0.3s_ease-out]">
+                        <span class="material-symbols-outlined text-lg">
+                            {% if category == 'error' %}error{% else %}check_circle{% endif %}
+                        </span>
+                        <span class="text-xs font-bold uppercase tracking-wider">{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Core Admin Layout Script -->
+    <script id="admin-layout-script">
+        /* ═══════════════════════════════════════════════════════════
+           SIDEBAR UTILITIES
+        ═══════════════════════════════════════════════════════════ */
+        function toggleSidebar(isVisible) {
+            const sidebar = document.getElementById('admin-sidebar');
+            if (!sidebar) return;
+            sidebar.classList.toggle('-translate-x-full', !isVisible);
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const toggleIcon = document.getElementById('theme-toggle-icon');
+            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark', !isDark);
+            html.classList.toggle('light', isDark);
+            const theme = isDark ? 'light' : 'dark';
+            if (toggleIcon) toggleIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+            localStorage.setItem('theme_preference', theme);
+            fetch('/api/theme_preference', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ theme })
+            }).catch(() => {});
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           SPA NAVIGATION ENGINE
+           — Sidebar stays frozen, only <main id="admin-main"> swaps
+        ═══════════════════════════════════════════════════════════ */
+        const ADMIN_ORIGIN = window.location.origin;
+        let _navigating = false;
+
+        function isAdminLink(href) {
+            if (!href) return false;
+            try {
+                const url = new URL(href, ADMIN_ORIGIN);
+                return url.origin === ADMIN_ORIGIN && url.pathname.startsWith('/admin');
+            } catch { return false; }
+        }
+
+        function updateSidebarActive(pathname) {
+            const sidebarNav = document.getElementById('sidebar-nav');
+            if (!sidebarNav) return;
+            sidebarNav.querySelectorAll('a').forEach(a => {
+                const ap = new URL(a.href, ADMIN_ORIGIN).pathname;
+                const isActive = (ap === pathname) || (ap !== '/admin/dashboard' && pathname.startsWith(ap + '/'));
+                // Active state classes (must match what Jinja applies)
+                a.classList.toggle('bg-cyan-950/20', isActive);
+                a.classList.toggle('text-cyan-400',  isActive);
+                a.classList.toggle('border-cyan-500/10', isActive);
+                a.classList.toggle('border-transparent', !isActive);
+                if (!isActive) {
+                    a.classList.remove('bg-cyan-950/20', 'text-cyan-400', 'border-cyan-500/10');
+                    a.classList.add('text-slate-400', 'border-transparent');
+                } else {
+                    a.classList.remove('text-slate-400', 'border-transparent');
+                }
+            });
+        }
+
+        function showPageLoader() {
+            let loader = document.getElementById('spa-loader');
+            if (!loader) {
+                loader = document.createElement('div');
+                loader.id = 'spa-loader';
+                loader.style.cssText = 'position:fixed;top:0;left:0;right:0;height:2px;z-index:9999;background:linear-gradient(90deg,#06b6d4,#4cd7f6);animation:spaLoad 0.6s ease-in-out infinite alternate;';
+                const style = document.createElement('style');
+                style.textContent = '@keyframes spaLoad{from{opacity:0.4;transform:scaleX(0.3)}to{opacity:1;transform:scaleX(1)}}';
+                document.head.appendChild(style);
+                document.body.appendChild(loader);
+            }
+            loader.style.display = 'block';
+        }
+
+        function hidePageLoader() {
+            const loader = document.getElementById('spa-loader');
+            if (loader) loader.style.display = 'none';
+        }
+
+        function showFlash(message, type) {
+            const container = document.getElementById('flash-container');
+            if (!container) return;
+            const isErr = type === 'error';
+            const el = document.createElement('div');
+            el.className = `flex items-center gap-3 p-4 rounded-xl border ${
+                isErr ? 'bg-red-950/40 border-red-500/30 text-red-200' : 'bg-cyan-950/40 border-cyan-500/30 text-emerald-200'
+            } shadow-lg backdrop-blur-md`;
+            el.style.animation = 'slideIn 0.3s ease-out';
+            el.innerHTML = `<span class="material-symbols-outlined text-lg">${isErr ? 'error' : 'check_circle'}</span>
+                            <span class="text-xs font-bold uppercase tracking-wider">${message}</span>`;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 4000);
+        }
+
+        async function navigateTo(url, pushState = true) {
+            if (_navigating) return;
+            _navigating = true;
+            showPageLoader();
+
+            try {
+                const res = await fetch(url, {
+                    headers: { 'X-SPA-Request': '1' },
+                    credentials: 'same-origin'
+                });
+
+                // If redirect (login page etc.) do hard nav
+                if (res.redirected || !res.ok) {
+                    window.location.href = res.redirected ? res.url : url;
+                    return;
+                }
+
+                const html = await res.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Extract the new main content
+                const newMain = doc.getElementById('admin-main');
+                const curMain = document.getElementById('admin-main');
+
+                if (!newMain || !curMain) {
+                    // Not an admin page — hard navigate
+                    window.location.href = url;
+                    return;
+                }
+
+                // Swap content with a tiny fade
+                curMain.style.opacity = '0';
+                curMain.style.transition = 'opacity 0.12s ease';
+
+                await new Promise(r => setTimeout(r, 120));
+
+                curMain.innerHTML = newMain.innerHTML;
+
+                // Update <title>
+                const newTitle = doc.querySelector('title');
+                if (newTitle) document.title = newTitle.textContent;
+
+                // Update breadcrumb text
+                const newBreadcrumb = doc.getElementById('admin-breadcrumb-text');
+                const curBreadcrumb = document.getElementById('admin-breadcrumb-text');
+                if (newBreadcrumb && curBreadcrumb) {
+                    curBreadcrumb.textContent = newBreadcrumb.textContent;
+                }
+
+                // Transfer any flash messages from the new doc
+                const newFlashes = doc.querySelectorAll('#flash-container > div');
+                newFlashes.forEach(f => {
+                    const isErr = f.classList.contains('text-red-200');
+                    const msg = f.querySelector('span:last-child');
+                    if (msg) showFlash(msg.textContent, isErr ? 'error' : 'success');
+                });
+
+                // Clean up previous inline or temp script execution nodes to keep DOM clean
+                document.querySelectorAll('script[data-spa-temp]').forEach(s => s.remove());
+
+                // Find all scripts inside the new main container
+                const scriptsInMain = newMain.querySelectorAll('script');
+                const externalScripts = [];
+                const inlineScripts = [];
+
+                scriptsInMain.forEach(s => {
+                    if (s.src) {
+                        externalScripts.push(s);
+                    } else {
+                        inlineScripts.push(s);
+                    }
+                });
+
+                // Load external dependencies first sequentially to ensure order correctness
+                for (const s of externalScripts) {
+                    await new Promise((resolve) => {
+                        // Check if script is already present in document body
+                        if (document.querySelector(`script[src="${s.src}"]`)) {
+                            resolve();
+                            return;
+                        }
+                        const ns = document.createElement('script');
+                        ns.src = s.src;
+                        ns.async = false;
+                        ns.onload = () => resolve();
+                        ns.onerror = () => {
+                            console.error('[SPA] Failed to load external script:', s.src);
+                            resolve(); // Resolve anyway to proceed
+                        };
+                        document.body.appendChild(ns);
+                    });
+                }
+
+                // Execute inline scripts sequentially
+                inlineScripts.forEach(s => {
+                    const ns = document.createElement('script');
+                    ns.setAttribute('data-spa-temp', 'true');
+                    ns.textContent = s.textContent;
+                    document.body.appendChild(ns);
+                });
+
+                // Update URL and sidebar active state
+                const parsedUrl = new URL(url, ADMIN_ORIGIN);
+                if (pushState) history.pushState({ spa: true, url }, '', url);
+                updateSidebarActive(parsedUrl.pathname);
+
+                // Scroll main to top
+                window.scrollTo({ top: 0, behavior: 'instant' });
+
+                // Dispatch DOMContentLoaded event manually on document to trigger initializers inside page-specific script blocks
+                document.dispatchEvent(new Event('DOMContentLoaded'));
+
+                // Fade in
+                curMain.style.opacity = '1';
+
+            } catch (err) {
+                console.error('[SPA] Navigation error:', err);
+                window.location.href = url;
+            } finally {
+                hidePageLoader();
+                _navigating = false;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           INITIALISATION
+        ═══════════════════════════════════════════════════════════ */
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.adminBaseInitialized) return;
+            window.adminBaseInitialized = true;
+
+            /* -- Intercept sidebar link clicks ---------------------- */
+            const sidebarNav = document.getElementById('sidebar-nav');
+            if (sidebarNav) {
+                sidebarNav.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', e => {
+                        const href = link.getAttribute('href');
+                        if (isAdminLink(href)) {
+                            e.preventDefault();
+                            link.blur(); // Remove browser focus outline immediately
+                            navigateTo(href);
+                        }
+                    });
+                });
+                // Scroll active link into view on first load
+                const activeLink = sidebarNav.querySelector('a.border');
+                if (activeLink) activeLink.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+            }
+
+            /* -- Browser back / forward ----------------------------- */
+            window.addEventListener('popstate', e => {
+                if (e.state && e.state.spa) {
+                    navigateTo(e.state.url, false);
+                } else {
+                    window.location.reload();
+                }
+            });
+            // Mark initial state so popstate can handle it
+            history.replaceState({ spa: true, url: location.href }, '', location.href);
+
+            /* -- Dropdown toggles ----------------------------------- */
+            const notificationBtn  = document.getElementById('admin-notification-btn');
+            const notificationMenu = document.getElementById('admin-notification-dropdown');
+            const userMenuBtn      = document.getElementById('admin-user-menu-btn');
+            const userMenu         = document.getElementById('admin-user-menu-dropdown');
+
+            if (notificationBtn && notificationMenu) {
+                notificationBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    notificationMenu.classList.toggle('hidden');
+                    if (userMenu) userMenu.classList.add('hidden');
+                });
+            }
+            if (userMenuBtn && userMenu) {
+                userMenuBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    userMenu.classList.toggle('hidden');
+                    if (notificationMenu) notificationMenu.classList.add('hidden');
+                });
+            }
+            document.addEventListener('click', () => {
+                if (notificationMenu) notificationMenu.classList.add('hidden');
+                if (userMenu) userMenu.classList.add('hidden');
+            });
+
+            /* -- Theme icon init ------------------------------------ */
+            const toggleIcon = document.getElementById('theme-toggle-icon');
+            if (toggleIcon) {
+                toggleIcon.textContent = document.documentElement.classList.contains('dark') ? 'dark_mode' : 'light_mode';
+            }
+
+            /* -- Auto-dismiss flash messages ----------------------- */
+            document.querySelectorAll('#flash-container > div').forEach(el => {
+                setTimeout(() => el.remove(), 4000);
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+

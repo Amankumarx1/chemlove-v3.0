@@ -1,0 +1,101 @@
+/* --- ChemLove Global Premium Interaction System --- */
+
+/* Mobile Optimization: Remove default webkit tap highlight flash globally */
+* {
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Base interactive elements: Remove browser focus outlines by default for mouse users */
+body:not(.keyboard-navigation) a:focus,
+body:not(.keyboard-navigation) button:focus,
+body:not(.keyboard-navigation) [role="button"]:focus,
+body:not(.keyboard-navigation) input[type="checkbox"]:focus,
+body:not(.keyboard-navigation) input[type="radio"]:focus,
+body:not(.keyboard-navigation) a:focus-visible,
+body:not(.keyboard-navigation) button:focus-visible,
+body:not(.keyboard-navigation) [role="button"]:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Remove default focus indicators for navigation components */
+.sidebar-link,
+.nav-link,
+.menu-item,
+.drawer-link,
+.header-link,
+.breadcrumb-link,
+#admin-sidebar a,
+#admin-sidebar button,
+#dashboard-sidebar a,
+#dashboard-sidebar button,
+#sidebar-nav a,
+#sidebar-nav button {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Custom ChemLove focus styling for form inputs, textareas and selects (preserving accessibility) */
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none !important;
+    border-color: var(--primary, #4cd7f6) !important;
+    box-shadow: 0 0 0 2px rgba(76, 215, 246, 0.2) !important;
+}
+
+/* Custom resets for cards, buttons, tabs, panels, and drawer elements to prevent active outline flashes */
+.btn:focus,
+.btn:active,
+.button:focus,
+.button:active,
+.action-btn:focus,
+.action-btn:active,
+.card:focus,
+.panel:focus,
+.widget:focus,
+.stat-card:focus,
+.tab:focus,
+.tab-button:focus,
+.tab-link:focus,
+.drawer-link:focus,
+.menu-item:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Accessibility: Show visible focus outline when keyboard navigation is active */
+body.keyboard-navigation *:focus,
+body.keyboard-navigation *:focus-visible {
+    outline: 2px solid var(--primary, #4cd7f6) !important;
+    outline-offset: 2px !important;
+}
+
+body.keyboard-navigation input:focus,
+body.keyboard-navigation textarea:focus,
+body.keyboard-navigation select:focus {
+    outline: none !important;
+    border-color: var(--primary, #4cd7f6) !important;
+    box-shadow: 0 0 0 2px rgba(76, 215, 246, 0.4) !important;
+}
+
+/* Missing Navigation Reset */
+.sidebar-link,
+.admin-tab-btn,
+.nav-link,
+.menu-item,
+button,
+a {
+    outline: none !important;
+}
+
+.sidebar-link:focus,
+.sidebar-link:focus-visible,
+.admin-tab-btn:focus,
+.admin-tab-btn:focus-visible,
+.nav-link:focus,
+.nav-link:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
