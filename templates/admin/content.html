@@ -1,8 +1,9 @@
-{% extends 'layouts/dashboard_base.html' %}
+{% extends 'layouts/admin_base.html' %}
 
 {% block title %}ChemLove | Curriculum Hub{% endblock %}
+{% block breadcrumb_active %}Curriculum Hub{% endblock %}
 
-{% block dashboard_content %}
+{% block admin_content %}
     <!-- Quill Rich Text Editor CDN -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
@@ -389,6 +390,24 @@
             <h3 id="experiment-modal-title" class="text-xl font-bold uppercase text-white">Add Experiment</h3>
             <form id="experiment-form" onsubmit="submitExperiment(event)" class="space-y-4">
                 <input type="hidden" id="exp-edit-id">
+
+                <!-- JSON File Upload Section -->
+                <div class="p-4 rounded-xl bg-slate-950/40 border border-white/5 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] uppercase font-bold tracking-widest text-slate-400 flex items-center gap-1.5 font-semibold">
+                            <span class="material-symbols-outlined text-xs text-cyan-400">upload_file</span>
+                            Quick Import JSON
+                        </span>
+                        <span class="text-[9px] text-slate-500 font-mono">Format: {"key": "value", ...}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="exp-json-upload" accept=".json" class="hidden" onchange="handleGenericJsonUpload(event, 'exp')">
+                        <button type="button" onclick="document.getElementById('exp-json-upload').click()" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-900/40 text-[10px] font-bold uppercase px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-xs">attach_file</span> Choose JSON File
+                        </button>
+                        <span id="exp-json-status" class="text-[10px] text-slate-500 italic">No file chosen</span>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Associated Chapter</label>
                     <select id="exp-chapter-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
@@ -422,6 +441,25 @@
         <div class="glass-morphism max-w-lg w-full p-8 rounded-3xl space-y-6 max-h-[85vh] overflow-y-auto">
             <h3 id="reaction-modal-title" class="text-xl font-bold uppercase text-white">Add Reaction</h3>
             <form id="reaction-form" onsubmit="submitReaction(event)" class="space-y-4">
+                
+                <!-- JSON File Upload Section -->
+                <div class="p-4 rounded-xl bg-slate-950/40 border border-white/5 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] uppercase font-bold tracking-widest text-slate-400 flex items-center gap-1.5 font-semibold">
+                            <span class="material-symbols-outlined text-xs text-cyan-400">upload_file</span>
+                            Quick Import JSON
+                        </span>
+                        <span class="text-[9px] text-slate-500 font-mono">Format: {"key": "value", ...}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="rxn-json-upload" accept=".json" class="hidden" onchange="handleGenericJsonUpload(event, 'rxn')">
+                        <button type="button" onclick="document.getElementById('rxn-json-upload').click()" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-900/40 text-[10px] font-bold uppercase px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-xs">attach_file</span> Choose JSON File
+                        </button>
+                        <span id="rxn-json-status" class="text-[10px] text-slate-500 italic">No file chosen</span>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Reaction Code ID</label>
@@ -477,6 +515,24 @@
             <h3 id="quiz-modal-title" class="text-xl font-bold uppercase text-white">Add Quiz</h3>
             <form id="quiz-form" onsubmit="submitQuiz(event)" class="space-y-4">
                 <input type="hidden" id="quiz-edit-id">
+
+                <!-- JSON File Upload Section -->
+                <div class="p-4 rounded-xl bg-slate-950/40 border border-white/5 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] uppercase font-bold tracking-widest text-slate-400 flex items-center gap-1.5 font-semibold">
+                            <span class="material-symbols-outlined text-xs text-cyan-400">upload_file</span>
+                            Quick Import JSON
+                        </span>
+                        <span class="text-[9px] text-slate-500 font-mono">Format: {"key": "value", ...}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="quiz-json-upload" accept=".json" class="hidden" onchange="handleGenericJsonUpload(event, 'quiz')">
+                        <button type="button" onclick="document.getElementById('quiz-json-upload').click()" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-900/40 text-[10px] font-bold uppercase px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-xs">attach_file</span> Choose JSON File
+                        </button>
+                        <span id="quiz-json-status" class="text-[10px] text-slate-500 italic">No file chosen</span>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Associated Chapter</label>
                     <select id="quiz-chapter-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
@@ -509,6 +565,24 @@
             <h3 id="course-modal-title" class="text-xl font-bold uppercase text-white">Add Course</h3>
             <form id="course-form" onsubmit="submitCourse(event)" class="space-y-4">
                 <input type="hidden" id="course-edit-id">
+
+                <!-- JSON File Upload Section -->
+                <div class="p-4 rounded-xl bg-slate-950/40 border border-white/5 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] uppercase font-bold tracking-widest text-slate-400 flex items-center gap-1.5 font-semibold">
+                            <span class="material-symbols-outlined text-xs text-cyan-400">upload_file</span>
+                            Quick Import JSON
+                        </span>
+                        <span class="text-[9px] text-slate-500 font-mono">Format: {"key": "value", ...}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="course-json-upload" accept=".json" class="hidden" onchange="handleGenericJsonUpload(event, 'course')">
+                        <button type="button" onclick="document.getElementById('course-json-upload').click()" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-900/40 text-[10px] font-bold uppercase px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-xs">attach_file</span> Choose JSON File
+                        </button>
+                        <span id="course-json-status" class="text-[10px] text-slate-500 italic">No file chosen</span>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Course Title</label>
                     <input type="text" id="course-title-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required>
@@ -556,6 +630,24 @@
             <h3 id="module-modal-title" class="text-xl font-bold uppercase text-white">Add Module</h3>
             <form id="module-form" onsubmit="submitModule(event)" class="space-y-4">
                 <input type="hidden" id="module-edit-id">
+
+                <!-- JSON File Upload Section -->
+                <div class="p-4 rounded-xl bg-slate-950/40 border border-white/5 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] uppercase font-bold tracking-widest text-slate-400 flex items-center gap-1.5 font-semibold">
+                            <span class="material-symbols-outlined text-xs text-cyan-400">upload_file</span>
+                            Quick Import JSON
+                        </span>
+                        <span class="text-[9px] text-slate-500 font-mono">Format: {"key": "value", ...}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="module-json-upload" accept=".json" class="hidden" onchange="handleGenericJsonUpload(event, 'module')">
+                        <button type="button" onclick="document.getElementById('module-json-upload').click()" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-900/40 text-[10px] font-bold uppercase px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-xs">attach_file</span> Choose JSON File
+                        </button>
+                        <span id="module-json-status" class="text-[10px] text-slate-500 italic">No file chosen</span>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Parent Course</label>
                     <select id="module-course-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
@@ -586,6 +678,24 @@
             <h3 id="lesson-modal-title" class="text-xl font-bold uppercase text-white">Add Lesson</h3>
             <form id="lesson-form" onsubmit="submitLesson(event)" class="space-y-4">
                 <input type="hidden" id="lesson-edit-id">
+
+                <!-- JSON File Upload Section -->
+                <div class="p-4 rounded-xl bg-slate-950/40 border border-white/5 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] uppercase font-bold tracking-widest text-slate-400 flex items-center gap-1.5 font-semibold">
+                            <span class="material-symbols-outlined text-xs text-cyan-400">upload_file</span>
+                            Quick Import JSON
+                        </span>
+                        <span class="text-[9px] text-slate-500 font-mono">Format: {"key": "value", ...}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="lesson-json-upload" accept=".json" class="hidden" onchange="handleGenericJsonUpload(event, 'lesson')">
+                        <button type="button" onclick="document.getElementById('lesson-json-upload').click()" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-900/40 text-[10px] font-bold uppercase px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-xs">attach_file</span> Choose JSON File
+                        </button>
+                        <span id="lesson-json-status" class="text-[10px] text-slate-500 italic">No file chosen</span>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Parent Chapter</label>
                     <select id="lesson-chapter-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
@@ -632,6 +742,24 @@
             <h3 id="resource-modal-title" class="text-xl font-bold uppercase text-white">Add Resource</h3>
             <form id="resource-form" onsubmit="submitResource(event)" class="space-y-4">
                 <input type="hidden" id="resource-edit-id">
+
+                <!-- JSON File Upload Section -->
+                <div class="p-4 rounded-xl bg-slate-950/40 border border-white/5 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] uppercase font-bold tracking-widest text-slate-400 flex items-center gap-1.5 font-semibold">
+                            <span class="material-symbols-outlined text-xs text-cyan-400">upload_file</span>
+                            Quick Import JSON
+                        </span>
+                        <span class="text-[9px] text-slate-500 font-mono">Format: {"key": "value", ...}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="resource-json-upload" accept=".json" class="hidden" onchange="handleGenericJsonUpload(event, 'resource')">
+                        <button type="button" onclick="document.getElementById('resource-json-upload').click()" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-900/40 text-[10px] font-bold uppercase px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-xs">attach_file</span> Choose JSON File
+                        </button>
+                        <span id="resource-json-status" class="text-[10px] text-slate-500 italic">No file chosen</span>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Parent Lesson</label>
                     <select id="resource-lesson-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary" required></select>
@@ -1015,6 +1143,171 @@
         return null;
     }
 
+    function resetJsonUpload(prefix) {
+        const jsonInput = document.getElementById(`${prefix}-json-upload`);
+        if (jsonInput) jsonInput.value = '';
+        const jsonStatus = document.getElementById(`${prefix}-json-status`);
+        if (jsonStatus) {
+            jsonStatus.textContent = 'No file chosen';
+            jsonStatus.className = 'text-[10px] text-slate-500 italic';
+        }
+    }
+
+    function handleGenericJsonUpload(event, prefix) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const statusEl = document.getElementById(`${prefix}-json-status`);
+        if (statusEl) {
+            statusEl.textContent = `Reading ${file.name}...`;
+            statusEl.className = "text-[10px] text-cyan-400 italic";
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                let importedCount = 0;
+
+                const textareaMapping = {
+                    notes: 'ch-notes-textarea',
+                    key_points: 'ch-keypoints-textarea',
+                    formulas: 'ch-formulas-textarea',
+                    reactions: 'ch-reactions-textarea',
+                    experiment_content: 'ch-experiment-content-textarea'
+                };
+
+                function setInputValue(fieldName, value) {
+                    const field = mapTopicToField(fieldName);
+                    if (prefix === 'ch' && field && textareaMapping[field]) {
+                        const textarea = document.getElementById(textareaMapping[field]);
+                        if (textarea) {
+                            textarea.value = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+                            updateCharCount(field);
+                            importedCount++;
+                            return true;
+                        }
+                    }
+
+                    const possibleIds = [
+                        `${prefix}-${fieldName.toLowerCase().replace(/_/g, '')}-input`,
+                        `${prefix}-${fieldName.toLowerCase().replace(/_/g, '-')}-input`,
+                        `${prefix}-${fieldName.toLowerCase().replace(/_/g, '')}-select`,
+                        `${prefix}-${fieldName.toLowerCase().replace(/_/g, '-')}-select`,
+                        `${prefix}-${fieldName.toLowerCase().replace(/_/g, '')}`,
+                        `${prefix}-${fieldName.toLowerCase().replace(/_/g, '-')}`
+                    ];
+                    
+                    let element = null;
+                    for (const id of possibleIds) {
+                        element = document.getElementById(id);
+                        if (element) break;
+                    }
+                    
+                    if (!element) {
+                        const modal = document.getElementById(`modal-${prefix === 'ch' ? 'chapter' : prefix}`);
+                        if (modal) {
+                            const normalizedField = fieldName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                            const inputs = modal.querySelectorAll('input, textarea, select');
+                            for (const input of inputs) {
+                                const inputIdNormalized = input.id.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                if (inputIdNormalized.includes(normalizedField) && !input.id.includes('edit-id') && !input.id.includes('upload')) {
+                                    element = input;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (element) {
+                        if (element.tagName === 'SELECT') {
+                            const valStr = String(value).trim().toLowerCase();
+                            let matched = false;
+                            for (const opt of element.options) {
+                                if (opt.value.toLowerCase() === valStr || opt.text.toLowerCase().includes(valStr)) {
+                                    element.value = opt.value;
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                            if (!matched && element.options.length > 0) {
+                                element.value = value;
+                            }
+                        } else {
+                            element.value = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+                        }
+                        
+                        element.dispatchEvent(new Event('input', { bubbles: true }));
+                        element.dispatchEvent(new Event('change', { bubbles: true }));
+                        importedCount++;
+                        return true;
+                    }
+                    
+                    if (prefix === 'lesson' && (fieldName.toLowerCase() === 'content' || fieldName.toLowerCase() === 'text')) {
+                        if (quillEditor) {
+                            quillEditor.root.innerHTML = String(value);
+                            importedCount++;
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                if (Array.isArray(data)) {
+                    let isAlternatingArray = true;
+                    for (let i = 0; i < data.length; i++) {
+                        if (typeof data[i] !== 'string' && typeof data[i] !== 'number') {
+                            isAlternatingArray = false;
+                            break;
+                        }
+                    }
+
+                    if (isAlternatingArray && data.length % 2 === 0) {
+                        for (let i = 0; i < data.length; i += 2) {
+                            setInputValue(String(data[i]), data[i+1]);
+                        }
+                    } else {
+                        data.forEach(item => {
+                            if (item && typeof item === 'object') {
+                                const topicKey = Object.keys(item).find(k => ['topic', 'title', 'name', 'key', 'field'].includes(k.toLowerCase()));
+                                const contentKey = Object.keys(item).find(k => ['content', 'value', 'text', 'body', 'desc', 'description'].includes(k.toLowerCase()));
+                                if (topicKey && contentKey) {
+                                    setInputValue(item[topicKey], item[contentKey]);
+                                } else {
+                                    for (const [key, val] of Object.entries(item)) {
+                                        setInputValue(key, val);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } else if (data && typeof data === 'object') {
+                    for (const [key, val] of Object.entries(data)) {
+                        setInputValue(key, val);
+                    }
+                }
+
+                if (statusEl) {
+                    if (importedCount > 0) {
+                        statusEl.textContent = `Successfully imported ${importedCount} fields!`;
+                        statusEl.className = "text-[10px] text-green-400 font-bold";
+                    } else {
+                        statusEl.textContent = "No matching fields found in JSON.";
+                        statusEl.className = "text-[10px] text-amber-400 font-bold";
+                    }
+                }
+
+            } catch (err) {
+                console.error(err);
+                if (statusEl) {
+                    statusEl.textContent = "Failed to parse JSON file.";
+                    statusEl.className = "text-[10px] text-rose-400 font-bold";
+                }
+            }
+        };
+        reader.readAsText(file);
+    }
+
     async function openChapterModal(ch = null) {
         await populateCoursesDropdown('ch-course-select');
         await populateChapterModulesDropdown();
@@ -1049,13 +1342,7 @@
             document.getElementById('ch-experiment-content-textarea').value = '';
             updateAllCharCounts();
         }
-        const jsonInput = document.getElementById('ch-json-upload');
-        if (jsonInput) jsonInput.value = '';
-        const jsonStatus = document.getElementById('ch-json-status');
-        if (jsonStatus) {
-            jsonStatus.textContent = 'No file chosen';
-            jsonStatus.className = 'text-[10px] text-slate-500 italic';
-        }
+        resetJsonUpload('ch');
         switchChContentEditorTab('notes');
         document.getElementById('modal-chapter').classList.remove('hidden');
     }
@@ -1182,6 +1469,7 @@
             document.getElementById('experiment-form').reset();
             document.getElementById('exp-edit-id').value = '';
         }
+        resetJsonUpload('exp');
         document.getElementById('modal-experiment').classList.remove('hidden');
     }
 
@@ -1284,6 +1572,7 @@
             document.getElementById('reaction-form').reset();
             document.getElementById('rxn-id-input').disabled = false;
         }
+        resetJsonUpload('rxn');
         document.getElementById('modal-reaction').classList.remove('hidden');
     }
 
@@ -1386,6 +1675,7 @@
             document.getElementById('quiz-form').reset();
             document.getElementById('quiz-edit-id').value = '';
         }
+        resetJsonUpload('quiz');
         document.getElementById('modal-quiz').classList.remove('hidden');
     }
 
@@ -1487,6 +1777,7 @@
             document.getElementById('course-form').reset();
             document.getElementById('course-edit-id').value = '';
         }
+        resetJsonUpload('course');
         document.getElementById('modal-course').classList.remove('hidden');
     }
 
@@ -1609,6 +1900,7 @@
             document.getElementById('module-form').reset();
             document.getElementById('module-edit-id').value = '';
         }
+        resetJsonUpload('module');
         document.getElementById('modal-module').classList.remove('hidden');
     }
 
@@ -1733,6 +2025,7 @@
             document.getElementById('lesson-edit-id').value = '';
             quillEditor.root.innerHTML = '';
         }
+        resetJsonUpload('lesson');
         document.getElementById('modal-lesson').classList.remove('hidden');
     }
 
@@ -1851,6 +2144,7 @@
             document.getElementById('resource-form').reset();
             document.getElementById('resource-edit-id').value = '';
         }
+        resetJsonUpload('resource');
         document.getElementById('modal-resource').classList.remove('hidden');
     }
 
