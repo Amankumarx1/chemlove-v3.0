@@ -309,6 +309,24 @@
                         <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500">Curriculum Content Editors</label>
                         <span class="text-[9px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded font-medium">⚠️ Unsaved changes warning: click Save Chapter to persist</span>
                     </div>
+
+                    <!-- JSON File Upload Section -->
+                    <div class="p-4 rounded-xl bg-slate-950/40 border border-white/5 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] uppercase font-bold tracking-widest text-slate-400 flex items-center gap-1.5 font-semibold">
+                                <span class="material-symbols-outlined text-xs text-cyan-400">upload_file</span>
+                                Quick Import JSON
+                            </span>
+                            <span class="text-[9px] text-slate-500 font-mono">Format: {"topic": "content", ...} or [{"topic": "...", "content": "..."}]</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <input type="file" id="ch-json-upload" accept=".json" class="hidden" onchange="handleChapterJsonUpload(event)">
+                            <button type="button" onclick="document.getElementById('ch-json-upload').click()" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-900/40 text-[10px] font-bold uppercase px-4 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-xs">attach_file</span> Choose JSON File
+                            </button>
+                            <span id="ch-json-status" class="text-[10px] text-slate-500 italic">No file chosen</span>
+                        </div>
+                    </div>
                     
                     <!-- Content Tab Navigation -->
                     <div class="flex flex-wrap gap-1 p-1 rounded-xl bg-slate-950/60 border border-white/5">
@@ -900,6 +918,103 @@
         ['notes', 'key_points', 'formulas', 'reactions', 'experiment_content'].forEach(updateCharCount);
     }
 
+    function handleChapterJsonUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const statusEl = document.getElementById('ch-json-status');
+        statusEl.textContent = `Reading ${file.name}...`;
+        statusEl.className = "text-[10px] text-cyan-400 italic";
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                let importedCount = 0;
+
+                const textareaMapping = {
+                    notes: 'ch-notes-textarea',
+                    key_points: 'ch-keypoints-textarea',
+                    formulas: 'ch-formulas-textarea',
+                    reactions: 'ch-reactions-textarea',
+                    experiment_content: 'ch-experiment-content-textarea'
+                };
+
+                function setField(topic, content) {
+                    const field = mapTopicToField(topic);
+                    if (field && textareaMapping[field]) {
+                        const textarea = document.getElementById(textareaMapping[field]);
+                        if (textarea) {
+                            textarea.value = typeof content === 'object' ? JSON.stringify(content, null, 2) : String(content);
+                            updateCharCount(field);
+                            importedCount++;
+                        }
+                    }
+                }
+
+                if (Array.isArray(data)) {
+                    let isAlternatingArray = true;
+                    for (let i = 0; i < data.length; i++) {
+                        if (typeof data[i] !== 'string') {
+                            isAlternatingArray = false;
+                            break;
+                        }
+                    }
+
+                    if (isAlternatingArray && data.length % 2 === 0) {
+                        for (let i = 0; i < data.length; i += 2) {
+                            setField(data[i], data[i+1]);
+                        }
+                    } else {
+                        data.forEach(item => {
+                            if (item && typeof item === 'object') {
+                                const topicKey = Object.keys(item).find(k => ['topic', 'title', 'name', 'key'].includes(k.toLowerCase()));
+                                const contentKey = Object.keys(item).find(k => ['content', 'value', 'text', 'body'].includes(k.toLowerCase()));
+                                if (topicKey && contentKey) {
+                                    setField(item[topicKey], item[contentKey]);
+                                } else {
+                                    const keys = Object.keys(item);
+                                    if (keys.length >= 2) {
+                                        setField(item[keys[0]], item[keys[1]]);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } else if (data && typeof data === 'object') {
+                    for (const [key, val] of Object.entries(data)) {
+                        setField(key, val);
+                    }
+                }
+
+                if (importedCount > 0) {
+                    statusEl.textContent = `Successfully imported ${importedCount} topics!`;
+                    statusEl.className = "text-[10px] text-green-400 font-bold";
+                } else {
+                    statusEl.textContent = "No matching topics/fields found in JSON.";
+                    statusEl.className = "text-[10px] text-amber-400 font-bold";
+                }
+
+            } catch (err) {
+                console.error(err);
+                statusEl.textContent = "Failed to parse JSON file.";
+                statusEl.className = "text-[10px] text-rose-400 font-bold";
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function mapTopicToField(topic) {
+        if (!topic) return null;
+        const clean = String(topic).toLowerCase().replace(/_/g, ' ').trim();
+        if (clean.includes('note') || clean === 'revision notes') return 'notes';
+        if (clean.includes('key point') || clean.includes('keypoints') || clean.includes('key_points')) return 'key_points';
+        if (clean.includes('formula')) return 'formulas';
+        if (clean.includes('reaction')) return 'reactions';
+        if (clean.includes('experiment') || clean.includes('lab') || clean.includes('theory') || clean.includes('aim')) return 'experiment_content';
+        return null;
+    }
+
     async function openChapterModal(ch = null) {
         await populateCoursesDropdown('ch-course-select');
         await populateChapterModulesDropdown();
@@ -933,6 +1048,13 @@
             document.getElementById('ch-reactions-textarea').value = '';
             document.getElementById('ch-experiment-content-textarea').value = '';
             updateAllCharCounts();
+        }
+        const jsonInput = document.getElementById('ch-json-upload');
+        if (jsonInput) jsonInput.value = '';
+        const jsonStatus = document.getElementById('ch-json-status');
+        if (jsonStatus) {
+            jsonStatus.textContent = 'No file chosen';
+            jsonStatus.className = 'text-[10px] text-slate-500 italic';
         }
         switchChContentEditorTab('notes');
         document.getElementById('modal-chapter').classList.remove('hidden');
