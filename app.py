@@ -32,45 +32,21 @@ google = oauth.register(
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def parse_mysql_url(url):
-    """Parse mysql://user:password@host:port/database URL."""
-    if not url.startswith("mysql://"):
-        raise ValueError("Invalid MySQL URL format. Must start with mysql://")
-    
-    rem = url[8:]
-    if "@" in rem:
-        auth, host_port_db = rem.split("@", 1)
-        if ":" in auth:
-            user, password = auth.split(":", 1)
-        else:
-            user = auth
-            password = ""
-    else:
-        user = "root"
-        password = ""
-        host_port_db = rem
-        
-    if "/" in host_port_db:
-        host_port, database = host_port_db.split("/", 1)
-    else:
-        host_port = host_port_db
-        database = ""
-        
-    if "?" in database:
-        database = database.split("?", 1)[0]
-        
-    if ":" in host_port:
-        host, port = host_port.split(":", 1)
-        port = int(port)
-    else:
-        host = host_port
-        port = 3306
-        
+    """Parse mysql://user:password@host:port/database URL using standard urllib.parse."""
     import urllib.parse
+    parsed = urllib.parse.urlparse(url)
+    
+    # Extract database name (path without leading slash)
+    database = parsed.path.lstrip('/')
+    
+    # Extract port
+    port = parsed.port if parsed.port is not None else 3306
+    
     return {
-        "host": host,
+        "host": parsed.hostname or "localhost",
         "port": port,
-        "user": urllib.parse.unquote(user),
-        "password": urllib.parse.unquote(password),
+        "user": urllib.parse.unquote(parsed.username or "root"),
+        "password": urllib.parse.unquote(parsed.password or ""),
         "database": database
     }
 
