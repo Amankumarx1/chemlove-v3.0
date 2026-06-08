@@ -8,8 +8,50 @@ from functools import wraps
 from dotenv import load_dotenv
 load_dotenv()
 
-import mysql.connector
-from mysql.connector.pooling import MySQLConnectionPool
+try:
+    import mysql.connector
+    from mysql.connector.pooling import MySQLConnectionPool
+    HAS_NATIVE_MYSQL = True
+except (ImportError, Exception):
+    import pymysql
+    pymysql.install_as_MySQLdb()
+    
+    class MockConnection:
+        def __init__(self, conn):
+            self._conn = conn
+            
+        def cursor(self, dictionary=True):
+            if dictionary:
+                import pymysql.cursors
+                return self._conn.cursor(pymysql.cursors.DictCursor)
+            return self._conn.cursor()
+            
+        def commit(self):
+            self._conn.commit()
+            
+        def rollback(self):
+            self._conn.rollback()
+            
+        def close(self):
+            self._conn.close()
+
+    class MockMySQLConnectionPool:
+        def __init__(self, pool_name, pool_size, **kwargs):
+            self.config = kwargs
+            
+        def get_connection(self):
+            import pymysql
+            return MockConnection(pymysql.connect(
+                host=self.config.get("host", "localhost"),
+                user=self.config.get("user", "root"),
+                password=self.config.get("password", ""),
+                database=self.config.get("database", "chemlove"),
+                port=self.config.get("port", 3306),
+                autocommit=False
+            ))
+            
+    MySQLConnectionPool = MockMySQLConnectionPool
+    HAS_NATIVE_MYSQL = False
 from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from authlib.integrations.flask_client import OAuth
