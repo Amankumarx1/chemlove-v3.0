@@ -836,6 +836,11 @@ def redirect_by_role(user):
 # PUBLIC ROUTES
 # ============================================================
 
+@app.route('/favicon.ico')
+def favicon():
+    return app.send_static_file('img/favicon.png')
+
+
 @app.route('/')
 def home():
     return render_template('landing/index.html', current_user=get_current_user())
