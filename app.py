@@ -261,6 +261,33 @@ def init_db():
                     conn.execute(f"ALTER TABLE chapter_progress ADD COLUMN {col} {col_def}")
                 except Exception:
                     pass  # Column already exists
+
+            # Notifications Multi-Filter Schema Update
+            v5_notification_cols = {
+                "target_role": "VARCHAR(50) DEFAULT 'all'",
+                "target_institution": "VARCHAR(255) DEFAULT 'all'",
+                "target_class_level": "VARCHAR(50) DEFAULT 'all'",
+            }
+            for col, col_def in v5_notification_cols.items():
+                try:
+                    conn.execute(f"ALTER TABLE notifications ADD COLUMN {col} {col_def}")
+                except Exception:
+                    pass
+            
+            # Create notification_reads table
+            try:
+                conn.execute("""
+                CREATE TABLE IF NOT EXISTS notification_reads (
+                    user_id INT NOT NULL,
+                    notification_id INT NOT NULL,
+                    read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (user_id, notification_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE
+                )
+                """)
+            except Exception as e:
+                print(f"[DATABASE] Error creating notification_reads: {e}")
                     
         print("[DATABASE] MySQL connection and Guided Learning V4 schemas verified successfully.")
     except Exception as e:
@@ -5351,6 +5378,67 @@ def admin_communications():
     return render_template('admin/communications.html', current_user=user, announcements=announcements, active_tab='communications')
 
 
+@app.route('/admin/notifications', methods=['GET', 'POST'])
+@admin_required
+def admin_notifications():
+    user = get_current_user()
+    if request.method == 'POST':
+        action = request.form.get('action')
+        notif_id = request.form.get('id')
+        if action == 'delete':
+            try:
+                with get_db() as conn:
+                    conn.execute("DELETE FROM notifications WHERE id = %s", (notif_id,))
+                log_audit("delete_notification", f"Deleted notification ID: {notif_id}")
+                flash("Notification deleted.", "success")
+            except Exception as e:
+                flash(f"Error: {e}", "error")
+        elif action == 'create':
+            title = request.form.get('title')
+            message = request.form.get('message')
+            target_role = request.form.get('target_role', 'all')
+            target_institution = request.form.get('target_institution', 'all')
+            target_class_level = request.form.get('target_class_level', 'all')
+            if title and message:
+                try:
+                    with get_db() as conn:
+                        conn.execute(
+                            """
+                            INSERT INTO notifications 
+                            (sender_id, title, message, target_role, target_institution, target_class_level, created_at) 
+                            VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                            """,
+                            (user['id'], title, message, target_role, target_institution, target_class_level)
+                        )
+                    log_audit("create_notification", f"Created notification: {title}")
+                    flash("Notification broadcast successfully.", "success")
+                except Exception as e:
+                    flash(f"Error: {e}", "error")
+        return redirect(url_for('admin_notifications'))
+
+    notifications = []
+    schools = []
+    try:
+        with get_db() as conn:
+            school_rows = conn.execute("SELECT DISTINCT institution FROM users WHERE institution IS NOT NULL AND institution != ''").fetchall()
+            schools = [r['institution'] for r in school_rows]
+            
+            notif_rows = conn.execute("""
+                SELECT n.*, u.name AS sender_name 
+                FROM notifications n 
+                JOIN users u ON n.sender_id = u.id 
+                ORDER BY n.created_at DESC
+            """).fetchall()
+            notifications = [dict(r) for r in notif_rows]
+            for n in notifications:
+                if isinstance(n.get('created_at'), datetime):
+                    n['created_at'] = n['created_at'].strftime('%Y-%m-%d %H:%M')
+    except Exception as e:
+        print(f"Error loading admin notifications: {e}")
+        
+    return render_template('admin/notifications.html', current_user=user, notifications=notifications, schools=schools, active_tab='notifications')
+
+
 # ============================================================
 # ADMIN — ANALYTICS
 # ============================================================
@@ -6582,6 +6670,101 @@ def api_announcements():
         with get_db() as conn:
             conn.execute("DELETE FROM announcements WHERE id = %s", (aid,))
         return jsonify({"ok": True})
+
+
+# ============================================================
+# API — NOTIFICATIONS
+# ============================================================
+
+@app.route('/api/notifications', methods=['GET'])
+def api_notifications():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    role = user['role']
+    institution = user['institution']
+    class_level = user.get('class_level') or user.get('classLevel') or 'all'
+    if not class_level:
+        class_level = 'all'
+
+    try:
+        with get_db() as conn:
+            rows = conn.execute("""
+                SELECT n.*, u.name AS sender_name,
+                       (CASE WHEN nr.user_id IS NOT NULL THEN 1 ELSE 0 END) AS is_read
+                FROM notifications n
+                JOIN users u ON n.sender_id = u.id
+                LEFT JOIN notification_reads nr ON n.id = nr.notification_id AND nr.user_id = %s
+                WHERE (n.target_role = 'all' OR n.target_role = %s)
+                  AND (n.target_institution = 'all' OR n.target_institution = %s)
+                  AND (n.target_class_level = 'all' OR n.target_class_level = %s)
+                ORDER BY n.created_at DESC
+                LIMIT 50
+            """, (user['id'], role, institution, class_level)).fetchall()
+            
+            notifications = [dict(r) for r in rows]
+            for n in notifications:
+                if isinstance(n.get('created_at'), datetime):
+                    n['created_at'] = n['created_at'].strftime('%Y-%m-%d %H:%M')
+            
+            unread_count = sum(1 for n in notifications if not n['is_read'])
+            
+            return jsonify({
+                "notifications": notifications,
+                "unread_count": unread_count
+            })
+    except Exception as e:
+        print(f"Error fetching notifications: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/notifications/read', methods=['POST'])
+def api_notifications_read():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    payload = request.get_json(silent=True) or {}
+    notif_id = payload.get("id")
+    mark_all = payload.get("all", False)
+    
+    try:
+        with get_db() as conn:
+            if mark_all:
+                role = user['role']
+                institution = user['institution']
+                class_level = user.get('class_level') or user.get('classLevel') or 'all'
+                if not class_level:
+                    class_level = 'all'
+                
+                notif_rows = conn.execute("""
+                    SELECT n.id 
+                    FROM notifications n
+                    LEFT JOIN notification_reads nr ON n.id = nr.notification_id AND nr.user_id = %s
+                    WHERE nr.user_id IS NULL
+                      AND (n.target_role = 'all' OR n.target_role = %s)
+                      AND (n.target_institution = 'all' OR n.target_institution = %s)
+                      AND (n.target_class_level = 'all' OR n.target_class_level = %s)
+                """, (user['id'], role, institution, class_level)).fetchall()
+                
+                for row in notif_rows:
+                    conn.execute("""
+                        INSERT IGNORE INTO notification_reads (user_id, notification_id)
+                        VALUES (%s, %s)
+                    """, (user['id'], row['id']))
+            elif notif_id:
+                conn.execute("""
+                    INSERT IGNORE INTO notification_reads (user_id, notification_id)
+                    VALUES (%s, %s)
+                """, (user['id'], notif_id))
+            else:
+                return jsonify({"error": "Missing notification id"}), 400
+                
+            return jsonify({"ok": True})
+    except Exception as e:
+        print(f"Error marking notification read: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # ============================================================

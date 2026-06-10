@@ -9,6 +9,7 @@
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS permissions;
 DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS notification_reads;
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS teacher_courses;
 DROP TABLE IF EXISTS course_enrollments;
@@ -433,14 +434,26 @@ CREATE TABLE certificates (
 );
 
 CREATE TABLE notifications (
-    id           INT AUTO_INCREMENT PRIMARY KEY,
-    sender_id    INT NOT NULL,
-    recipient_id INT NULL,
-    target_group VARCHAR(100) NULL,
-    title        VARCHAR(255) NOT NULL,
-    message      TEXT NOT NULL,
-    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    id                 INT AUTO_INCREMENT PRIMARY KEY,
+    sender_id          INT NOT NULL,
+    recipient_id       INT NULL,
+    target_group       VARCHAR(100) NULL,
+    target_role        VARCHAR(50) DEFAULT 'all',
+    target_institution VARCHAR(255) DEFAULT 'all',
+    target_class_level VARCHAR(50) DEFAULT 'all',
+    title              VARCHAR(255) NOT NULL,
+    message            TEXT NOT NULL,
+    created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE notification_reads (
+    user_id         INT NOT NULL,
+    notification_id INT NOT NULL,
+    read_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, notification_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE
 );
 
 
