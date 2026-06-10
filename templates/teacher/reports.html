@@ -8,8 +8,43 @@
         <p class="text-slate-400 mt-2 text-sm">Review student assignment submissions, approve laboratory experiments, and award mastery grades.</p>
     </div>
 
+    <!-- Telemetry Reports & Classroom Analytics -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+        <!-- Quiz averages -->
+        <div class="glass-morphism p-6 rounded-3xl space-y-6">
+            <div class="flex justify-between items-center border-b border-white/5 pb-4">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">analytics</span>
+                    Classroom Quiz Mastery
+                </h3>
+                <span class="text-[8px] font-black uppercase text-primary bg-primary-light text-on-primary px-2.5 py-1 rounded-lg">Telemetry Panel</span>
+            </div>
+            <div id="quiz-analytics-container" class="space-y-4">
+                <div class="text-xs text-slate-500 py-4 text-center animate-pulse">Retrieving quiz data...</div>
+            </div>
+        </div>
+
+        <!-- Attendance Trends -->
+        <div class="glass-morphism p-6 rounded-3xl space-y-6">
+            <div class="flex justify-between items-center border-b border-white/5 pb-4">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-tertiary">calendar_today</span>
+                    Weekly Attendance Trends
+                </h3>
+                <span class="text-[8px] font-black uppercase text-tertiary bg-tertiary/10 px-2.5 py-1 rounded-lg">Realtime Stream</span>
+            </div>
+            <div id="attendance-analytics-container" class="flex flex-col justify-end h-48">
+                <div class="text-xs text-slate-500 py-4 text-center animate-pulse my-auto">Retrieving attendance data...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Submissions List -->
-    <div id="submissions-list" class="space-y-4 pb-24 mt-8">
+    <div id="submissions-list" class="space-y-4 pb-24 mt-12">
+        <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">folder_open</span>
+            Pending Submissions Record
+        </h3>
         <!-- Spinner -->
         <div class="flex justify-center py-12" id="report-spinner">
             <div class="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
@@ -80,6 +115,89 @@
         } catch (e) { console.error(e); }
     }
 
-    document.addEventListener('DOMContentLoaded', loadSubmissions);
+    async function loadAnalytics() {
+        try {
+            const res = await fetch('/api/teacher/analytics');
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            // 1. Render Quiz Mastery
+            const quizContainer = document.getElementById('quiz-analytics-container');
+            quizContainer.innerHTML = '';
+            if (!data.quizzes || data.quizzes.length === 0) {
+                quizContainer.innerHTML = '<div class="text-xs text-slate-500 py-4 text-center">No quiz evaluations found.</div>';
+            } else {
+                data.quizzes.forEach(item => {
+                    const pct = Math.round(item.avg_score);
+                    quizContainer.innerHTML += `
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs font-bold uppercase">
+                                <span class="text-slate-300 truncate max-w-[200px]">${item.classroom_name}</span>
+                                <span class="text-cyan-400">${pct}% Avg Score</span>
+                            </div>
+                            <div class="w-full bg-slate-900/50 h-2.5 rounded-full overflow-hidden border border-white/5">
+                                <div class="h-full bg-gradient-to-r from-primary to-primary-container shadow-[0_0_8px_rgba(6,182,212,0.4)]" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // 2. Render Attendance trends as columns inside an SVG
+            const attContainer = document.getElementById('attendance-analytics-container');
+            attContainer.innerHTML = '';
+            
+            let svgContent = `
+                <svg viewBox="0 0 500 160" class="w-full h-full">
+                    <!-- Grid Lines -->
+                    <line x1="40" y1="20" x2="480" y2="20" stroke="rgba(255,255,255,0.05)" stroke-dasharray="4" />
+                    <line x1="40" y1="70" x2="480" y2="70" stroke="rgba(255,255,255,0.05)" stroke-dasharray="4" />
+                    <line x1="40" y1="120" x2="480" y2="120" stroke="rgba(255,255,255,0.05)" stroke-dasharray="4" />
+                    
+                    <text x="10" y="24" fill="rgba(255,255,255,0.3)" font-size="9" font-weight="bold">100%</text>
+                    <text x="10" y="74" fill="rgba(255,255,255,0.3)" font-size="9" font-weight="bold">50%</text>
+                    <text x="10" y="124" fill="rgba(255,255,255,0.3)" font-size="9" font-weight="bold">0%</text>
+            `;
+            
+            const days = data.attendance || [];
+            const barWidth = 32;
+            const gap = 30;
+            const startX = 60;
+            
+            days.forEach((day, index) => {
+                const x = startX + index * (barWidth + gap);
+                const height = 100;
+                
+                const presentH = (day.present_pct / 100) * height;
+                const absentH = (day.absent_pct / 100) * height;
+                
+                const presentY = 120 - presentH;
+                const absentY = presentY - absentH;
+                
+                svgContent += `
+                    <!-- Stacked Bar: Present -->
+                    <rect x="${x}" y="${presentY}" width="${barWidth}" height="${presentH}" rx="3" fill="#4cd7f6" opacity="0.85" />
+                    <!-- Stacked Bar: Absent -->
+                    <rect x="${x}" y="${absentY}" width="${barWidth}" height="${absentH}" rx="3" fill="#ffb0cd" opacity="0.6" />
+                    
+                    <!-- Label -->
+                    <text x="${x + barWidth/2}" y="145" fill="rgba(255,255,255,0.5)" font-size="10" font-weight="bold" text-anchor="middle" class="uppercase">${day.day}</text>
+                    
+                    <!-- Tooltip percentage -->
+                    <text x="${x + barWidth/2}" y="${presentY - 6}" fill="#4cd7f6" font-size="8" font-weight="900" text-anchor="middle">${Math.round(day.present_pct)}%</text>
+                `;
+            });
+            
+            svgContent += `</svg>`;
+            attContainer.innerHTML = svgContent;
+        } catch(e) {
+            console.error("Failed to load telemetry analytics:", e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSubmissions();
+        loadAnalytics();
+    });
 </script>
 {% endblock %}

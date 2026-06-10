@@ -124,6 +124,22 @@
                             {% endif %}
                         </div>
                     </div>
+                    
+                    <!-- Futuristic Avatar Selection -->
+                    <div class="border-t border-white/5 pt-6">
+                        <label class="block font-bold uppercase text-[9px] mb-3 tracking-widest text-slate-500">Select Futuristic Chemistry Avatar / Badge</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 max-w-xl">
+                            {% set avatars = ['science', 'biotech', 'chemistry', 'psychology', 'hub', 'local_fire_department', 'school', 'workspace_premium', 'star', 'military_tech'] %}
+                            {% for av in avatars %}
+                            <button type="button" onclick="selectAvatar('{{ av }}')" id="avatar-choice-{{ av }}" class="avatar-choice-btn p-4 rounded-xl border {% if current_user.avatar == av %}border-primary bg-primary-light/10 text-primary shadow-[0_0_12px_rgba(6,182,212,0.2)]{% else %}border-white/5 bg-[#0e1416] text-slate-400 hover:border-white/10 hover:text-white{% endif %} transition-all flex flex-col items-center justify-center gap-1.5 hover:scale-105">
+                                <span class="material-symbols-outlined text-2xl">{{ av }}</span>
+                                <span class="text-[8px] font-black uppercase tracking-tight">{{ av | replace('_', ' ') }}</span>
+                            </button>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" id="avatar-input" name="avatar" value="{{ current_user.avatar or 'account_circle' }}">
+                    </div>
+
                     <div class="border-t border-white/5 pt-6 flex justify-end">
                         <button type="submit" id="save-btn" class="btn-primary font-bold text-xs uppercase px-8 py-3.5 rounded-xl hover:scale-102 transition-all flex items-center gap-2">
                             <span class="material-symbols-outlined text-sm">sync</span>
@@ -451,6 +467,20 @@
         }
     }
 
+    // Select avatar choice handler
+    function selectAvatar(avatarName) {
+        document.querySelectorAll('.avatar-choice-btn').forEach(btn => {
+            btn.classList.remove('border-primary', 'bg-primary-light/10', 'text-primary', 'shadow-[0_0_12px_rgba(6,182,212,0.2)]');
+            btn.classList.add('border-white/5', 'bg-[#0e1416]', 'text-slate-400');
+        });
+        const activeBtn = document.getElementById('avatar-choice-' + avatarName);
+        if (activeBtn) {
+            activeBtn.classList.remove('border-white/5', 'bg-[#0e1416]', 'text-slate-400');
+            activeBtn.classList.add('border-primary', 'bg-primary-light/10', 'text-primary', 'shadow-[0_0_12px_rgba(6,182,212,0.2)]');
+        }
+        document.getElementById('avatar-input').value = avatarName;
+    }
+
     // Profile Save Form Logic
     const form = document.getElementById('profile-edit-form');
     const saveBtn = document.getElementById('save-btn');
@@ -466,12 +496,13 @@
         const institution = document.getElementById('institution-input').value;
         const mobile = document.getElementById('mobile-input').value;
         const classLevel = document.getElementById('class-level-input').value;
+        const avatar = document.getElementById('avatar-input').value;
         
         try {
             const res = await fetch('/api/profile', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, institution, mobile, classLevel })
+                body: JSON.stringify({ name, institution, mobile, classLevel, avatar })
             });
             const data = await res.json();
             if (data.ok) {
@@ -484,6 +515,15 @@
                 alertBox.className = "mt-4 p-4 rounded-xl text-sm bg-cyan-950/40 border border-cyan-500/30 text-cyan-200 flex items-center gap-2";
                 alertBox.innerHTML = '<span class="material-symbols-outlined text-sm">check_circle</span> Personal telemetry updated successfully.';
                 alertBox.classList.remove('hidden');
+                
+                // Trigger celebratory confetti
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 150,
+                        spread: 80,
+                        origin: { y: 0.6 }
+                    });
+                }
             } else {
                 throw new Error(data.error || 'Failed to update profile');
             }

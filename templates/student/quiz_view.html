@@ -147,6 +147,13 @@
         
         // Award XP via event logging if score is good
         if (percentage >= 50) {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 180,
+                    spread: 90,
+                    origin: { y: 0.6 }
+                });
+            }
             fetch('/api/log_event', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

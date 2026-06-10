@@ -398,7 +398,7 @@
                     <!-- User Menu Dropdown -->
                     <div class="relative" id="admin-user-menu-container">
                         <button id="admin-user-menu-btn" class="flex items-center gap-2 bg-[#0e1416]/40 hover:bg-slate-800/40 border border-white/5 px-3 py-1.5 rounded-xl text-xs font-bold uppercase transition-all shadow-md">
-                            <span class="material-symbols-outlined text-base text-cyan-400">account_circle</span>
+                            <span class="material-symbols-outlined text-base text-cyan-400">{{ current_user.avatar or 'account_circle' }}</span>
                             <span class="text-white hidden md:inline">{{ current_user.name }}</span>
                             <span class="material-symbols-outlined text-[10px] text-slate-500">keyboard_arrow_down</span>
                         </button>

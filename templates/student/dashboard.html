@@ -11,7 +11,7 @@
         <div class="flex items-center gap-5 relative z-10">
             <!-- Neon Stylized Avatar -->
             <div class="relative w-20 h-20 rounded-2xl bg-[#171d1e] border border-primary/30 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.15)] overflow-hidden">
-                <span class="material-symbols-outlined text-5xl text-primary animate-pulse">chemistry</span>
+                <span class="material-symbols-outlined text-5xl text-primary animate-pulse">{{ current_user.avatar or 'chemistry' }}</span>
             </div>
             <div>
                 <div class="inline-flex items-center gap-1.5 bg-primary-light text-primary px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase mb-2">

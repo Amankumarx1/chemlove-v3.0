@@ -1,6 +1,6 @@
 <div class="relative">
     <button id="avatar-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/40 border border-white/5 hover:bg-slate-800/40 hover:scale-105 transition-all duration-300">
-        <span class="material-symbols-outlined text-cyan-400 text-lg">account_circle</span>
+        <span class="material-symbols-outlined text-cyan-400 text-lg">{{ current_user.avatar or 'account_circle' }}</span>
         <span class="font-bold text-sm text-cyan-400 hidden sm:inline">{{ current_user.name }}</span>
         <span class="material-symbols-outlined text-xs text-slate-500">keyboard_arrow_down</span>
     </button>

@@ -1,0 +1,379 @@
+{% extends 'layouts/dashboard_base.html' %}
+
+{% block title %}ChemLove | Equation Balancing Game{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Welcome Header -->
+    <div class="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+        <div>
+            <div class="inline-flex items-center gap-2 bg-primary-container/20 text-primary px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-4">
+                <span class="w-2 h-2 rounded-full bg-primary live-pulse"></span>
+                Interactive Training Simulator
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Equation Balancing Game</h1>
+            <p class="text-slate-400 mt-2 text-sm">Balance chemical coefficients to achieve stoichiometry equilibrium and earn XP.</p>
+        </div>
+        <a href="/student/dashboard" class="flex items-center gap-1 bg-slate-800 border border-white/5 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-700/60 transition-all">
+            <span class="material-symbols-outlined text-sm">arrow_back</span> Return Dashboard
+        </a>
+    </div>
+
+    <!-- Game Deck -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left: Simulator Card -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="glass-morphism p-8 rounded-3xl border border-white/5 bg-[#171d1e]/40 relative overflow-hidden">
+                <div class="absolute -right-24 -top-24 w-60 h-60 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <!-- Game Stage Indicators -->
+                <div class="flex justify-between items-center mb-8">
+                    <span class="text-xs font-black tracking-wider uppercase text-cyan-400 bg-cyan-950/40 px-3 py-1 rounded-lg" id="stage-indicator">Level 1 of 5</span>
+                    <div class="flex gap-1" id="stage-dots">
+                        <!-- stage dots will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Equation Display Area -->
+                <div class="flex flex-col items-center justify-center py-12 px-4 bg-black/20 border border-white/5 rounded-2xl mb-8 min-h-[160px]">
+                    <div class="flex flex-wrap items-center justify-center gap-4 text-2xl md:text-3xl font-black text-white" id="equation-display">
+                        <!-- Equation components with steppers will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Atomic Ledger comparison table -->
+                <div class="space-y-4">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Atomic Ledger Comparison</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="ledger-cards">
+                        <!-- Atom rows will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="mt-8 border-t border-white/5 pt-6 flex justify-between gap-4">
+                    <button onclick="resetCoefficients()" class="bg-slate-800 hover:bg-slate-700/60 border border-white/5 text-slate-300 font-bold text-xs uppercase px-6 py-3 rounded-xl transition-all">
+                        Reset Coefficients
+                    </button>
+                    <button onclick="checkBalanced()" class="btn-primary font-bold text-xs uppercase px-8 py-3 rounded-xl hover:scale-102 transition-all">
+                        Check Equilibrium
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Status / Rules Card -->
+        <div class="space-y-6">
+            <!-- XP Reward Card -->
+            <div id="reward-card" class="glass-morphism p-8 rounded-3xl border border-white/5 bg-[#171d1e]/40 text-center space-y-6">
+                <span class="material-symbols-outlined text-5xl text-amber-400 animate-bounce">workspace_premium</span>
+                <div>
+                    <h4 class="font-bold text-slate-400 uppercase text-xs tracking-widest mb-1">Completing Challenge</h4>
+                    <div class="text-3xl font-black text-white">+40 XP Reward</div>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">Ensure all atom counts on the Reactants side perfectly match the Products side to balance the stoichiometry coefficients.</p>
+            </div>
+
+            <!-- Success modal (Hidden by default) -->
+            <div id="success-card" class="hidden glass-morphism p-8 rounded-3xl border border-emerald-500/20 bg-emerald-950/10 text-center space-y-6">
+                <span class="material-symbols-outlined text-5xl text-emerald-400">check_circle</span>
+                <div>
+                    <h4 class="font-bold text-emerald-300 uppercase text-xs tracking-widest mb-1">Equilibrium Reached</h4>
+                    <div class="text-2xl font-black text-white"> stoichiometrically Perfect!</div>
+                </div>
+                <div class="text-xs text-slate-300" id="success-message">You have successfully solved this level. Ready to proceed to the next formula?</div>
+                <button onclick="nextLevel()" id="next-level-btn" class="w-full btn-primary text-xs font-bold uppercase tracking-widest py-3 rounded-xl block hover:scale-102 transition-all">
+                    Next Challenge
+                </button>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Chemistry equations list
+    const levels = [
+        {
+            equation: "H₂ + O₂ -> H₂O",
+            reactants: [
+                { formula: "H₂", element: "H", multiplier: 2 },
+                { formula: "O₂", element: "O", multiplier: 2 }
+            ],
+            products: [
+                { formula: "H₂O", elements: [{ name: "H", multiplier: 2 }, { name: "O", multiplier: 1 }] }
+            ],
+            balanced: [2, 1, 2], // 2 H₂ + 1 O₂ -> 2 H₂O
+            elements: ["H", "O"]
+        },
+        {
+            equation: "N₂ + H₂ -> NH₃",
+            reactants: [
+                { formula: "N₂", element: "N", multiplier: 2 },
+                { formula: "H₂", element: "H", multiplier: 2 }
+            ],
+            products: [
+                { formula: "NH₃", elements: [{ name: "N", multiplier: 1 }, { name: "H", multiplier: 3 }] }
+            ],
+            balanced: [1, 3, 2], // 1 N₂ + 3 H₂ -> 2 NH₃
+            elements: ["N", "H"]
+        },
+        {
+            equation: "CH₄ + O₂ -> CO₂ + H₂O",
+            reactants: [
+                { formula: "CH₄", elements: [{ name: "C", multiplier: 1 }, { name: "H", multiplier: 4 }] },
+                { formula: "O₂", element: "O", multiplier: 2 }
+            ],
+            products: [
+                { formula: "CO₂", elements: [{ name: "C", multiplier: 1 }, { name: "O", multiplier: 2 }] },
+                { formula: "H₂O", elements: [{ name: "H", multiplier: 2 }, { name: "O", multiplier: 1 }] }
+            ],
+            balanced: [1, 2, 1, 2], // 1 CH₄ + 2 O₂ -> 1 CO₂ + 2 H₂O
+            elements: ["C", "H", "O"]
+        },
+        {
+            equation: "Fe + O₂ -> Fe₂O₃",
+            reactants: [
+                { formula: "Fe", element: "Fe", multiplier: 1 },
+                { formula: "O₂", element: "O", multiplier: 2 }
+            ],
+            products: [
+                { formula: "Fe₂O₃", elements: [{ name: "Fe", multiplier: 2 }, { name: "O", multiplier: 3 }] }
+            ],
+            balanced: [4, 3, 2], // 4 Fe + 3 O₂ -> 2 Fe₂O₃
+            elements: ["Fe", "O"]
+        },
+        {
+            equation: "Al + HCl -> AlCl₃ + H₂",
+            reactants: [
+                { formula: "Al", element: "Al", multiplier: 1 },
+                { formula: "HCl", elements: [{ name: "H", multiplier: 1 }, { name: "Cl", multiplier: 1 }] }
+            ],
+            products: [
+                { formula: "AlCl₃", elements: [{ name: "Al", multiplier: 1 }, { name: "Cl", multiplier: 3 }] },
+                { formula: "H₂", element: "H", multiplier: 2 }
+            ],
+            balanced: [2, 6, 2, 3], // 2 Al + 6 HCl -> 2 AlCl₃ + 3 H₂
+            elements: ["Al", "H", "Cl"]
+        }
+    ];
+
+    let currentLevelIdx = 0;
+    let coefficients = []; // stores current coefficients selected by user
+
+    function initLevel() {
+        const level = levels[currentLevelIdx];
+        document.getElementById('stage-indicator').textContent = `Level ${currentLevelIdx + 1} of ${levels.length}`;
+        
+        // Update stage dots
+        const dots = document.getElementById('stage-dots');
+        dots.innerHTML = '';
+        levels.forEach((_, idx) => {
+            dots.innerHTML += `<span class="w-2.5 h-2.5 rounded-full ${idx === currentLevelIdx ? 'bg-cyan-400' : 'bg-slate-700'}"></span>`;
+        });
+
+        // Initialize coefficients to 1
+        const count = level.reactants.length + level.products.length;
+        coefficients = Array(count).fill(1);
+
+        renderEquation();
+        calculateLedger();
+        
+        // Hide success cards
+        document.getElementById('success-card').classList.add('hidden');
+        document.getElementById('reward-card').classList.remove('hidden');
+    }
+
+    function renderEquation() {
+        const level = levels[currentLevelIdx];
+        const container = document.getElementById('equation-display');
+        container.innerHTML = '';
+
+        let btnIndex = 0;
+
+        // Render reactants
+        level.reactants.forEach((reactant, rIdx) => {
+            if (rIdx > 0) {
+                container.innerHTML += `<span class="text-slate-400 font-black">+</span>`;
+            }
+            container.innerHTML += createStepperHtml(btnIndex, reactant.formula);
+            btnIndex++;
+        });
+
+        // Render arrow
+        container.innerHTML += `<span class="text-cyan-400 font-black">➔</span>`;
+
+        // Render products
+        level.products.forEach((product, pIdx) => {
+            if (pIdx > 0) {
+                container.innerHTML += `<span class="text-slate-400 font-black">+</span>`;
+            }
+            container.innerHTML += createStepperHtml(btnIndex, product.formula);
+            btnIndex++;
+        });
+    }
+
+    function createStepperHtml(idx, formula) {
+        return `
+            <div class="flex flex-col items-center gap-1.5 bg-[#0e1416]/50 p-2.5 rounded-xl border border-white/5">
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="changeCoefficient(${idx}, -1)" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-center text-xs text-slate-300 hover:bg-slate-800 transition-all font-bold">-</button>
+                    <span id="coef-${idx}" class="w-6 text-center text-lg font-black text-cyan-400 font-mono">1</span>
+                    <button type="button" onclick="changeCoefficient(${idx}, 1)" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-center text-xs text-slate-300 hover:bg-slate-800 transition-all font-bold">+</button>
+                </div>
+                <span class="text-sm font-bold tracking-wider text-slate-300 font-mono">${formula}</span>
+            </div>
+        `;
+    }
+
+    function changeCoefficient(idx, delta) {
+        const newVal = Math.max(1, Math.min(10, coefficients[idx] + delta));
+        coefficients[idx] = newVal;
+        document.getElementById(`coef-${idx}`).textContent = newVal;
+        calculateLedger();
+    }
+
+    function resetCoefficients() {
+        coefficients = coefficients.map(() => 1);
+        coefficients.forEach((val, idx) => {
+            const el = document.getElementById(`coef-${idx}`);
+            if (el) el.textContent = val;
+        });
+        calculateLedger();
+    }
+
+    function calculateLedger() {
+        const level = levels[currentLevelIdx];
+        const ledgerCards = document.getElementById('ledger-cards');
+        ledgerCards.innerHTML = '';
+
+        level.elements.forEach(element => {
+            let reactantsCount = 0;
+            let productsCount = 0;
+
+            // Reactants calculation
+            level.reactants.forEach((reactant, rIdx) => {
+                const coef = coefficients[rIdx];
+                if (reactant.element === element) {
+                    reactantsCount += coef * reactant.multiplier;
+                } else if (reactant.elements) {
+                    const match = reactant.elements.find(e => e.name === element);
+                    if (match) {
+                        reactantsCount += coef * match.multiplier;
+                    }
+                }
+            });
+
+            // Products calculation
+            const reactantsOffset = level.reactants.length;
+            level.products.forEach((product, pIdx) => {
+                const coef = coefficients[reactantsOffset + pIdx];
+                if (product.element === element) {
+                    productsCount += coef * product.multiplier;
+                } else if (product.elements) {
+                    const match = product.elements.find(e => e.name === element);
+                    if (match) {
+                        productsCount += coef * match.multiplier;
+                    }
+                }
+            });
+
+            const isMatched = (reactantsCount === productsCount);
+
+            ledgerCards.innerHTML += `
+                <div class="bg-[#171d1e]/30 border ${isMatched ? 'border-emerald-500/20 bg-emerald-950/5' : 'border-white/5'} p-4 rounded-xl flex items-center justify-between transition-all">
+                    <div>
+                        <div class="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Element ${element}</div>
+                        <div class="flex gap-4 items-center">
+                            <span class="text-xs font-bold text-slate-300 uppercase">Reactants: <span class="font-black font-mono ${isMatched ? 'text-emerald-400' : 'text-slate-300'}">${reactantsCount}</span></span>
+                            <span class="text-slate-600 font-bold">|</span>
+                            <span class="text-xs font-bold text-slate-300 uppercase">Products: <span class="font-black font-mono ${isMatched ? 'text-emerald-400' : 'text-slate-300'}">${productsCount}</span></span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="material-symbols-outlined text-2xl ${isMatched ? 'text-emerald-400' : 'text-amber-500'}">
+                            ${isMatched ? 'check_circle' : 'pending'}
+                        </span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function checkBalanced() {
+        const level = levels[currentLevelIdx];
+        let correct = true;
+        
+        // Compare coefficients with balanced coefficients
+        for (let i = 0; i < level.balanced.length; i++) {
+            if (coefficients[i] !== level.balanced[i]) {
+                correct = false;
+                break;
+            }
+        }
+
+        if (correct) {
+            // Success! Trigger short level confetti
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 50,
+                    spread: 60,
+                    origin: { y: 0.7 }
+                });
+            }
+
+            // Show success card
+            document.getElementById('reward-card').classList.add('hidden');
+            const successCard = document.getElementById('success-card');
+            successCard.classList.remove('hidden');
+
+            const nextBtn = document.getElementById('next-level-btn');
+            const msg = document.getElementById('success-message');
+            
+            if (currentLevelIdx === levels.length - 1) {
+                nextBtn.textContent = "Complete Training & Claim XP";
+                msg.textContent = "Excellent work! You have balanced all chemistry formulas successfully.";
+            } else {
+                nextBtn.textContent = "Next Challenge";
+                msg.textContent = " Stoichiometric balance achieved. Ready for the next equation?";
+            }
+        } else {
+            alert("Stoichiometric numbers do not balance yet. Please check the ledger counts below the equation!");
+        }
+    }
+
+    async function nextLevel() {
+        if (currentLevelIdx === levels.length - 1) {
+            // Trigger massive confetti
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 200,
+                    spread: 100,
+                    origin: { y: 0.6 }
+                });
+            }
+
+            // Save complete state and award XP
+            try {
+                const res = await fetch('/api/student/balance-game/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    alert("Training completed! +40 XP has been successfully added to your profile.");
+                    window.location.href = "/student/dashboard";
+                }
+            } catch(e) {
+                console.error("Failed to complete game", e);
+            }
+        } else {
+            currentLevelIdx++;
+            initLevel();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initLevel();
+    });
+</script>
+{% endblock %}

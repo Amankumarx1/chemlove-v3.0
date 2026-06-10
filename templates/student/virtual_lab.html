@@ -119,6 +119,16 @@
                 <!-- Results injected here -->
             </div>
 
+            <!-- 3D Molecular Viewer Card -->
+            <div id="mol-viewer-container" class="hidden border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0 space-y-3">
+                <div class="flex justify-between items-center">
+                    <label class="font-bold text-[9px] uppercase text-cyan-400 tracking-widest">3D Molecular Viewer</label>
+                    <span class="material-symbols-outlined text-xs text-slate-500">deployed_code</span>
+                </div>
+                <div id="mol-canvas" class="w-full h-44 bg-black/60 rounded-xl relative overflow-hidden border border-white/5" style="position: relative;"></div>
+                <p id="mol-viewer-info" class="text-[9px] text-slate-500 font-mono leading-tight uppercase"></p>
+            </div>
+
             <!-- Temperature Gauge -->
             <div class="border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0">
                 <label class="font-bold text-[9px] uppercase text-slate-500 mb-1 tracking-widest">Temperature</label>
@@ -427,6 +437,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://3dmol.org/build/3Dmol-min.js"></script>
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 <script>
     // Tab switching logic
@@ -610,5 +622,51 @@
             if (iArrow) iArrow.classList.remove('rotate-180');
         });
     });
+
+    // ── 3D Molecular Viewer Renderer ──
+    window.render3D = function(compoundName) {
+        const container = document.getElementById('mol-viewer-container');
+        const canvas = document.getElementById('mol-canvas');
+        const info = document.getElementById('mol-viewer-info');
+        
+        if (!container || !canvas) return;
+        
+        container.classList.remove('hidden');
+        info.textContent = `Loading ${compoundName}...`;
+        
+        canvas.innerHTML = '';
+        
+        // Fetch SDF from PubChem PUG REST API
+        const url = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(compoundName)}/SDF?record_type=3d`;
+        
+        fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error("Not found");
+                return res.text();
+            })
+            .then(sdfData => {
+                info.textContent = `${compoundName}`;
+                
+                // Initialize 3Dmol viewer
+                let viewer = $3Dmol.createViewer($(canvas), {
+                    backgroundColor: '#0d1315'
+                });
+                
+                viewer.addModel(sdfData, "sdf");
+                viewer.setStyle({}, {stick: {colorscheme: "Jmol", radius: 0.18}, sphere: {colorscheme: "Jmol", radius: 0.4}});
+                viewer.zoomTo();
+                viewer.render();
+            })
+            .catch(err => {
+                console.error("3Dmol load error:", err);
+                info.textContent = `Structure: ${compoundName}`;
+                canvas.innerHTML = `
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-[10px] text-slate-500 font-mono bg-black/60 p-4 text-center">
+                        <span class="material-symbols-outlined text-cyan-500 text-2xl animate-spin mb-1">help</span>
+                        3D Model Not Cached.
+                    </div>
+                `;
+            });
+    };
 </script>
 {% endblock %}

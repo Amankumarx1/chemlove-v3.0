@@ -335,8 +335,51 @@
       {% endif %}
       {% endif %}
     </div>
+  {# ── AI Chemistry Tutor Floating Widget & Sidebar ── #}
+  <div class="fixed bottom-24 right-6 z-50">
+    <button onclick="toggleAiTutor(true)" class="w-14 h-14 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300 relative group">
+      <span class="material-symbols-outlined text-2xl">psychology</span>
+      <span class="absolute right-16 bg-slate-900 border border-white/10 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider text-cyan-400 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">AI Chemistry Tutor</span>
+    </button>
   </div>
 
+  <div id="ai-tutor-sidebar" class="fixed right-0 top-0 bottom-0 w-[400px] max-w-full bg-[#0d1315]/95 border-l border-white/10 shadow-2xl z-[60] transform translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="p-5 border-b border-white/5 flex justify-between items-center bg-[#090d0e]">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-cyan-400">psychology</span>
+        <div>
+          <h3 class="text-xs font-black uppercase tracking-wider text-white">AI Chemistry Tutor</h3>
+          <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Active learning assistant</p>
+        </div>
+      </div>
+      <button onclick="toggleAiTutor(false)" class="text-slate-500 hover:text-white transition-colors">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div id="ai-chat-messages" class="flex-grow p-5 overflow-y-auto space-y-4 scrollbar-thin text-xs">
+      <div class="p-3 bg-cyan-950/20 border border-cyan-500/10 rounded-2xl text-slate-300">
+        <div class="font-bold text-cyan-400 mb-1">🤖 AI Chemistry Tutor</div>
+        Hello! I am your AI Chemistry Tutor. Ask me any questions about formulas, equations, or concepts in this section!
+      </div>
+    </div>
+
+    <div class="px-5 py-2 flex flex-wrap gap-1.5 shrink-0 bg-[#090d0e]/40 border-t border-white/5 pt-3">
+      <button onclick="sendSuggestedQuestion('Explain the core concepts in this section')" class="px-2.5 py-1.5 rounded-lg border border-white/5 bg-[#171d1e]/40 text-[9px] font-semibold text-slate-300 hover:text-cyan-400 hover:border-cyan-500/20 transition-all">Explain Section</button>
+      <button onclick="sendSuggestedQuestion('Show me a real life example of this')" class="px-2.5 py-1.5 rounded-lg border border-white/5 bg-[#171d1e]/40 text-[9px] font-semibold text-slate-300 hover:text-cyan-400 hover:border-cyan-500/20 transition-all">Real-life Example</button>
+      <button onclick="sendSuggestedQuestion('Give me a quiz question about this topic')" class="px-2.5 py-1.5 rounded-lg border border-white/5 bg-[#171d1e]/40 text-[9px] font-semibold text-slate-300 hover:text-cyan-400 hover:border-cyan-500/20 transition-all">Quick Quiz</button>
+    </div>
+
+    <div class="p-5 border-t border-white/5 bg-[#090d0e] shrink-0">
+      <form onsubmit="handleAiChatSubmit(event)" class="flex gap-2">
+        <input type="text" id="ai-chat-input" required placeholder="Ask a chemistry question..."
+          class="flex-grow bg-[#090d0e] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-cyan-500 focus:ring-0 placeholder:text-slate-600 outline-none">
+        <button type="submit" class="bg-cyan-600 hover:bg-cyan-500 text-[#001f26] p-2.5 rounded-xl flex items-center justify-center transition-all shadow-lg active:scale-95">
+          <span class="material-symbols-outlined text-base">send</span>
+        </button>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -579,5 +622,106 @@ function submitQuiz(){}
 function prevQuestion(){}
 function nextQuestion(){}
 {% endif %}
+
+// ── AI Tutor Widget Logic ──
+function toggleAiTutor(open) {
+  const sidebar = document.getElementById('ai-tutor-sidebar');
+  if (sidebar) {
+    if (open) {
+      sidebar.classList.remove('translate-x-full');
+    } else {
+      sidebar.classList.add('translate-x-full');
+    }
+  }
+}
+
+function sendSuggestedQuestion(q) {
+  const input = document.getElementById('ai-chat-input');
+  if (input) {
+    input.value = q;
+    const form = input.closest('form');
+    if (form) {
+      form.dispatchEvent(new Event('submit', { cancelable: true }));
+    }
+  }
+}
+
+async function handleAiChatSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById('ai-chat-input');
+  const chatMessages = document.getElementById('ai-chat-messages');
+  if (!input || !chatMessages) return;
+
+  const q = input.value.trim();
+  if (!q) return;
+
+  input.value = '';
+
+  // Append user message
+  const userMsg = document.createElement('div');
+  userMsg.className = 'p-3 bg-white/5 border border-white/5 rounded-2xl text-slate-300 text-right';
+  userMsg.innerHTML = `<div class="font-bold text-slate-400 mb-1">You</div>${escapeHtml(q)}`;
+  chatMessages.appendChild(userMsg);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  // Append thinking indicator
+  const thinkingMsg = document.createElement('div');
+  thinkingMsg.className = 'p-3 bg-cyan-950/20 border border-cyan-500/10 rounded-2xl text-slate-400 animate-pulse';
+  thinkingMsg.id = 'ai-tutor-thinking';
+  thinkingMsg.innerHTML = `<div class="font-bold text-cyan-400 mb-1">🤖 AI Chemistry Tutor</div>Tutor is thinking...`;
+  chatMessages.appendChild(thinkingMsg);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  try {
+    const res = await fetch('/api/ai/tutor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q })
+    });
+    const data = await res.json();
+
+    // Remove thinking message
+    const thinking = document.getElementById('ai-tutor-thinking');
+    if (thinking) thinking.remove();
+
+    // Append response
+    const tutorMsg = document.createElement('div');
+    tutorMsg.className = 'p-3 bg-cyan-950/20 border border-cyan-500/10 rounded-2xl text-slate-300';
+    
+    // Simple markdown renderer for response
+    let rendered = data.response;
+    // Escape HTML first to prevent XSS from prompt
+    rendered = escapeHtml(rendered);
+    // Bold / Italic
+    rendered = rendered.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    rendered = rendered.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Math equations
+    rendered = rendered.replace(/\$\$(.+?)\$\$/g, '<div class="math-eq my-2 text-center text-cyan-400">$1</div>');
+    rendered = rendered.replace(/\$(.+?)\$/g, '<span class="text-cyan-400">$1</span>');
+    // Headings
+    rendered = rendered.replace(/^#{4}\s+(.+)$/gm, '<h4 class="font-bold text-xs uppercase text-cyan-400 mt-2 mb-1">$1</h4>');
+    rendered = rendered.replace(/^#{3}\s+(.+)$/gm, '<h3 class="font-black text-xs uppercase text-white mt-3 mb-1.5">$1</h3>');
+    rendered = rendered.replace(/^#{2}\s+(.+)$/gm, '<h2 class="font-black text-sm uppercase text-white mt-4 mb-2">$1</h2>');
+
+    tutorMsg.innerHTML = `<div class="font-bold text-cyan-400 mb-1">🤖 AI Chemistry Tutor</div><div>${rendered}</div>`;
+    chatMessages.appendChild(tutorMsg);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  } catch (err) {
+    console.error("AI Tutor failed:", err);
+    const thinking = document.getElementById('ai-tutor-thinking');
+    if (thinking) thinking.remove();
+
+    const errMsg = document.createElement('div');
+    errMsg.className = 'p-3 bg-red-950/20 border border-red-500/10 rounded-2xl text-red-400';
+    errMsg.innerHTML = `<div class="font-bold text-red-400 mb-1">Error</div>Failed to communicate with AI Tutor.`;
+    chatMessages.appendChild(errMsg);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+}
+
+function escapeHtml(str) {
+  return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : '';
+}
 </script>
 {% endblock %}

@@ -1802,6 +1802,11 @@ function handleReactionSuccess(rxn) {
   
   updateGauges(finalTemp, finalPH, 94.5);
   
+  if (typeof window.render3D === 'function') {
+      const primaryProduct = rxn.products.split(',')[0].trim();
+      window.render3D(primaryProduct);
+  }
+  
   const isDangerous = rxn.explanation.toLowerCase().includes('explosive') || 
                       rxn.explanation.toLowerCase().includes('violent') || 
                       rxn.explanation.toLowerCase().includes('combustion') || 
