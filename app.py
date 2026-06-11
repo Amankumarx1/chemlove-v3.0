@@ -294,6 +294,24 @@ def init_db():
                 conn.execute("ALTER TABLE users ADD COLUMN avatar VARCHAR(100) DEFAULT 'account_circle'")
             except Exception:
                 pass
+            
+            # Create lab_attempts table
+            try:
+                conn.execute("""
+                CREATE TABLE IF NOT EXISTS lab_attempts (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    experiment_name VARCHAR(255) NOT NULL,
+                    mode VARCHAR(50) NOT NULL,
+                    duration_seconds INT NOT NULL,
+                    mistakes_count INT NOT NULL DEFAULT 0,
+                    accuracy_percentage INT NOT NULL DEFAULT 100,
+                    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """)
+            except Exception as e:
+                print(f"[DATABASE] Error creating lab_attempts: {e}")
                     
         print("[DATABASE] MySQL connection and Guided Learning V4 schemas verified successfully.")
     except Exception as e:
@@ -7043,7 +7061,7 @@ def api_leaderboard():
             rows = conn.execute(
                 """
                 SELECT u.name, u.institution, sp.current_xp, sp.level,
-                       RANK() OVER (ORDER BY sp.current_xp DESC) AS rank
+                       RANK() OVER (ORDER BY sp.current_xp DESC) AS `rank`
                 FROM student_profiles sp
                 JOIN users u ON sp.user_id = u.id
                 WHERE u.class_level = %s
@@ -7056,7 +7074,7 @@ def api_leaderboard():
             rows = conn.execute(
                 """
                 SELECT u.name, u.institution, sp.current_xp, sp.level,
-                       RANK() OVER (ORDER BY sp.current_xp DESC) AS rank
+                       RANK() OVER (ORDER BY sp.current_xp DESC) AS `rank`
                 FROM student_profiles sp
                 JOIN users u ON sp.user_id = u.id
                 ORDER BY sp.current_xp DESC
@@ -7065,6 +7083,278 @@ def api_leaderboard():
                 (limit,)
             ).fetchall()
     return jsonify({"leaderboard": [dict(r) for r in rows]})
+
+
+    return jsonify({"leaderboard": [dict(r) for r in rows]})
+
+
+# ============================================================
+# API — AI SCIENTIST & VIRTUAL LAB MASTER
+# ============================================================
+
+@app.route('/api/ai/scientist', methods=['POST'])
+def api_ai_scientist():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    payload = request.get_json(silent=True) or {}
+    user_query = payload.get("user_query", "").strip()
+    experiment_name = payload.get("experiment_name", "Sandbox")
+    chemicals = [c.strip() for c in payload.get("chemicals_in_flask", []) if c.strip()]
+    telemetry = payload.get("telemetry", {})
+    ph = telemetry.get("ph", 7.0)
+    temp = telemetry.get("temp", 24.5)
+    
+    # Analyze active compounds in flask
+    has_acid = any(c in ['HCl', 'HNO3', 'H2SO4', 'CH3COOH'] for c in chemicals)
+    has_base = any(c in ['NaOH', 'KOH', 'Ca(OH)2'] for c in chemicals)
+    has_ch4 = 'CH4' in chemicals
+    has_o2 = 'O2' in chemicals
+    has_kclo3 = 'KClO3' in chemicals
+    has_fe = 'Fe' in chemicals
+    has_cuso4 = 'CuSO4' in chemicals
+    
+    response_text = ""
+    predicted_product = "N/A"
+    suggested_next = "N/A"
+    viva_questions = []
+    lab_report = {}
+    
+    # Default outputs based on chemicals
+    if has_acid and has_base:
+        predicted_product = "Salt + Water (e.g. NaCl + H2O)"
+        suggested_next = "Indicator (like Phenolphthalein) to test pH equivalence"
+        viva_questions = [
+            "Why does acid-base neutralization increase the temperature?",
+            "What defines a strong acid versus a weak acid?",
+            "What is the spectator ion in this neutralization?"
+        ]
+        lab_report = {
+            "objective": "To perform acid-base neutralization between acid and base.",
+            "procedure": "1. Measure acid and base reagents.\n2. Dispense acid into the flask.\n3. Add base drop-by-drop until pH reaches 7.0.",
+            "observations": f"The temperature rose to {temp}°C, indicating an exothermic reaction. The pH stabilized at {ph}.",
+            "calculations": "n(Acid) = Concentration * Volume = n(Base)",
+            "result": "Successful synthesis of neutral salt solution.",
+            "conclusion": "The reaction completed cleanly. Hydroxide and hydronium ions formed neutral water."
+        }
+        
+        if "Explain" in user_query or "explain" in user_query.lower():
+            response_text = "The hydronium ions (H⁺) from the acid are combining with the hydroxide ions (OH⁻) from the base to produce neutral water molecules (H₂O). This neutralization reaction is exothermic, releasing thermal energy and causing the temperature to rise."
+        elif "Predict" in user_query or "predict" in user_query.lower():
+            response_text = "The reaction will produce water and a dissolved salt. For example, HCl + NaOH will yield NaCl (Sodium Chloride) and H₂O."
+        elif "Suggest" in user_query or "suggest" in user_query.lower():
+            response_text = "To find the exact endpoint, you should add an indicator such as Phenolphthalein, which changes from colorless to pink as the solution crosses pH 8.3."
+        else:
+            response_text = "I observe an acid-base neutralization. Adding more base will increase the pH, while adding more acid will decrease it."
+            
+    elif has_ch4 and has_o2:
+        predicted_product = "CO2 + H2O + Heat (Carbon Dioxide and Water)"
+        suggested_next = "Measure carbon dioxide levels or collect water vapor"
+        viva_questions = [
+            "Why is combustion of methane classified as a redox reaction?",
+            "What is the activation energy required for methane combustion?",
+            "How does limiting oxygen affect the combustion products?"
+        ]
+        lab_report = {
+            "objective": "To observe the combustion of methane in the presence of oxygen.",
+            "procedure": "1. Introduce methane (CH4) gas into the chamber.\n2. Supply oxygen (O2).\n3. Ignite to initiate combustion.",
+            "observations": f"Rapid heat release (temperature reached {temp}°C). Carbon dioxide and water vapor were generated.",
+            "calculations": "CH4 + 2O2 -> CO2 + 2H2O",
+            "result": "Methane fully combusted into carbon dioxide and water.",
+            "conclusion": "Combustion of hydrocarbons is highly exothermic and yields carbon dioxide and water under sufficient oxygen supply."
+        }
+        if "Explain" in user_query or "explain" in user_query.lower():
+            response_text = "Methane is reacting with oxygen in a combustion reaction. The C-H bonds in methane and O=O bonds in oxygen are broken, forming more stable C=O bonds in carbon dioxide and H-O bonds in water, releasing a significant amount of heat."
+        elif "Predict" in user_query or "predict" in user_query.lower():
+            response_text = "Methane combustion produces Carbon Dioxide (CO₂) and Water (H₂O) along with significant heat release."
+        else:
+            response_text = "Methane combustion is active. The carbon atoms are being oxidized, and oxygen atoms are being reduced."
+            
+    elif has_kclo3:
+        predicted_product = "2KCl + 3O2 (Potassium Chloride and Oxygen Gas)"
+        suggested_next = "Heat the flask using the burner setup to decompose KClO3"
+        viva_questions = [
+            "What is the role of MnO2 catalyst in the decomposition of KClO3?",
+            "How do you test for the presence of oxygen gas?",
+            "What type of chemical reaction is this decomposition?"
+        ]
+        lab_report = {
+            "objective": "Preparation of Oxygen gas via thermal decomposition of Potassium Chlorate.",
+            "procedure": "1. Add solid Potassium Chlorate (KClO3) to the flask.\n2. Heat the flask using the burner.\n3. Collect the evolved gas via downward displacement of water.",
+            "observations": "Gas bubbles evolved rapidly upon heating. A white solid residue of KCl remained at the bottom.",
+            "calculations": "2KClO3 -> 2KCl + 3O2",
+            "result": "Oxygen gas successfully prepared and collected.",
+            "conclusion": "Thermal decomposition of chlorates yields chloride salt and oxygen gas."
+        }
+        if "Explain" in user_query or "explain" in user_query.lower():
+            response_text = "Upon heating, Potassium Chlorate decomposes thermally to produce Potassium Chloride solid and oxygen gas. This is a decomposition reaction."
+        elif "Predict" in user_query or "predict" in user_query.lower():
+            response_text = "The thermal decomposition of KClO₃ yields Potassium Chloride (KCl) solid residue and Oxygen (O₂) gas."
+        else:
+            response_text = "This setup is configured for Oxygen preparation. Apply heat to trigger decomposition of Potassium Chlorate!"
+            
+    elif has_fe and has_cuso4:
+        predicted_product = "FeSO4 + Cu (Iron(II) Sulfate and Metallic Copper)"
+        suggested_next = "Filter the mixture to retrieve the precipitated copper"
+        viva_questions = [
+            "Why does iron displace copper from its sulfate solution?",
+            "What color change is observed in the solution during this reaction?",
+            "Is this reaction a redox reaction?"
+        ]
+        lab_report = {
+            "objective": "To study the displacement reaction between Iron and Copper Sulfate.",
+            "procedure": "1. Dispense blue Copper Sulfate (CuSO4) solution into the flask.\n2. Add metallic Iron (Fe).\n3. Wait for the displacement reaction to occur.",
+            "observations": "The blue solution gradually turned green (FeSO4). A reddish-brown deposit of copper formed on the iron.",
+            "calculations": "Fe + CuSO4 -> FeSO4 + Cu",
+            "result": "Iron successfully displaced copper, producing copper precipitate.",
+            "conclusion": "Iron is more reactive than copper, displacing it in a single displacement redox reaction."
+        }
+        if "Explain" in user_query or "explain" in user_query.lower():
+            response_text = "Iron is more electropositive (reactive) than copper. It loses electrons to copper ions, dissolving to form Iron(II) Sulfate (green solution) while metallic copper deposits as a reddish-brown precipitate."
+        elif "Predict" in user_query or "predict" in user_query.lower():
+            response_text = "The products are Iron(II) Sulfate (FeSO₄) in solution and solid Copper (Cu) precipitate."
+        else:
+            response_text = "I observe a displacement reaction. Iron is displacing copper due to its higher reactivity."
+    else:
+        predicted_product = "N/A (No reaction active)"
+        suggested_next = "Add compatible reagents (e.g. Acid + Base, or Hydrocarbon + Oxygen)"
+        viva_questions = [
+            "What is the definition of a chemical element?",
+            "How does temperature affect chemical reaction rates?",
+            "What is the pH scale and what does it measure?"
+        ]
+        lab_report = {
+            "objective": "General chemical exploration inside the Virtual Sandbox.",
+            "procedure": f"1. Select chemicals from the shelf.\n2. Dispense them into the flask drop-zone.\n3. Observe telemetry changes.",
+            "observations": f"Flask currently contains: {', '.join(chemicals) if chemicals else 'No chemicals'}. pH is {ph} and Temperature is {temp}°C.",
+            "calculations": "N/A",
+            "result": "Explored chemical combinations.",
+            "conclusion": "Sandbox simulator is fully operational."
+        }
+        
+        if "ph" in user_query.lower():
+            response_text = f"The current pH is {ph}. In chemistry, pH is a scale used to specify the acidity or basicity of an aqueous solution. Acidic solutions have a lower pH, while basic solutions have a higher pH."
+        elif "temp" in user_query.lower() or "temperature" in user_query.lower():
+            response_text = f"The current temperature is {temp}°C. Dissolving solutes or mixing reagents can release heat (exothermic) or absorb heat (endothermic), altering the flask temperature."
+        elif "next" in user_query.lower() or "suggest" in user_query.lower():
+            response_text = "To start an experiment, try adding Hydrochloric Acid (HCl) and Sodium Hydroxide (NaOH) to perform an acid-base neutralization reaction."
+        elif "report" in user_query.lower() or "generate" in user_query.lower():
+            response_text = "Lab report outline generated. You can click 'Generate Lab Report' to download the full documentation!"
+        else:
+            response_text = f"Hello! I am your AI Scientist. I observe the flask currently contains {', '.join(chemicals) if chemicals else 'no chemicals'}. The pH is {ph} and temperature is {temp}°C."
+
+    return jsonify({
+        "response": response_text,
+        "predicted_product": predicted_product,
+        "suggested_next": suggested_next,
+        "viva_questions": viva_questions,
+        "lab_report": lab_report
+    })
+
+
+@app.route('/api/student/lab/reward', methods=['POST'])
+def api_student_lab_reward():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    payload = request.get_json(silent=True) or {}
+    xp_amount = int(payload.get("xp", 50))
+    mission_name = payload.get("mission", "Experiment Completion")
+    
+    try:
+        with get_db() as conn:
+            sp = conn.execute("SELECT current_xp, level FROM student_profiles WHERE user_id = %s", (user["id"],)).fetchone()
+            if not sp:
+                conn.execute("INSERT IGNORE INTO student_profiles (user_id, current_xp, level) VALUES (%s, 100, 1)", (user["id"],))
+                current_xp = 100
+                current_level = 1
+            else:
+                current_xp = sp["current_xp"]
+                current_level = sp["level"]
+                
+            new_xp = current_xp + xp_amount
+            lvl_info = get_level_info(new_xp)
+            new_level = lvl_info["level"]
+            
+            conn.execute(
+                "UPDATE student_profiles SET current_xp = %s, level = %s WHERE user_id = %s",
+                (new_xp, new_level, user["id"])
+            )
+            
+            conn.execute(
+                "INSERT INTO user_history (user_id, event_type, event_data) VALUES (%s, 'lab_reward', %s)",
+                (user["id"], f"xp={xp_amount}, mission={mission_name}")
+            )
+            
+            if new_level >= 3:
+                conn.execute(
+                    "INSERT IGNORE INTO user_badges (user_id, badge_id, unlocked_at) VALUES (%s, 3, NOW())",
+                    (user["id"],)
+                )
+                
+            return jsonify({
+                "ok": True,
+                "xp_added": xp_amount,
+                "total_xp": new_xp,
+                "level": new_level,
+                "level_title": lvl_info["title"],
+                "level_up": new_level > current_level
+            })
+    except Exception as e:
+        print(f"Error rewarding student: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/student/lab/attempt', methods=['POST'])
+def api_student_lab_attempt():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    payload = request.get_json(silent=True) or {}
+    experiment_name = payload.get("experiment_name", "Sandbox Explorer")
+    mode = payload.get("mode", "sandbox")
+    duration = int(payload.get("duration_seconds", 0))
+    mistakes = int(payload.get("mistakes_count", 0))
+    accuracy = int(payload.get("accuracy_percentage", 100))
+    
+    try:
+        with get_db() as conn:
+            conn.execute(
+                """
+                INSERT INTO lab_attempts (user_id, experiment_name, mode, duration_seconds, mistakes_count, accuracy_percentage)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (user["id"], experiment_name, mode, duration, mistakes, accuracy)
+            )
+        return jsonify({"ok": True})
+    except Exception as e:
+        print(f"Error saving lab attempt: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/teacher/lab_attempts', methods=['GET'])
+def api_teacher_lab_attempts():
+    user = get_current_user()
+    if not user or user['role'] not in ('teacher', 'admin'):
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    try:
+        with get_db() as conn:
+            rows = conn.execute(
+                """
+                SELECT la.*, u.name AS student_name, u.class_level
+                FROM lab_attempts la
+                JOIN users u ON la.user_id = u.id
+                ORDER BY la.completed_at DESC
+                """
+            ).fetchall()
+        return jsonify({"attempts": [dict(r) for r in rows]})
+    except Exception as e:
+        print(f"Error fetching lab attempts: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':

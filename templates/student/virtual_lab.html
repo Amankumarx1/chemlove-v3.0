@@ -110,23 +110,43 @@
     </div>
 
     <!-- Tabs: centered text-based sized buttons in the middle -->
-    <div class="flex justify-center items-center my-1 shrink-0">
-        <div class="flex bg-surface-container p-1 rounded-full border border-white/5 shadow-xl max-w-max">
+    <div class="flex justify-center items-center my-2 shrink-0">
+        <div class="flex flex-wrap justify-center bg-surface-container p-1 rounded-2xl border border-white/5 shadow-xl max-w-max gap-1">
             <button id="tab-btn-lab" onclick="switchLabTab('lab')"
-                class="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all bg-primary text-on-primary shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all bg-primary text-on-primary shadow-[0_0_15px_rgba(6,182,212,0.3)]">
                 Simulator
             </button>
             {% if current_user.class_level|string in ['11', '12'] %}
             <button id="tab-btn-titration" onclick="switchLabTab('titration')"
-                class="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface">
+                class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface">
                 Titration
             </button>
             {% else %}
             <button id="tab-btn-titration" disabled title="Titration is unlocked for Class 11 and 12 only"
-                class="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all text-slate-600 cursor-not-allowed flex items-center gap-1.5">
+                class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all text-slate-600 cursor-not-allowed flex items-center gap-1">
                 <span class="material-symbols-outlined text-[10px]">lock</span> Titration
             </button>
             {% endif %}
+            <button id="tab-btn-guided" onclick="switchLabTab('guided')"
+                class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface">
+                Guided Labs
+            </button>
+            <button id="tab-btn-missions" onclick="switchLabTab('missions')"
+                class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface">
+                Missions
+            </button>
+            <button id="tab-btn-spectroscopy" onclick="switchLabTab('spectroscopy')"
+                class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface">
+                Spectroscopy
+            </button>
+            <button id="tab-btn-organic" onclick="switchLabTab('organic')"
+                class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface">
+                Organic Sim
+            </button>
+            <button id="tab-btn-ptable" onclick="switchLabTab('ptable')"
+                class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface">
+                Periodic Table
+            </button>
         </div>
     </div>
 </div>
@@ -164,6 +184,17 @@
                     <div class="relative w-full flex-grow min-h-0 flex items-center justify-center flex-col z-10"
                         id="drop-zone" ondragover="handleDragOver(event)" ondrop="handleDrop(event)"
                         ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)">
+                        
+                        <!-- Equipment Assembly Toolbar -->
+                        <div class="flex flex-wrap justify-center bg-surface-container-high/80 backdrop-blur-md p-1 border border-white/5 rounded-2xl gap-1 shrink-0 mb-4 z-20 shadow-md">
+                            <button id="equip-btn-flask" onclick="setEquipment('flask')" class="equip-btn active bg-primary text-on-primary text-[9px] font-black uppercase px-3 py-1.5 rounded-xl transition-all flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">science</span> Flask</button>
+                            <button id="equip-btn-beaker" onclick="setEquipment('beaker')" class="equip-btn text-slate-400 hover:text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-xl transition-all flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">coffee</span> Beaker</button>
+                            <button id="equip-btn-testtube" onclick="setEquipment('testtube')" class="equip-btn text-slate-400 hover:text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-xl transition-all flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">thermostat_carbon</span> Test Tube</button>
+                            <button id="equip-btn-burner" onclick="setEquipment('burner')" class="equip-btn text-slate-400 hover:text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-xl transition-all flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">mode_fan</span> Burner</button>
+                            <button id="equip-btn-condenser" onclick="setEquipment('condenser')" class="equip-btn text-slate-400 hover:text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-xl transition-all flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">device_thermostat</span> Condenser</button>
+                            <button id="equip-btn-balance" onclick="setEquipment('balance')" class="equip-btn text-slate-400 hover:text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-xl transition-all flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">scale</span> Balance</button>
+                        </div>
+
                         <!-- SVG Flask -->
                         <style>
                             #flask-liquid-0:not(.opacity-0) ~ #liquid-meniscus,
@@ -271,51 +302,90 @@
 
             <!-- Right: Telemetry -->
             <aside class="w-80 border-l border-white/10 bg-surface p-4 flex flex-col gap-3 overflow-y-auto shrink-0">
-                <div class="border-b border-white/10 pb-2 flex justify-between items-center shrink-0">
-                    <h3 class="font-bold text-sm uppercase italic text-cyan-400">Telemetry</h3>
-                    <div class="w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping"></div>
+                <!-- Sidebar Tab Toggles -->
+                <div class="flex bg-surface-container p-1 rounded-xl border border-white/5 shadow-md mb-2 shrink-0">
+                    <button id="right-tab-telemetry" onclick="setRightTab('telemetry')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-cyan-950/40 text-cyan-400">Telemetry</button>
+                    <button id="right-tab-ai" onclick="setRightTab('ai')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-white">AI Scientist</button>
                 </div>
-                <div id="result-area" class="hidden shrink-0"></div>
-                <div id="mol-viewer-container" class="hidden border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0 space-y-3">
-                    <div class="flex justify-between items-center">
-                        <label class="font-bold text-[9px] uppercase text-cyan-400 tracking-widest">3D Molecular Viewer</label>
-                        <span class="material-symbols-outlined text-xs text-slate-500">deployed_code</span>
+
+                <!-- Telemetry View -->
+                <div id="right-view-telemetry" class="space-y-3 flex flex-col flex-1 min-h-0">
+                    <div class="border-b border-white/10 pb-2 flex justify-between items-center shrink-0">
+                        <h3 class="font-bold text-sm uppercase italic text-cyan-400">Telemetry</h3>
+                        <div class="w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping"></div>
                     </div>
-                    <div id="mol-canvas" class="w-full h-44 bg-black/60 rounded-xl relative overflow-hidden border border-white/5" style="position: relative;"></div>
-                    <p id="mol-viewer-info" class="text-[9px] text-slate-500 font-mono leading-tight uppercase"></p>
-                </div>
-                <div class="border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0">
-                    <label class="font-bold text-[9px] uppercase text-slate-500 mb-1 tracking-widest">Temperature</label>
-                    <div class="flex items-baseline justify-between">
-                        <span id="temp-val" class="text-3xl font-black tracking-tight">24.5</span>
-                        <span class="text-base font-bold text-slate-500">°C</span>
-                    </div>
-                    <div class="w-full bg-[#0e1416] h-2.5 mt-2 border border-white/5 rounded-full overflow-hidden">
-                        <div id="temp-bar" class="bg-gradient-to-r from-cyan-500 to-red-500 h-full transition-all duration-500" style="width: 24.5%"></div>
-                    </div>
-                </div>
-                <div class="border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0">
-                    <label class="font-bold text-[9px] uppercase text-slate-500 mb-1 tracking-widest">pH Level</label>
-                    <div class="flex items-baseline justify-between">
-                        <span id="ph-val" class="text-3xl font-black tracking-tight">7.02</span>
-                        <span class="text-base font-bold text-slate-500">PH</span>
-                    </div>
-                    <div class="flex justify-between mt-2 font-bold text-[7px] uppercase text-slate-500">
-                        <span class="text-red-400">Acidic</span><span>Neutral</span><span class="text-cyan-400">Alkaline</span>
-                    </div>
-                    <div class="w-full bg-[#0e1416] h-2 mt-1 border border-white/5 rounded-full relative">
-                        <div id="ph-marker" class="absolute h-3 w-1 bg-cyan-400 -top-0.5 transition-all duration-500" style="left: 50%"></div>
-                    </div>
-                </div>
-                <div class="border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0">
-                    <label class="font-bold text-[9px] uppercase text-slate-500 mb-1 tracking-widest">Stability Index</label>
-                    <div class="flex items-center gap-3 mt-1">
-                        <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                            <span class="material-symbols-outlined text-xl font-black text-cyan-400">security</span>
+                    <div id="result-area" class="hidden shrink-0"></div>
+                    <div id="mol-viewer-container" class="hidden border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <label class="font-bold text-[9px] uppercase text-cyan-400 tracking-widest">3D Molecular Viewer</label>
+                            <span class="material-symbols-outlined text-xs text-slate-500">deployed_code</span>
                         </div>
-                        <span id="stability-val" class="text-2xl font-black tracking-tight">98.2%</span>
+                        <div id="mol-canvas" class="w-full h-44 bg-black/60 rounded-xl relative overflow-hidden border border-white/5" style="position: relative;"></div>
+                        <p id="mol-viewer-info" class="text-[9px] text-slate-500 font-mono leading-tight uppercase"></p>
+                    </div>
+                    <div class="border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0">
+                        <label class="font-bold text-[9px] uppercase text-slate-500 mb-1 tracking-widest">Temperature</label>
+                        <div class="flex items-baseline justify-between">
+                            <span id="temp-val" class="text-3xl font-black tracking-tight">24.5</span>
+                            <span class="text-base font-bold text-slate-500">°C</span>
+                        </div>
+                        <div class="w-full bg-[#0e1416] h-2.5 mt-2 border border-white/5 rounded-full overflow-hidden">
+                            <div id="temp-bar" class="bg-gradient-to-r from-cyan-500 to-red-500 h-full transition-all duration-500" style="width: 24.5%"></div>
+                        </div>
+                    </div>
+                    <div class="border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0">
+                        <label class="font-bold text-[9px] uppercase text-slate-500 mb-1 tracking-widest">pH Level</label>
+                        <div class="flex items-baseline justify-between">
+                            <span id="ph-val" class="text-3xl font-black tracking-tight">7.02</span>
+                            <span class="text-base font-bold text-slate-500">PH</span>
+                        </div>
+                        <div class="flex justify-between mt-2 font-bold text-[7px] uppercase text-slate-500">
+                            <span class="text-red-400">Acidic</span><span>Neutral</span><span class="text-cyan-400">Alkaline</span>
+                        </div>
+                        <div class="w-full bg-[#0e1416] h-2 mt-1 border border-white/5 rounded-full relative">
+                            <div id="ph-marker" class="absolute h-3 w-1 bg-cyan-400 -top-0.5 transition-all duration-500" style="left: 50%"></div>
+                        </div>
+                    </div>
+                    <div class="border border-white/10 p-4 bg-surface-container-high rounded-xl flex flex-col shrink-0">
+                        <label class="font-bold text-[9px] uppercase text-slate-500 mb-1 tracking-widest">Stability Index</label>
+                        <div class="flex items-center gap-3 mt-1">
+                            <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-xl font-black text-cyan-400">security</span>
+                            </div>
+                            <span id="stability-val" class="text-2xl font-black tracking-tight">98.2%</span>
+                        </div>
                     </div>
                 </div>
+
+                <!-- AI Scientist View -->
+                <div id="right-view-ai" class="hidden flex flex-col flex-1 min-h-0 space-y-3">
+                    <div class="border-b border-white/10 pb-2">
+                        <h3 class="font-bold text-sm uppercase italic text-cyan-400">AI Scientist</h3>
+                    </div>
+                    
+                    <!-- Quick Actions Grid -->
+                    <div class="grid grid-cols-2 gap-1.5 shrink-0">
+                        <button onclick="triggerAIQuickAction('Explain')" class="bg-surface-container border border-white/5 p-2 rounded-xl text-[9px] font-black uppercase text-slate-300 hover:text-cyan-400 hover:border-cyan-500/20 text-center transition-all">Explain Reaction</button>
+                        <button onclick="triggerAIQuickAction('Predict')" class="bg-surface-container border border-white/5 p-2 rounded-xl text-[9px] font-black uppercase text-slate-300 hover:text-cyan-400 hover:border-cyan-500/20 text-center transition-all">Predict Product</button>
+                        <button onclick="triggerAIQuickAction('Suggest')" class="bg-surface-container border border-white/5 p-2 rounded-xl text-[9px] font-black uppercase text-slate-300 hover:text-cyan-400 hover:border-cyan-500/20 text-center transition-all">Suggest Next</button>
+                        <button onclick="triggerAIQuickAction('Viva')" class="bg-surface-container border border-white/5 p-2 rounded-xl text-[9px] font-black uppercase text-slate-300 hover:text-cyan-400 hover:border-cyan-500/20 text-center transition-all">viva questions</button>
+                        <button onclick="triggerAIQuickAction('Report')" class="bg-cyan-500 text-[#001f26] col-span-2 p-2.5 rounded-xl text-[9px] font-black uppercase text-center transition-all hover:bg-cyan-400 flex items-center justify-center gap-1 shadow-lg"><span class="material-symbols-outlined text-xs">download</span> Generate Lab Report</button>
+                    </div>
+
+                    <!-- AI Chat Box -->
+                    <div class="flex-grow bg-black/40 border border-white/5 rounded-xl p-3 flex flex-col overflow-hidden min-h-32">
+                        <div id="ai-chat-log" class="flex-1 overflow-y-auto space-y-2 text-[10px] pr-1 scrollbar-thin">
+                            <div class="text-slate-500 text-center italic mt-4">Ask a question or select a quick action above.</div>
+                        </div>
+                    </div>
+
+                    <!-- Chat input -->
+                    <div class="flex gap-1.5 shrink-0">
+                        <input id="ai-chat-input" type="text" placeholder="Ask AI Scientist..." class="flex-1 bg-surface-container border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+                        <button onclick="submitAIChat()" class="w-10 h-10 bg-cyan-500 text-[#001f26] rounded-xl flex items-center justify-center hover:bg-cyan-400 transition-all shrink-0 active:scale-95"><span class="material-symbols-outlined text-base">send</span></button>
+                    </div>
+                </div>
+
                 <div class="mt-auto pt-4 border-t border-white/10 bg-slate-900/40 -mx-4 -mb-4 p-4 shrink-0">
                     <h4 class="font-bold text-[10px] mb-2 uppercase text-slate-500 tracking-widest">System Log</h4>
                     <div id="lab-log" class="flex flex-col gap-1.5 font-mono text-[9px] leading-tight max-h-32 overflow-y-auto text-white">
@@ -728,46 +798,350 @@
 </div>
 {% endif %}
 
+<!-- ═══ GUIDED LABS WORKBENCH ═══ -->
+<div id="page-guided" class="hidden">
+    <div class="bg-surface border border-white/10 rounded-3xl flex flex-col overflow-hidden relative shadow-2xl" style="height: calc(100vh - 9rem);">
+        <div class="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+            <!-- Left Panel: Guided Experiments Shelf -->
+            <aside class="w-full lg:w-72 border-r border-white/10 p-4 bg-surface flex flex-col gap-3 shrink-0">
+                <div class="flex justify-between items-center border-b border-white/10 pb-2">
+                    <h3 class="font-bold text-sm uppercase italic text-cyan-400">Experiments List</h3>
+                    <span class="material-symbols-outlined text-slate-500 text-base">science</span>
+                </div>
+                <div class="flex flex-col gap-2 overflow-y-auto flex-1 scrollbar-thin">
+                    <button onclick="startGuidedExperiment('oxygen')" class="guided-exp-btn w-full text-left p-3 rounded-xl border border-cyan-500/20 bg-cyan-950/20 text-cyan-400 transition-all hover:bg-cyan-950/30">
+                        <div class="font-black text-xs uppercase">Preparation of Oxygen</div>
+                        <div class="text-[9px] text-slate-400 mt-1">Thermal decomposition of KClO3</div>
+                    </button>
+                    <button onclick="startGuidedExperiment('neutralization')" class="guided-exp-btn w-full text-left p-3 rounded-xl border border-white/5 bg-surface-container text-slate-300 transition-all hover:bg-white/5">
+                        <div class="font-black text-xs uppercase">Acid-Base Synthesis</div>
+                        <div class="text-[9px] text-slate-400 mt-1">Neutralize strong acid HCl with NaOH</div>
+                    </button>
+                    <button onclick="startGuidedExperiment('displacement')" class="guided-exp-btn w-full text-left p-3 rounded-xl border border-white/5 bg-surface-container text-slate-300 transition-all hover:bg-white/5">
+                        <div class="font-black text-xs uppercase">Displacement Reaction</div>
+                        <div class="text-[9px] text-slate-400 mt-1">Iron displacement of Copper Sulfate</div>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Center Panel: Active Experiment Guidance -->
+            <section class="flex-grow flex flex-col border-r border-white/10 bg-surface overflow-hidden relative">
+                <div class="p-6 border-b border-white/5 flex justify-between items-center bg-surface-container-low shrink-0">
+                    <div>
+                        <h2 id="guided-title" class="text-lg font-black uppercase text-white">Preparation of Oxygen</h2>
+                        <p id="guided-subtitle" class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Guided Experiment 1</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Progress</span>
+                            <div class="font-mono text-xs font-black text-cyan-400" id="guided-progress-val">0%</div>
+                        </div>
+                        <div class="w-24 bg-slate-900 h-2 rounded-full overflow-hidden border border-white/5">
+                            <div id="guided-progress-bar" class="h-full bg-cyan-400 transition-all" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-grow p-6 flex flex-col items-center justify-center relative overflow-hidden grid-bg min-h-[300px]">
+                    <!-- Guided Apparatus Visualization -->
+                    <div class="relative w-full max-w-sm aspect-square flex flex-col items-center justify-center border border-white/5 bg-[#0e1416]/40 rounded-3xl p-4">
+                        <div id="guided-apparatus" class="relative w-full h-48 flex items-center justify-center">
+                            <!-- SVG Flask with Heating Stand or displacement setups -->
+                            <svg class="h-full max-h-[160px] w-auto relative z-10" viewBox="0 0 200 200">
+                                <ellipse cx="100" cy="155" rx="55" ry="10" fill="rgba(6, 182, 212, 0.1)" />
+                                <!-- Heat stand or Bunsen Burner burner flame -->
+                                <g id="burner-setup" class="opacity-0 transition-opacity">
+                                    <rect x="95" y="150" width="10" height="20" fill="#2d3748" />
+                                    <path d="M 90 170 L 110 170 L 105 150 L 95 150 Z" fill="#4a5568" />
+                                    <!-- Dynamic flame -->
+                                    <path id="burner-flame" d="M 98 150 Q 100 135 102 150 Z" fill="#ff7c00" class="animate-pulse" />
+                                </g>
+                                <path d="M 85 45 L 85 85 Q 85 100 75 110 L 50 148 Q 46 155 53 158 L 147 158 Q 154 155 150 148 L 125 110 Q 115 100 115 85 L 115 45 Z" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
+                                <ellipse cx="100" cy="45" rx="15" ry="3" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.4)" />
+                                <path id="guided-liquid" d="M 60 135 C 80 132, 120 132, 140 135 L 145 155 L 55 155 Z" fill="#0055ff" fill-opacity="0.3" class="opacity-0 transition-all duration-500" />
+                                <g id="guided-gas-bubbles" class="opacity-0"></g>
+                            </svg>
+                        </div>
+                        <div id="guided-status-badge" class="mt-4 border border-cyan-500/20 bg-cyan-950/20 text-cyan-400 px-4 py-1 font-bold text-[9px] uppercase tracking-wider rounded-lg shadow-md">
+                            Awaiting Setup
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-surface-container border-t border-white/5 p-4 flex gap-4 h-20 items-center justify-between shrink-0">
+                    <div class="text-xs text-slate-400 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-amber-400 text-sm">info</span>
+                        <span id="guided-instruction-desc">Follow the steps on the right side to proceed.</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="guided-prev-step-btn" onclick="guidedPrevStep()" class="bg-slate-800 text-slate-300 font-bold text-[10px] uppercase border border-white/5 hover:bg-slate-700 transition-all rounded-xl px-4 py-2.5">Back</button>
+                        <button id="guided-next-step-btn" onclick="guidedNextStep()" class="kinetic-gradient text-on-primary font-bold text-[10px] uppercase rounded-xl px-6 py-2.5 shadow-lg">Next Step</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Steps & Objectives -->
+            <aside class="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-white/10 bg-surface p-4 flex flex-col gap-3 overflow-y-auto shrink-0">
+                <div class="border-b border-white/10 pb-2">
+                    <h3 class="font-bold text-sm uppercase italic text-cyan-400">Steps Tracker</h3>
+                </div>
+                <div id="guided-steps-list" class="space-y-3 flex-1 overflow-y-auto pr-1">
+                    <!-- Steps injected dynamically by JS -->
+                </div>
+                <div class="border-t border-white/10 pt-3 mt-auto">
+                    <button id="guided-claim-reward-btn" disabled onclick="claimGuidedReward()" class="w-full py-3 bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-widest rounded-xl transition-all border border-white/5 flex items-center justify-center gap-1.5 cursor-not-allowed">
+                        <span class="material-symbols-outlined text-sm">emoji_events</span>
+                        Complete & Claim +50 XP
+                    </button>
+                </div>
+            </aside>
+        </div>
+        <!-- Footer -->
+        <footer class="bg-surface-container border-t border-white/5 text-slate-400 p-2.5 px-6 flex justify-between items-center text-[9px] font-bold uppercase tracking-widest shrink-0">
+            <div class="flex gap-4"><span>MODE: GUIDED_LABS</span><span>EXPERIMENT: OXYGEN_PREP</span></div>
+            <div class="flex gap-2 items-center"><span class="w-1.5 h-1.5 bg-cyan-400 animate-pulse rounded-full"></span><span class="text-cyan-400">SYS: GUIDED</span></div>
+        </footer>
+    </div>
+</div>
+
+<!-- ═══ CHEMISTRY MISSIONS ═══ -->
+<div id="page-missions" class="hidden">
+    <div class="bg-surface border border-white/10 rounded-3xl p-6 flex flex-col overflow-y-auto relative shadow-2xl" style="height: calc(100vh - 9rem);">
+        <div class="mb-6 border-b border-white/10 pb-4">
+            <h2 class="text-xl font-black uppercase text-white">Laboratory Career Path & Missions</h2>
+            <div class="flex items-center gap-2 mt-2">
+                <span class="text-[10px] font-bold uppercase text-slate-400">Current Rank:</span>
+                <span class="text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-400/30 px-3 py-0.5 rounded-full" id="career-rank-badge">Lab Intern</span>
+                <span class="text-[9px] text-slate-500 italic ml-2">Unlock advanced ranks at higher XP levels.</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Mission 1 -->
+            <div class="glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 w-16 h-16 bg-primary/5 rounded-full blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="space-y-3">
+                    <span class="material-symbols-outlined text-cyan-400 text-3xl">biotech</span>
+                    <h3 class="text-sm font-black uppercase text-white">Mission 1: Neutralize Acid</h3>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">Dispense Hydrochloric Acid (HCl) and buffer it using Sodium Hydroxide (NaOH) until the pH level lands exactly on 7.00 &plusmn; 0.1.</p>
+                </div>
+                <div class="mt-6 flex justify-between items-center border-t border-white/5 pt-4">
+                    <span class="text-[10px] font-bold text-cyan-400 tracking-wider">+40 XP Reward</span>
+                    <button onclick="startMission('neutralize')" class="bg-primary hover:bg-cyan-300 text-[#001f26] font-bold text-[10px] uppercase px-4 py-2 rounded-xl transition-all">Launch</button>
+                </div>
+            </div>
+
+            <!-- Mission 2 -->
+            <div class="glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 w-16 h-16 bg-tertiary/5 rounded-full blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="space-y-3">
+                    <span class="material-symbols-outlined text-tertiary text-3xl">psychology</span>
+                    <h3 class="text-sm font-black uppercase text-white">Mission 2: Identify Unknown</h3>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">An unknown compound has been dispensed. Check its pH, run the telemetry tests, and identify the chemical formula correctly.</p>
+                </div>
+                <div class="mt-6 flex justify-between items-center border-t border-white/5 pt-4">
+                    <span class="text-[10px] font-bold text-tertiary tracking-wider">+60 XP Reward</span>
+                    <button onclick="startMission('identify')" class="bg-tertiary hover:bg-pink-300 text-[#001f26] font-bold text-[10px] uppercase px-4 py-2 rounded-xl transition-all">Launch</button>
+                </div>
+            </div>
+
+            <!-- Mission 3 -->
+            <div class="glass-morphism p-6 rounded-2xl flex flex-col justify-between border border-white/5 relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 w-16 h-16 bg-primary/5 rounded-full blur-xl group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="space-y-3">
+                    <span class="material-symbols-outlined text-cyan-400 text-3xl">colorize</span>
+                    <h3 class="text-sm font-black uppercase text-white">Mission 3: Titrate to Endpoint</h3>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">Perform a precise titration. Slowly add NaOH from the burette into HCl and stop immediately at the Phenolphthalein endpoint (pH 8.3).</p>
+                </div>
+                <div class="mt-6 flex justify-between items-center border-t border-white/5 pt-4">
+                    <span class="text-[10px] font-bold text-cyan-400 tracking-wider">+50 XP Reward</span>
+                    <button onclick="startMission('titrate_mission')" class="bg-primary hover:bg-cyan-300 text-[#001f26] font-bold text-[10px] uppercase px-4 py-2 rounded-xl transition-all">Launch</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mission Execution Overlays -->
+        <div id="mission-exec-container" class="hidden mt-8 p-6 bg-surface-container rounded-2xl border border-cyan-500/20 relative shadow-2xl animate-[fadeIn_0.25s_ease-out]">
+            <div class="flex justify-between items-center border-b border-white/5 pb-3 mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                    <h3 class="text-sm font-black uppercase text-white" id="mission-exec-title">Active Mission</h3>
+                </div>
+                <button onclick="abortMission()" class="text-xs text-slate-500 hover:text-white uppercase font-bold">Abort Mission</button>
+            </div>
+            <div id="mission-exec-content" class="text-xs text-slate-300 space-y-4">
+                <!-- Injected dynamically by JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ SPECTROSCOPY LAB ═══ -->
+<div id="page-spectroscopy" class="hidden">
+    <div class="bg-surface border border-white/10 rounded-3xl p-6 flex flex-col relative shadow-2xl overflow-y-auto" style="height: calc(100vh - 9rem);">
+        <div class="mb-6 border-b border-white/10 pb-4">
+            <h2 class="text-xl font-black uppercase text-white">Spectroscopy Lab Analyzer</h2>
+            <p class="text-xs text-slate-400 mt-1">Select a chemical compound to view its characteristic Infrared (IR) and Nuclear Magnetic Resonance (NMR) spectra.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1">
+            <!-- Left Side: Compound Selector -->
+            <div class="lg:col-span-1 bg-surface-container border border-white/5 p-4 rounded-xl flex flex-col gap-2 h-max">
+                <label class="font-bold text-[9px] uppercase tracking-wider text-slate-500">Select Compound</label>
+                <button onclick="showSpectra('Methane')" class="spec-compound-btn active w-full p-3 rounded-lg border border-cyan-500/20 bg-cyan-950/20 text-cyan-400 font-bold text-xs text-left uppercase">Methane (CH4)</button>
+                <button onclick="showSpectra('Benzene')" class="spec-compound-btn w-full p-3 rounded-lg border border-white/5 bg-surface text-slate-300 font-bold text-xs text-left uppercase hover:bg-white/5">Benzene (C6H6)</button>
+                <button onclick="showSpectra('Ethanol')" class="spec-compound-btn w-full p-3 rounded-lg border border-white/5 bg-surface text-slate-300 font-bold text-xs text-left uppercase hover:bg-white/5">Ethanol (C2H5OH)</button>
+                <button onclick="showSpectra('Water')" class="spec-compound-btn w-full p-3 rounded-lg border border-white/5 bg-surface text-slate-300 font-bold text-xs text-left uppercase hover:bg-white/5">Water (H2O)</button>
+            </div>
+
+            <!-- Right Side: Spectra Displays -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- IR spectrum -->
+                <div class="bg-surface-container border border-white/5 p-6 rounded-2xl">
+                    <h3 class="text-xs font-black uppercase tracking-wider text-cyan-400 mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">analytics</span> Infrared (IR) Spectrum
+                    </h3>
+                    <div id="ir-spectra-container" class="h-40 bg-black/40 rounded-xl relative overflow-hidden border border-white/5 p-2">
+                        <!-- Custom SVG spectrum drawn by JS -->
+                    </div>
+                </div>
+
+                <!-- NMR spectrum -->
+                <div class="bg-surface-container border border-white/5 p-6 rounded-2xl">
+                    <h3 class="text-xs font-black uppercase tracking-wider text-cyan-400 mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">stacked_bar_chart</span> 1H-NMR Chemical Shifts
+                    </h3>
+                    <div id="nmr-spectra-container" class="h-40 bg-black/40 rounded-xl relative overflow-hidden border border-white/5 p-2">
+                        <!-- Custom SVG spectrum drawn by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ ORGANIC REACTION SIMULATOR ═══ -->
+<div id="page-organic" class="hidden">
+    <div class="bg-surface border border-white/10 rounded-3xl p-6 flex flex-col relative shadow-2xl overflow-y-auto" style="height: calc(100vh - 9rem);">
+        <div class="mb-6 border-b border-white/10 pb-4">
+            <h2 class="text-xl font-black uppercase text-white">Organic Reaction Simulator</h2>
+            <p class="text-xs text-slate-400 mt-1">Visualize mechanism pathways, nucleophilic attacks, and transition states in real-time.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Selector -->
+            <div class="lg:col-span-1 bg-surface-container border border-white/5 p-4 rounded-xl flex flex-col gap-2 h-max">
+                <label class="font-bold text-[9px] uppercase tracking-wider text-slate-500">Reactions</label>
+                <button onclick="playOrganicSim('SN2')" class="org-btn active w-full p-3 rounded-lg border border-cyan-500/20 bg-cyan-950/20 text-cyan-400 font-bold text-xs text-left uppercase">SN2 Substitution</button>
+                <button onclick="playOrganicSim('SN1')" class="org-btn w-full p-3 rounded-lg border border-white/5 bg-surface text-slate-300 font-bold text-xs text-left uppercase hover:bg-white/5">SN1 Substitution</button>
+                <button onclick="playOrganicSim('E2')" class="org-btn w-full p-3 rounded-lg border border-white/5 bg-surface text-slate-300 font-bold text-xs text-left uppercase hover:bg-white/5">E2 Elimination</button>
+                <button onclick="playOrganicSim('Esterification')" class="org-btn w-full p-3 rounded-lg border border-white/5 bg-surface text-slate-300 font-bold text-xs text-left uppercase hover:bg-white/5">Esterification</button>
+            </div>
+
+            <!-- Animation Canvas -->
+            <div class="lg:col-span-3 bg-surface-container-high border border-white/10 p-6 rounded-2xl flex flex-col min-h-[300px]">
+                <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
+                    <h3 id="organic-title" class="text-sm font-black uppercase text-white">SN2 Reaction Pathway</h3>
+                    <button onclick="triggerOrganicAnimation()" class="bg-cyan-500 hover:bg-cyan-600 text-[#001f26] font-bold text-[10px] uppercase px-4 py-2 rounded-xl transition-all">Replay Mechanism</button>
+                </div>
+                <!-- Animation Stage -->
+                <div class="flex-grow bg-black/60 rounded-xl relative overflow-hidden flex items-center justify-center p-6 border border-white/5" id="organic-stage" style="height: 250px;">
+                    <!-- SVG transition molecules injected dynamically by JS -->
+                </div>
+                <div class="mt-4 p-4 bg-surface-container rounded-xl border border-white/5 text-[11px] text-slate-400 leading-relaxed" id="organic-desc">
+                    In an SN2 mechanism, the nucleophile attacks the substrate from the backside, exactly 180 degrees away from the leaving group, causing an inversion of stereochemical configuration.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ INTERACTIVE PERIODIC TABLE ═══ -->
+<div id="page-ptable" class="hidden">
+    <div class="bg-surface border border-white/10 rounded-3xl p-6 flex flex-col relative shadow-2xl overflow-y-auto" style="height: calc(100vh - 9rem);">
+        <div class="mb-6 border-b border-white/10 pb-4">
+            <h2 class="text-xl font-black uppercase text-white">Interactive Periodic Table</h2>
+            <p class="text-xs text-slate-400 mt-1">Click an element card to review physical properties, valence shell electron configurations, and reactions.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Periodic table layout -->
+            <div class="lg:col-span-3 bg-surface-container border border-white/5 p-4 rounded-xl overflow-x-auto">
+                <div class="grid grid-cols-18 gap-1.5 min-w-[600px]" id="ptable-grid">
+                    <!-- Injected dynamically by JS -->
+                </div>
+            </div>
+
+            <!-- Detail panel -->
+            <div class="lg:col-span-1 bg-surface-container-high border border-white/10 p-5 rounded-2xl flex flex-col gap-4" id="ptable-details">
+                <div class="text-center py-12 text-slate-500 text-xs font-bold uppercase">
+                    Click element on the table to inspect details.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://3dmol.org/build/3Dmol-min.js"></script>
+<!-- jspdf client-side PDF exporter CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 <script>
     // ══════════════════════════════════════════════════════════
     // TAB SWITCHING
     // ══════════════════════════════════════════════════════════
     function switchLabTab(mode) {
-        const tabBtnLab = document.getElementById('tab-btn-lab');
-        const tabBtnTitration = document.getElementById('tab-btn-titration');
-        const pageLab = document.getElementById('page-lab');
-        const pageTitration = document.getElementById('page-titration');
-        const mobileBar = document.getElementById('mobile-action-bar');
+        const pages = {
+            lab: document.getElementById('page-lab'),
+            titration: document.getElementById('page-page-titration') || document.getElementById('page-titration'),
+            guided: document.getElementById('page-guided'),
+            missions: document.getElementById('page-missions'),
+            spectroscopy: document.getElementById('page-spectroscopy'),
+            organic: document.getElementById('page-organic'),
+            ptable: document.getElementById('page-ptable')
+        };
+        
+        const buttons = {
+            lab: document.getElementById('tab-btn-lab'),
+            titration: document.getElementById('tab-btn-titration'),
+            guided: document.getElementById('tab-btn-guided'),
+            missions: document.getElementById('tab-btn-missions'),
+            spectroscopy: document.getElementById('tab-btn-spectroscopy'),
+            organic: document.getElementById('tab-btn-organic'),
+            ptable: document.getElementById('tab-btn-ptable')
+        };
 
-        const activeClass = "px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all bg-primary text-on-primary shadow-[0_0_15px_rgba(6,182,212,0.3)]";
-        const inactiveClass = "px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface";
+        const activeClass = "px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all bg-primary text-on-primary shadow-[0_0_15px_rgba(6,182,212,0.3)]";
+        const inactiveClass = "px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface";
 
-        if (mode === 'titration' && !pageTitration) {
-            return;
+        for (const [key, page] of Object.entries(pages)) {
+            if (page) page.classList.add('hidden');
+        }
+        for (const [key, btn] of Object.entries(buttons)) {
+            if (btn && !btn.disabled) btn.className = inactiveClass;
         }
 
+        if (pages[mode]) pages[mode].classList.remove('hidden');
+        if (buttons[mode]) buttons[mode].className = activeClass;
+
         if (mode === 'lab') {
-            tabBtnLab.className = activeClass;
-            if (tabBtnTitration) tabBtnTitration.className = inactiveClass;
-            pageLab.classList.remove('hidden');
-            if (pageTitration) pageTitration.classList.add('hidden');
-            if (mobileBar) mobileBar.classList.remove('hidden');
             if (typeof resetLab === 'function') resetLab();
             if (typeof renderLabPage === 'function') renderLabPage();
-        } else {
-            if (tabBtnTitration) tabBtnTitration.className = activeClass;
-            tabBtnLab.className = inactiveClass;
-            if (pageTitration) pageTitration.classList.remove('hidden');
-            pageLab.classList.add('hidden');
-            if (mobileBar) mobileBar.classList.add('hidden');
+        } else if (mode === 'titration') {
             if (typeof resetTitration === 'function') resetTitration();
             if (typeof initTitrationPage === 'function') initTitrationPage();
+        } else if (mode === 'guided') {
+            if (typeof startGuidedExperiment === 'function') startGuidedExperiment('oxygen');
+        } else if (mode === 'spectroscopy') {
+            if (typeof showSpectra === 'function') showSpectra('Methane');
+        } else if (mode === 'organic') {
+            if (typeof playOrganicSim === 'function') playOrganicSim('SN2');
+        } else if (mode === 'ptable') {
+            if (typeof initPeriodicTable === 'function') initPeriodicTable();
         }
     }
 

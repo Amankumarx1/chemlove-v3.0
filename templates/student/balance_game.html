@@ -155,6 +155,71 @@
             ],
             balanced: [2, 6, 2, 3], // 2 Al + 6 HCl -> 2 AlCl₃ + 3 H₂
             elements: ["Al", "H", "Cl"]
+        },
+        {
+            equation: "CO₂ + H₂O -> C₆H₁₂O₆ + O₂",
+            reactants: [
+                { formula: "CO₂", elements: [{ name: "C", multiplier: 1 }, { name: "O", multiplier: 2 }] },
+                { formula: "H₂O", elements: [{ name: "H", multiplier: 2 }, { name: "O", multiplier: 1 }] }
+            ],
+            products: [
+                { formula: "C₆H₁₂O₆", elements: [{ name: "C", multiplier: 6 }, { name: "H", multiplier: 12 }, { name: "O", multiplier: 6 }] },
+                { formula: "O₂", element: "O", multiplier: 2 }
+            ],
+            balanced: [6, 6, 1, 6], // 6 CO₂ + 6 H₂O -> 1 C₆H₁₂O₆ + 6 O₂
+            elements: ["C", "H", "O"]
+        },
+        {
+            equation: "C₃H₈ + O₂ -> CO₂ + H₂O",
+            reactants: [
+                { formula: "C₃H₈", elements: [{ name: "C", multiplier: 3 }, { name: "H", multiplier: 8 }] },
+                { formula: "O₂", element: "O", multiplier: 2 }
+            ],
+            products: [
+                { formula: "CO₂", elements: [{ name: "C", multiplier: 1 }, { name: "O", multiplier: 2 }] },
+                { formula: "H₂O", elements: [{ name: "H", multiplier: 2 }, { name: "O", multiplier: 1 }] }
+            ],
+            balanced: [1, 5, 3, 4], // 1 C₃H₈ + 5 O₂ -> 3 CO₂ + 4 H₂O
+            elements: ["C", "H", "O"]
+        },
+        {
+            equation: "NH₃ + O₂ -> NO + H₂O",
+            reactants: [
+                { formula: "NH₃", elements: [{ name: "N", multiplier: 1 }, { name: "H", multiplier: 3 }] },
+                { formula: "O₂", element: "O", multiplier: 2 }
+            ],
+            products: [
+                { formula: "NO", elements: [{ name: "N", multiplier: 1 }, { name: "O", multiplier: 1 }] },
+                { formula: "H₂O", elements: [{ name: "H", multiplier: 2 }, { name: "O", multiplier: 1 }] }
+            ],
+            balanced: [4, 5, 4, 6], // 4 NH₃ + 5 O₂ -> 4 NO + 6 H₂O
+            elements: ["N", "H", "O"]
+        },
+        {
+            equation: "Fe₂O₃ + CO -> Fe + CO₂",
+            reactants: [
+                { formula: "Fe₂O₃", elements: [{ name: "Fe", multiplier: 2 }, { name: "O", multiplier: 3 }] },
+                { formula: "CO", elements: [{ name: "C", multiplier: 1 }, { name: "O", multiplier: 1 }] }
+            ],
+            products: [
+                { formula: "Fe", element: "Fe", multiplier: 1 },
+                { formula: "CO₂", elements: [{ name: "C", multiplier: 1 }, { name: "O", multiplier: 2 }] }
+            ],
+            balanced: [1, 3, 2, 3], // 1 Fe₂O₃ + 3 CO -> 2 Fe + 3 CO₂
+            elements: ["Fe", "O", "C"]
+        },
+        {
+            equation: "NaOH + H₃PO₄ -> Na₃PO₄ + H₂O",
+            reactants: [
+                { formula: "NaOH", elements: [{ name: "Na", multiplier: 1 }, { name: "O", multiplier: 1 }, { name: "H", multiplier: 1 }] },
+                { formula: "H₃PO₄", elements: [{ name: "H", multiplier: 3 }, { name: "P", multiplier: 1 }, { name: "O", multiplier: 4 }] }
+            ],
+            products: [
+                { formula: "Na₃PO₄", elements: [{ name: "Na", multiplier: 3 }, { name: "P", multiplier: 1 }, { name: "O", multiplier: 4 }] },
+                { formula: "H₂O", elements: [{ name: "H", multiplier: 2 }, { name: "O", multiplier: 1 }] }
+            ],
+            balanced: [3, 1, 1, 3], // 3 NaOH + 1 H₃PO₄ -> 1 Na₃PO₄ + 3 H₂O
+            elements: ["Na", "O", "H", "P"]
         }
     ];
 

@@ -1136,14 +1136,17 @@ function setSearchTab(tab) {
   currentSearchTab = tab;
   // Update tab UI
   document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
+  const tabElem = document.getElementById('tab-' + tab);
+  if (tabElem) tabElem.classList.add('active');
   // Update placeholder
   const input = document.getElementById('search-input');
-  if (tab === 'name') input.placeholder = '🔍  Search by reaction name...';
-  else if (tab === 'reactant') input.placeholder = '🧪  Enter a reactant formula (e.g. C6H6, NaOH, HCl)...';
-  else if (tab === 'product') input.placeholder = '✨  Enter a product formula (e.g. C6H5Br, CO2, H2O)...';
-  input.value = '';
-  input.focus();
+  if (input) {
+    if (tab === 'name') input.placeholder = '🔍  Search by reaction name...';
+    else if (tab === 'reactant') input.placeholder = '🧪  Enter a reactant formula (e.g. C6H6, NaOH, HCl)...';
+    else if (tab === 'product') input.placeholder = '✨  Enter a product formula (e.g. C6H5Br, CO2, H2O)...';
+    input.value = '';
+    input.focus();
+  }
   filterReactions();
 }
 
@@ -1157,15 +1160,21 @@ function setFilterType(type, btn) {
     b.classList.remove('bg-primary', 'text-on-primary', 'border-primary', 'shadow-[0_0_15px_rgba(6,182,212,0.3)]');
     b.classList.add('bg-surface-container', 'border-white/5', 'text-slate-400');
   });
-  btn.classList.remove('bg-surface-container', 'border-white/5', 'text-slate-400');
-  btn.classList.add('bg-primary', 'text-on-primary', 'border-primary', 'shadow-[0_0_15px_rgba(6,182,212,0.3)]');
+  if (btn) {
+    btn.classList.remove('bg-surface-container', 'border-white/5', 'text-slate-400');
+    btn.classList.add('bg-primary', 'text-on-primary', 'border-primary', 'shadow-[0_0_15px_rgba(6,182,212,0.3)]');
+  }
   
   filterReactions();
 }
 
 function filterReactions() {
-  const q = document.getElementById('search-input').value.trim();
-  const cls = document.getElementById('class-filter').value;
+  const searchInput = document.getElementById('search-input');
+  const classFilter = document.getElementById('class-filter');
+  if (!searchInput || !classFilter) return;
+
+  const q = searchInput.value.trim();
+  const cls = classFilter.value;
   const type = currentFilterType;
 
   const normQ = normalizeChemicalText(q);
@@ -2340,4 +2349,776 @@ function updateGraph(state, currentPH, Veq) {
     point.setAttribute('cy', cy);
   }
 }
+
+
+// ============================================================
+// AUDIO SYNTHESIS ENGINE (Web Audio API)
+// ============================================================
+let audioCtx = null;
+function playLabSound(type) {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    if (type === 'pour') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.5);
+      gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.5);
+    } else if (type === 'bubble') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(Math.random() * 500 + 400, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.1);
+    } else if (type === 'explosion') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.4);
+      gainNode.gain.setValueAtTime(0.25, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.45);
+    }
+  } catch (e) {
+    console.log("Audio not supported or interaction deferred:", e);
+  }
+}
+
+// Modify existing drop to play sounds
+const originalHandleDrop = window.handleDrop;
+window.handleDrop = function(e) {
+  playLabSound('pour');
+  setTimeout(() => playLabSound('bubble'), 300);
+  if (originalHandleDrop) {
+    originalHandleDrop(e);
+  }
+};
+
+
+// ============================================================
+// EQUIPMENT ASSEMBLY & SWAPPING
+// ============================================================
+let currentEquipment = 'flask';
+window.setEquipment = function(type) {
+  currentEquipment = type;
+  document.querySelectorAll('.equip-btn').forEach(btn => {
+    if (btn.id === `equip-btn-${type}`) {
+      btn.classList.add('active', 'bg-primary', 'text-on-primary');
+      btn.classList.remove('text-slate-400');
+    } else {
+      btn.classList.remove('active', 'bg-primary', 'text-on-primary');
+      btn.classList.add('text-slate-400');
+    }
+  });
+  
+  const status = document.getElementById('lab-status');
+  if (status) status.textContent = `EQUIPMENT MIGRATED TO: ${type.toUpperCase()}`;
+  playLabSound('pour');
+};
+
+
+// ============================================================
+// SIDEBAR TOGGLE & AI SCIENTIST ENGINE
+// ============================================================
+window.setRightTab = function(tab) {
+  const viewTelemetry = document.getElementById('right-view-telemetry');
+  const viewAI = document.getElementById('right-view-ai');
+  const tabTelemetry = document.getElementById('right-tab-telemetry');
+  const tabAI = document.getElementById('right-tab-ai');
+  
+  if (tab === 'telemetry') {
+    if(viewTelemetry) viewTelemetry.classList.remove('hidden');
+    if(viewAI) viewAI.classList.add('hidden');
+    if(tabTelemetry) tabTelemetry.className = "flex-1 text-center py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-cyan-950/40 text-cyan-400";
+    if(tabAI) tabAI.className = "flex-1 text-center py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-white";
+  } else {
+    if(viewTelemetry) viewTelemetry.classList.add('hidden');
+    if(viewAI) viewAI.classList.remove('hidden');
+    if(tabTelemetry) tabTelemetry.className = "flex-1 text-center py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-white";
+    if(tabAI) tabAI.className = "flex-1 text-center py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-cyan-950/40 text-cyan-400";
+  }
+};
+
+function appendChatMessage(sender, text) {
+  const log = document.getElementById('ai-chat-log');
+  if(!log) return;
+  const div = document.createElement('div');
+  div.className = `p-2 rounded-xl text-[10px] leading-relaxed max-w-[90%] ${sender === 'AI' ? 'bg-cyan-950/40 text-cyan-300 border border-cyan-500/10 mr-auto' : 'bg-slate-800 text-slate-100 ml-auto'}`;
+  div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+let currentAIReport = null;
+
+window.triggerAIQuickAction = async function(action) {
+  const log = document.getElementById('ai-chat-log');
+  if(log && log.querySelector('.italic')) log.innerHTML = '';
+  
+  appendChatMessage('System', `Requesting AI analysis: ${action}...`);
+  
+  const formulas = droppedElements.map(el => el.symbol || el.formula);
+  const temp = parseFloat(document.getElementById('temp-val')?.textContent || '24.5');
+  const ph = parseFloat(document.getElementById('ph-val')?.textContent || '7.00');
+  const stability = parseFloat(document.getElementById('stability-val')?.textContent || '100');
+
+  try {
+    const res = await fetch('/api/ai/scientist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_query: action,
+        experiment_name: activeGuidedExp || 'Sandbox',
+        chemicals_in_flask: formulas,
+        telemetry: { ph, temp, stability }
+      })
+    });
+    if(!res.ok) throw new Error("API call failed");
+    const data = await res.json();
+    
+    if (action === 'Report') {
+      currentAIReport = data.lab_report;
+      appendChatMessage('AI', 'Experiment report successfully generated! Initiating PDF download...');
+      downloadPDFReport(data.lab_report);
+    } else if (action === 'Viva') {
+      appendChatMessage('AI', `Generated Laboratory Viva Questions:<br>${data.viva_questions.map((q, i) => `${i+1}. ${q}`).join('<br>')}`);
+    } else if (action === 'Predict') {
+      appendChatMessage('AI', `Predicted reaction output products: <strong>${data.predicted_product}</strong>`);
+    } else if (action === 'Suggest') {
+      appendChatMessage('AI', `AI Chemist Suggestion: ${data.suggested_next}`);
+    } else {
+      appendChatMessage('AI', data.response);
+    }
+  } catch (e) {
+    console.error("AI Error:", e);
+    appendChatMessage('AI', 'Sorry, I encountered an error checking telemetry logs. Please try again.');
+  }
+};
+
+window.submitAIChat = async function() {
+  const input = document.getElementById('ai-chat-input');
+  if(!input || !input.value.trim()) return;
+  const query = input.value.trim();
+  input.value = '';
+  
+  const log = document.getElementById('ai-chat-log');
+  if(log && log.querySelector('.italic')) log.innerHTML = '';
+  
+  appendChatMessage('Student', query);
+  
+  const formulas = droppedElements.map(el => el.symbol || el.formula);
+  const temp = parseFloat(document.getElementById('temp-val')?.textContent || '24.5');
+  const ph = parseFloat(document.getElementById('ph-val')?.textContent || '7.00');
+  const stability = parseFloat(document.getElementById('stability-val')?.textContent || '100');
+
+  try {
+    const res = await fetch('/api/ai/scientist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_query: query,
+        experiment_name: activeGuidedExp || 'Sandbox',
+        chemicals_in_flask: formulas,
+        telemetry: { ph, temp, stability }
+      })
+    });
+    if(!res.ok) throw new Error("API call failed");
+    const data = await res.json();
+    appendChatMessage('AI', data.response);
+  } catch (e) {
+    appendChatMessage('AI', 'Sorry, I lost contact with my core knowledge base. Please try again.');
+  }
+};
+
+
+// ============================================================
+// PDF LAB REPORT GENERATOR
+// ============================================================
+function downloadPDFReport(report) {
+  if(!report || !window.jspdf) {
+    alert("No report generated yet. Click 'Generate Lab Report' first.");
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setTextColor(6, 182, 212);
+  doc.text("ChemLove Laboratory Report", 20, 25);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 32);
+  doc.line(20, 35, 190, 35);
+  
+  let y = 45;
+  const sections = [
+    { title: "OBJECTIVE", content: report.objective },
+    { title: "PROCEDURE", content: report.procedure },
+    { title: "OBSERVATIONS", content: report.observations },
+    { title: "CALCULATIONS", content: report.calculations },
+    { title: "RESULT", content: report.result },
+    { title: "CONCLUSION", content: report.conclusion }
+  ];
+  
+  sections.forEach(sec => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(14, 20, 22);
+    doc.text(sec.title, 20, y);
+    y += 6;
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(80);
+    const splitText = doc.splitTextToSize(sec.content || "N/A", 170);
+    doc.text(splitText, 20, y);
+    y += (splitText.length * 5) + 8;
+  });
+  
+  doc.save("laboratory_report.pdf");
+}
+
+
+// ============================================================
+// GUIDED EXPERIMENTS WORKBENCH
+// ============================================================
+let activeGuidedExp = null;
+let guidedStepIndex = 0;
+let guidedExperiments = {
+  oxygen: {
+    title: "Preparation of Oxygen",
+    steps: [
+      { desc: "Add solid KClO3 reagent into the flask", check: () => droppedElements.some(el => el.symbol === 'KClO3') },
+      { desc: "Assemble Bunsen Burner heating device", check: () => currentEquipment === 'burner' },
+      { desc: "Apply heat to trigger chemical decomposition", check: () => {
+          const flame = document.getElementById('burner-flame');
+          return flame && document.getElementById('burner-setup').classList.contains('opacity-100');
+        }
+      },
+      { desc: "Observe oxygen bubbles forming in displacement", check: () => true }
+    ],
+    xp: 50
+  },
+  neutralization: {
+    title: "Acid-Base Synthesis",
+    steps: [
+      { desc: "Dispense hydrochloric acid (HCl) into simulator", check: () => droppedElements.some(el => el.symbol === 'HCl') },
+      { desc: "Slowly add neutralizing base Sodium Hydroxide (NaOH)", check: () => droppedElements.some(el => el.symbol === 'NaOH') },
+      { desc: "Equilibrate solution pH exactly to 7.00", check: () => {
+          const ph = parseFloat(document.getElementById('ph-val')?.textContent || '7.00');
+          return Math.abs(ph - 7.00) <= 0.1;
+        }
+      }
+    ],
+    xp: 50
+  },
+  displacement: {
+    title: "Displacement Reaction",
+    steps: [
+      { desc: "Dispense blue Copper Sulfate (CuSO4) solution", check: () => droppedElements.some(el => el.symbol === 'CuSO4') },
+      { desc: "Add reactive metallic Iron (Fe) strips", check: () => droppedElements.some(el => el.symbol === 'Fe') },
+      { desc: "Observe red metallic copper forming and color displacement", check: () => true }
+    ],
+    xp: 50
+  }
+};
+
+window.startGuidedExperiment = function(id) {
+  activeGuidedExp = id;
+  guidedStepIndex = 0;
+  const exp = guidedExperiments[id];
+  document.getElementById('guided-title').textContent = exp.title;
+  
+  document.querySelectorAll('.guided-exp-btn').forEach(btn => {
+    if (btn.getAttribute('onclick').includes(`'${id}'`)) {
+      btn.className = "guided-exp-btn w-full text-left p-3 rounded-xl border border-cyan-500/20 bg-cyan-950/20 text-cyan-400 transition-all hover:bg-cyan-950/30";
+    } else {
+      btn.className = "guided-exp-btn w-full text-left p-3 rounded-xl border border-white/5 bg-surface-container text-slate-300 transition-all hover:bg-white/5";
+    }
+  });
+
+  window.renderGuidedSteps();
+  window.resetGuidedApparatus();
+};
+
+window.renderGuidedSteps = function() {
+  const exp = guidedExperiments[activeGuidedExp];
+  const list = document.getElementById('guided-steps-list');
+  if(!list) return;
+  list.innerHTML = exp.steps.map((step, idx) => {
+    const isCompleted = idx < guidedStepIndex;
+    const isActive = idx === guidedStepIndex;
+    return `
+      <div class="flex items-start gap-3 p-3 rounded-xl border ${isCompleted ? 'border-emerald-500/20 bg-emerald-950/10 text-emerald-300' : isActive ? 'border-cyan-500/20 bg-cyan-950/10 text-cyan-300' : 'border-white/5 bg-surface-container text-slate-500'}">
+        <span class="material-symbols-outlined text-sm mt-0.5">${isCompleted ? 'check_circle' : 'circle'}</span>
+        <div class="text-[10px] font-bold uppercase tracking-wider">${step.desc}</div>
+      </div>
+    `;
+  }).join('');
+
+  const pct = Math.round((guidedStepIndex / exp.steps.length) * 100);
+  document.getElementById('guided-progress-val').textContent = `${pct}%`;
+  document.getElementById('guided-progress-bar').style.width = `${pct}%`;
+  
+  const nextBtn = document.getElementById('guided-next-step-btn');
+  const claimBtn = document.getElementById('guided-claim-reward-btn');
+  
+  if (guidedStepIndex >= exp.steps.length) {
+    if(nextBtn) nextBtn.disabled = true;
+    if(claimBtn) {
+      claimBtn.disabled = false;
+      claimBtn.className = "w-full py-3 bg-cyan-500 text-[#001f26] font-black text-xs uppercase tracking-widest rounded-xl transition-all border border-cyan-400/20 flex items-center justify-center gap-1.5 cursor-pointer shadow-lg active:scale-95";
+    }
+  } else {
+    if(nextBtn) nextBtn.disabled = false;
+    if(claimBtn) {
+      claimBtn.disabled = true;
+      claimBtn.className = "w-full py-3 bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-widest rounded-xl transition-all border border-white/5 flex items-center justify-center gap-1.5 cursor-not-allowed";
+    }
+  }
+};
+
+window.guidedNextStep = function() {
+  const exp = guidedExperiments[activeGuidedExp];
+  const step = exp.steps[guidedStepIndex];
+  
+  if (step.check()) {
+    guidedStepIndex++;
+    window.renderGuidedSteps();
+    playLabSound('pour');
+    
+    if (activeGuidedExp === 'oxygen' && guidedStepIndex === 3) {
+      document.getElementById('burner-setup').classList.remove('opacity-0');
+      document.getElementById('burner-setup').classList.add('opacity-100');
+      document.getElementById('guided-liquid').classList.remove('opacity-0');
+      document.getElementById('guided-status-badge').textContent = "HEATING ACTIVE - OXYGEN EVOLUTION";
+      playLabSound('explosion');
+    }
+  } else {
+    alert(`Please complete step requirements: "${step.desc}"`);
+  }
+};
+
+window.guidedPrevStep = function() {
+  if(guidedStepIndex > 0) {
+    guidedStepIndex--;
+    window.renderGuidedSteps();
+  }
+};
+
+window.resetGuidedApparatus = function() {
+  droppedElements = [];
+  currentEquipment = 'flask';
+  const flameSetup = document.getElementById('burner-setup');
+  if(flameSetup) flameSetup.className = "opacity-0 transition-opacity";
+  const guidedLiq = document.getElementById('guided-liquid');
+  if(guidedLiq) guidedLiq.classList.add('opacity-0');
+  const badge = document.getElementById('guided-status-badge');
+  if(badge) badge.textContent = "Awaiting Setup";
+};
+
+window.claimGuidedReward = async function() {
+  const exp = guidedExperiments[activeGuidedExp];
+  try {
+    const res = await fetch('/api/student/lab/reward', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ xp: exp.xp, mission: exp.title })
+    });
+    const data = await res.json();
+    if(data.ok) {
+      if(typeof confetti === 'function') {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      }
+      alert(`Congratulations! You completed ${exp.title} and earned +${exp.xp} XP!`);
+      
+      await fetch('/api/student/lab/attempt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          experiment_name: exp.title,
+          mode: 'guided',
+          duration_seconds: 180,
+          mistakes_count: 0,
+          accuracy_percentage: 100
+        })
+      });
+      
+      switchLabTab('lab');
+    }
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+
+// ============================================================
+// CHEMISTRY MISSIONS ENGINE
+// ============================================================
+let activeMission = null;
+let missionStartTime = 0;
+let missionMistakes = 0;
+
+window.startMission = function(id) {
+  activeMission = id;
+  missionStartTime = Date.now();
+  missionMistakes = 0;
+  
+  const container = document.getElementById('mission-exec-container');
+  const title = document.getElementById('mission-exec-title');
+  const content = document.getElementById('mission-exec-content');
+  
+  container.classList.remove('hidden');
+  
+  if (id === 'neutralize') {
+    title.textContent = "Neutralization Mission";
+    content.innerHTML = `
+      <p>Setup: The flask contains 10 mL of HCl Acid. Add NaOH base from the shelf drop-zone until the pH reaches exactly 7.00 &plusmn; 0.1.</p>
+      <button onclick="launchNeutralizeMission()" class="bg-primary hover:bg-cyan-300 text-[#001f26] font-bold text-[10px] uppercase px-4 py-2 rounded-xl transition-all">Begin Simulation</button>
+    `;
+  } else if (id === 'identify') {
+    title.textContent = "Unknown Compound Identifier";
+    content.innerHTML = `
+      <p>Setup: A mystery chemical tag 'X' is in the flask. It exhibits pH 12.0 and reacts with acid releasing significant heat.</p>
+      <p class="font-bold">What is compound X?</p>
+      <div class="grid grid-cols-2 gap-2 mt-2">
+        <button onclick="submitIdentifyAnswer('HCl')" class="bg-slate-800 text-xs text-white p-2.5 rounded-lg border border-white/5 hover:bg-slate-700">HCl</button>
+        <button onclick="submitIdentifyAnswer('NaOH')" class="bg-slate-800 text-xs text-white p-2.5 rounded-lg border border-white/5 hover:bg-slate-700">NaOH</button>
+        <button onclick="submitIdentifyAnswer('CH4')" class="bg-slate-800 text-xs text-white p-2.5 rounded-lg border border-white/5 hover:bg-slate-700">CH4</button>
+        <button onclick="submitIdentifyAnswer('KClO3')" class="bg-slate-800 text-xs text-white p-2.5 rounded-lg border border-white/5 hover:bg-slate-700">KClO3</button>
+      </div>
+    `;
+  } else if (id === 'titrate_mission') {
+    title.textContent = "Precision Titration Mission";
+    content.innerHTML = `
+      <p>Setup: Adjust the Titration burette setup to dispense NaOH into 20 mL HCl. Tap on burette or use the slider, and stop EXACTLY at the Phenolphthalein color endpoint (pH 8.3).</p>
+      <button onclick="launchTitrationMission()" class="bg-primary hover:bg-cyan-300 text-[#001f26] font-bold text-[10px] uppercase px-4 py-2 rounded-xl transition-all">Begin Titration</button>
+    `;
+  }
+};
+
+window.launchNeutralizeMission = function() {
+  switchLabTab('lab');
+  resetLab();
+  // Simulate drop
+  droppedElements.push({symbol: "HCl", name: "Hydrochloric Acid", formula: "HCl"});
+  updateLabUIOnDrop({symbol: "HCl", name: "Hydrochloric Acid", formula: "HCl"});
+  addLabLog("MISSION START: REACH pH 7.00", "text-cyan-400 font-bold");
+};
+
+window.launchTitrationMission = function() {
+  switchLabTab('titration');
+  resetTitration();
+  addLabLog("MISSION START: REACH ENDPOINT pH 8.3", "text-cyan-400 font-bold");
+};
+
+window.submitIdentifyAnswer = async function(ans) {
+  if (ans === 'NaOH') {
+    alert("Correct! Compound X is NaOH (a strong base).");
+    await completeMission('Identify Unknown', 60);
+  } else {
+    missionMistakes++;
+    alert("Incorrect! Try analyzing the chemical properties again.");
+  }
+};
+
+async function completeMission(name, xp) {
+  const duration = Math.round((Date.now() - missionStartTime) / 1000);
+  const accuracy = Math.max(0, 100 - (missionMistakes * 20));
+  
+  try {
+    const res = await fetch('/api/student/lab/reward', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ xp: xp, mission: name })
+    });
+    const data = await res.json();
+    if(data.ok) {
+      if(typeof confetti === 'function') confetti({ particleCount: 120, spread: 80 });
+      
+      await fetch('/api/student/lab/attempt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          experiment_name: name,
+          mode: 'mission',
+          duration_seconds: duration,
+          mistakes_count: missionMistakes,
+          accuracy_percentage: accuracy
+        })
+      });
+      
+      window.abortMission();
+      switchLabTab('missions');
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+window.abortMission = function() {
+  activeMission = null;
+  const container = document.getElementById('mission-exec-container');
+  if(container) container.classList.add('hidden');
+};
+
+
+// ============================================================
+// SPECTROSCOPY LAB GRAPH ENGINE
+// ============================================================
+let specData = {
+  Methane: {
+    ir: [
+      { x: 50, y: 10 }, { x: 100, y: 10 }, { x: 150, y: 80 }, { x: 170, y: 10 },
+      { x: 250, y: 10 }, { x: 300, y: 90 }, { x: 320, y: 10 }, { x: 400, y: 10 }
+    ],
+    nmr: [
+      { x: 350, y: 120, label: "Singlet (CH4, 0.9 ppm)" }
+    ]
+  },
+  Benzene: {
+    ir: [
+      { x: 50, y: 15 }, { x: 120, y: 15 }, { x: 180, y: 95 }, { x: 200, y: 15 },
+      { x: 280, y: 15 }, { x: 330, y: 85 }, { x: 350, y: 15 }, { x: 400, y: 15 }
+    ],
+    nmr: [
+      { x: 100, y: 130, label: "Aromatic Singlet (C6H6, 7.27 ppm)" }
+    ]
+  },
+  Ethanol: {
+    ir: [
+      { x: 50, y: 10 }, { x: 80, y: 90 }, { x: 120, y: 10 }, { x: 200, y: 10 },
+      { x: 280, y: 85 }, { x: 310, y: 10 }, { x: 400, y: 10 }
+    ],
+    nmr: [
+      { x: 300, y: 120, label: "Triplet (CH3, 1.2 ppm)" },
+      { x: 200, y: 90, label: "Quartet (CH2, 3.7 ppm)" },
+      { x: 100, y: 50, label: "Singlet (OH, 5.0 ppm)" }
+    ]
+  },
+  Water: {
+    ir: [
+      { x: 50, y: 20 }, { x: 100, y: 98 }, { x: 180, y: 20 },
+      { x: 300, y: 90 }, { x: 330, y: 20 }, { x: 400, y: 20 }
+    ],
+    nmr: [
+      { x: 250, y: 130, label: "Liquid peak (H2O, 4.7 ppm)" }
+    ]
+  }
+};
+
+window.showSpectra = function(compound) {
+  document.querySelectorAll('.spec-compound-btn').forEach(btn => {
+    if (btn.textContent.includes(compound)) {
+      btn.className = "spec-compound-btn active w-full p-3 rounded-lg border border-cyan-500/20 bg-cyan-950/20 text-cyan-400 font-bold text-xs text-left uppercase";
+    } else {
+      btn.className = "spec-compound-btn w-full p-3 rounded-lg border border-white/5 bg-surface text-slate-300 font-bold text-xs text-left uppercase hover:bg-white/5";
+    }
+  });
+
+  const data = specData[compound];
+  const irContainer = document.getElementById('ir-spectra-container');
+  const nmrContainer = document.getElementById('nmr-spectra-container');
+  
+  if (irContainer && data) {
+    irContainer.innerHTML = `
+      <svg class="w-full h-full" viewBox="0 0 450 120">
+        <line x1="30" y1="10" x2="30" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+        <line x1="30" y1="100" x2="430" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+        <text x="5" y="15" fill="#a0aec0" font-size="8">100%T</text>
+        <text x="5" y="98" fill="#a0aec0" font-size="8">0%T</text>
+        <polyline fill="none" stroke="#4cd7f6" stroke-width="2" points="${data.ir.map(p => `${p.x + 30},${100 - p.y}`).join(' ')}" />
+      </svg>
+    `;
+  }
+
+  if (nmrContainer && data) {
+    let nmrBars = '';
+    data.nmr.forEach(bar => {
+      nmrBars += `
+        <line x1="${bar.x}" y1="100" x2="${bar.x}" y2="${100 - bar.y}" stroke="#ffb0cd" stroke-width="3.5" />
+        <text x="${bar.x - 10}" y="${80 - bar.y}" fill="#ffb0cd" font-size="7" font-weight="bold">${bar.label}</text>
+      `;
+    });
+    nmrContainer.innerHTML = `
+      <svg class="w-full h-full" viewBox="0 0 450 120">
+        <line x1="30" y1="10" x2="30" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+        <line x1="30" y1="100" x2="430" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+        <text x="360" y="112" fill="#a0aec0" font-size="7">TMS (0 ppm)</text>
+        ${nmrBars}
+      </svg>
+    `;
+  }
+};
+
+
+// ============================================================
+// ORGANIC REACTION SIMULATOR ANIMATOR
+// ============================================================
+let currentMechanism = 'SN2';
+
+window.playOrganicSim = function(mechanism) {
+  currentMechanism = mechanism;
+  document.querySelectorAll('.org-btn').forEach(btn => {
+    if (btn.getAttribute('onclick').includes(`'${mechanism}'`)) {
+      btn.className = "org-btn active w-full p-3 rounded-lg border border-cyan-500/20 bg-cyan-950/20 text-cyan-400 font-bold text-xs text-left uppercase";
+    } else {
+      btn.className = "org-btn w-full p-3 rounded-lg border border-white/5 bg-surface text-slate-300 font-bold text-xs text-left uppercase hover:bg-white/5";
+    }
+  });
+  
+  const title = document.getElementById('organic-title');
+  const desc = document.getElementById('organic-desc');
+  
+  if (mechanism === 'SN2') {
+    title.textContent = "SN2 Reaction Pathway";
+    desc.textContent = "In an SN2 mechanism, the nucleophile attacks the substrate from the backside, exactly 180 degrees away from the leaving group, causing a transition state with five-coordinate carbon and inversion of configuration.";
+  } else if (mechanism === 'SN1') {
+    title.textContent = "SN1 Substitution Mechanism";
+    desc.textContent = "SN1 is a two-step nucleophilic substitution. First, the leaving group departs, forming a carbocation intermediate. Then, the nucleophile attacks from either side, resulting in racemization.";
+  } else if (mechanism === 'E2') {
+    title.textContent = "E2 Elimination Mechanism";
+    desc.textContent = "E2 is a concerted elimination reaction where a strong base pulls a proton from the beta-carbon while the leaving group departs, forming a double bond.";
+  } else if (mechanism === 'Esterification') {
+    title.textContent = "Fischer Esterification Mechanism";
+    desc.textContent = "Reaction of carboxylic acid and alcohol in acid catalyst to form ester and water. The acid protonates the carbonyl carbon, activating it to nucleophilic attack by alcohol.";
+  }
+  
+  window.triggerOrganicAnimation();
+};
+
+window.triggerOrganicAnimation = function() {
+  const stage = document.getElementById('organic-stage');
+  if(!stage) return;
+  
+  if (currentMechanism === 'SN2') {
+    stage.innerHTML = `
+      <svg class="w-full h-full" viewBox="0 0 400 160">
+        <circle cx="200" cy="80" r="16" fill="#4a5568" />
+        <text x="196" y="84" fill="white" font-size="10" font-weight="bold">C</text>
+        <g id="leaving-group">
+          <line x1="200" y1="80" x2="260" y2="80" stroke="white" stroke-width="2" />
+          <circle cx="260" cy="80" r="14" fill="#e53e3e" />
+          <text x="254" y="84" fill="white" font-size="10" font-weight="bold">Cl</text>
+          <animateTransform attributeName="transform" type="translate" from="0,0" to="100,0" dur="2s" fill="freeze" begin="1s" />
+          <animate attributeName="opacity" from="1" to="0" dur="2s" fill="freeze" begin="1.5s" />
+        </g>
+        <g id="nucleophile">
+          <circle cx="60" cy="80" r="14" fill="#3182ce" />
+          <text x="50" y="84" fill="white" font-size="10" font-weight="bold">OH-</text>
+          <animateTransform attributeName="transform" type="translate" from="0,0" to="124,0" dur="1.2s" fill="freeze" />
+        </g>
+      </svg>
+    `;
+  } else {
+    stage.innerHTML = `
+      <svg class="w-full h-full" viewBox="0 0 400 160">
+        <g id="carbocation">
+          <circle cx="200" cy="80" r="18" fill="#4cd7f6" />
+          <text x="194" y="84" fill="#001f26" font-size="11" font-weight="black">C+</text>
+          <circle cx="120" cy="80" r="12" fill="#3182ce" />
+          <text x="110" y="84" fill="white" font-size="8" font-weight="bold">Nu-</text>
+          <animateTransform attributeName="transform" type="translate" from="-200,0" to="0,0" dur="1s" fill="freeze" />
+        </g>
+      </svg>
+    `;
+  }
+};
+
+
+// ============================================================
+// INTERACTIVE PERIODIC TABLE
+// ============================================================
+let elementsData = {
+  1: { name: "Hydrogen", symbol: "H", num: 1, mass: 1.008, conf: "1s1", uses: "Rocket fuel, ammonia synthesis", rxn: "2H2 + O2 -> 2H2O" },
+  2: { name: "Helium", symbol: "He", num: 2, mass: 4.003, conf: "1s2", uses: "Balloons, cooling superconducting magnets", rxn: "Noble gas (inert)" },
+  3: { name: "Lithium", symbol: "Li", num: 3, mass: 6.94, conf: "[He] 2s1", uses: "Batteries, glass, psychiatric meds", rxn: "2Li + 2H2O -> 2LiOH + H2" },
+  4: { name: "Beryllium", symbol: "Be", num: 4, mass: 9.012, conf: "[He] 2s2", uses: "Aerospace parts, X-ray tubes", rxn: "2Be + O2 -> 2BeO" },
+  5: { name: "Boron", symbol: "B", num: 5, mass: 10.81, conf: "[He] 2s2 2p1", uses: "Fiberglass, borosilicate glass", rxn: "4B + 3O2 -> 2B2O3" },
+  6: { name: "Carbon", symbol: "C", num: 6, mass: 12.011, conf: "[He] 2s2 2p2", uses: "Steel alloy, organic compounds", rxn: "C + O2 -> CO2" },
+  7: { name: "Nitrogen", symbol: "N", num: 7, mass: 14.007, conf: "[He] 2s2 2p3", uses: "Fertilizers, liquid coolant", rxn: "N2 + 3H2 -> 2NH3" },
+  8: { name: "Oxygen", symbol: "O", num: 8, mass: 15.999, conf: "[He] 2s2 2p4", uses: "Respiration, steel manufacture", rxn: "Combustion agent" },
+  9: { name: "Fluorine", symbol: "F", num: 9, mass: 18.998, conf: "[He] 2s2 2p5", uses: "Uranium processing, toothpaste", rxn: "H2 + F2 -> 2HF" },
+  10: { name: "Neon", symbol: "Ne", num: 10, mass: 20.180, conf: "[He] 2s2 2p6", uses: "Neon signs, advertising lights", rxn: "Noble gas (inert)" },
+  11: { name: "Sodium", symbol: "Na", num: 11, mass: 22.990, conf: "[Ne] 3s1", uses: "Street lights, heat exchanger", rxn: "2Na + Cl2 -> 2NaCl" },
+  12: { name: "Magnesium", symbol: "Mg", num: 12, mass: 24.305, conf: "[Ne] 3s2", uses: "Aircraft alloys, flares, medicine", rxn: "Mg + 2HCl -> MgCl2 + H2" },
+  13: { name: "Aluminium", symbol: "Al", num: 13, mass: 26.982, conf: "[Ne] 3s2 3p1", uses: "Cans, foil, kitchen utensils", rxn: "4Al + 3O2 -> 2Al2O3" },
+  14: { name: "Silicon", symbol: "Si", num: 14, mass: 28.085, conf: "[Ne] 3s2 3p2", uses: "Microchips, solar cells, glass", rxn: "Si + O2 -> SiO2" },
+  15: { name: "Phosphorus", symbol: "P", num: 15, mass: 30.974, conf: "[Ne] 3s2 3p3", uses: "Matches, fertilizers, detergents", rxn: "P4 + 5O2 -> P4O10" },
+  16: { name: "Sulfur", symbol: "S", num: 16, mass: 32.06, conf: "[Ne] 3s2 3p4", uses: "Sulfuric acid, gunpowder", rxn: "S + O2 -> SO2" },
+  17: { name: "Chlorine", symbol: "Cl", num: 17, mass: 35.45, conf: "[Ne] 3s2 3p5", uses: "Water purification, disinfectants", rxn: "2Na + Cl2 -> 2NaCl" },
+  18: { name: "Argon", symbol: "Ar", num: 18, mass: 39.948, conf: "[Ne] 3s2 3p6", uses: "Incandescent lamps, welding shields", rxn: "Noble gas (inert)" },
+  19: { name: "Potassium", symbol: "K", num: 19, mass: 39.098, conf: "[Ar] 4s1", uses: "Potash fertilizers, liquid soaps", rxn: "2K + 2H2O -> 2KOH + H2" },
+  20: { name: "Calcium", symbol: "Ca", num: 20, mass: 40.078, conf: "[Ar] 4s2", uses: "Cement, plaster, calcium alloys", rxn: "Ca + 2H2O -> Ca(OH)2 + H2" }
+};
+
+window.initPeriodicTable = function() {
+  const grid = document.getElementById('ptable-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  
+  for (let num = 1; num <= 20; num++) {
+    const el = elementsData[num];
+    const card = document.createElement('button');
+    card.onclick = () => window.showElementDetails(num);
+    card.className = "bg-surface-container border border-white/5 p-2 rounded-xl flex flex-col items-center hover:border-cyan-400/35 hover:-translate-y-1 transition-all";
+    card.innerHTML = `
+      <span class="text-[8px] font-bold text-slate-500 self-start">${el.num}</span>
+      <span class="text-base font-black text-cyan-400">${el.symbol}</span>
+      <span class="text-[8px] text-slate-400 truncate w-full text-center">${el.name}</span>
+    `;
+    grid.appendChild(card);
+  }
+};
+
+window.showElementDetails = function(num) {
+  const el = elementsData[num];
+  const details = document.getElementById('ptable-details');
+  if(!details) return;
+  
+  details.innerHTML = `
+    <div class="flex justify-between items-center border-b border-white/5 pb-2">
+      <h3 class="text-sm font-black uppercase text-cyan-400">${el.name}</h3>
+      <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-950/20 text-cyan-300 border border-cyan-500/10">No. ${el.num}</span>
+    </div>
+    <div class="space-y-3 text-xs">
+      <div>
+        <div class="text-[9px] font-bold uppercase text-slate-500">Atomic Symbol</div>
+        <div class="font-black text-xl text-white mt-0.5">${el.symbol}</div>
+      </div>
+      <div>
+        <div class="text-[9px] font-bold uppercase text-slate-500">Atomic Mass</div>
+        <div class="font-mono text-white mt-0.5">${el.mass} u</div>
+      </div>
+      <div>
+        <div class="text-[9px] font-bold uppercase text-slate-500">Electron Configuration</div>
+        <div class="font-mono text-white mt-0.5">${el.conf}</div>
+      </div>
+      <div>
+        <div class="text-[9px] font-bold uppercase text-slate-500">Typical Uses</div>
+        <div class="text-slate-300 mt-0.5 leading-relaxed">${el.uses}</div>
+      </div>
+      <div>
+        <div class="text-[9px] font-bold uppercase text-slate-500">Characteristic Reaction</div>
+        <div class="font-mono text-cyan-300 mt-0.5">${el.rxn}</div>
+      </div>
+    </div>
+  `;
+};
+
 
