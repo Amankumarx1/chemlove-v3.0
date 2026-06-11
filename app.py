@@ -132,6 +132,33 @@ else:
         "database": os.getenv("MYSQL_DATABASE", "chemlove")
     }
 
+# Perform bootstrap connection to ensure target database exists before creating the pool
+try:
+    target_db = db_config.get("database", "chemlove")
+    bootstrap_config = db_config.copy()
+    if "database" in bootstrap_config:
+        del bootstrap_config["database"]
+    
+    if HAS_NATIVE_MYSQL:
+        conn = mysql.connector.connect(**bootstrap_config)
+    else:
+        pymysql_config = {
+            "host": bootstrap_config.get("host", "localhost"),
+            "user": bootstrap_config.get("user", "root"),
+            "password": bootstrap_config.get("password", ""),
+            "port": int(bootstrap_config.get("port", 3306))
+        }
+        import pymysql
+        conn = pymysql.connect(**pymysql_config)
+        
+    cur = conn.cursor()
+    cur.execute(f"CREATE DATABASE IF NOT EXISTS `{target_db}`")
+    cur.close()
+    conn.close()
+    print(f"[DATABASE] Verified or created database: {target_db}")
+except Exception as e:
+    print(f"[DATABASE] WARNING: Database bootstrap creation failed (might already exist or user lacks permission): {e}")
+
 try:
     pool = MySQLConnectionPool(
         pool_name="chemlove_pool",
@@ -208,28 +235,84 @@ def no_cache_html(response):
     return response
 
 
-# ── Startup connectivity check ─────────────────────────────────────────────
+def execute_sql_file(conn, filepath):
+    """Executes a multi-statement SQL file using the wrapper connection."""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    statements = []
+    current_statement = []
+    
+    for line in content.split('\n'):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith('--') or stripped.startswith('#'):
+            continue
+        
+        current_statement.append(line)
+        if stripped.endswith(';'):
+            statements.append('\n'.join(current_statement))
+            current_statement = []
+            
+    cursor = conn.conn.cursor()
+    try:
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+        for stmt in statements:
+            stmt_stripped = stmt.strip()
+            if stmt_stripped:
+                cursor.execute(stmt_stripped)
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+        conn.conn.commit()
+    except Exception as e:
+        conn.conn.rollback()
+        raise e
+    finally:
+        cursor.close()
+
 def init_db():
-    """Verify MySQL database is reachable and apply V3+V4 Guided Learning schema additions."""
+    """Verify MySQL database connection, auto-run schema.sql / seed.sql if empty, and ensure admin exists."""
     try:
         with get_db() as conn:
-            conn.execute("SELECT 1").fetchone()
+            cursor = conn.conn.cursor()
+            cursor.execute("SHOW TABLES")
+            tables = [list(r.values())[0] if isinstance(r, dict) else r[0] for r in cursor.fetchall()]
+            cursor.close()
             
-            # Create chapter_section_progress table
-            conn.execute("""
-            CREATE TABLE IF NOT EXISTS chapter_section_progress (
-                user_id INT NOT NULL,
-                chapter_id INT NOT NULL,
-                section_name VARCHAR(50) NOT NULL,
-                is_completed BOOLEAN DEFAULT FALSE,
-                completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                PRIMARY KEY (user_id, chapter_id, section_name),
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE
-            )
-            """)
+            if not tables or 'users' not in tables:
+                print("[DATABASE] No tables found. Importing schema.sql...")
+                execute_sql_file(conn, "schema.sql")
+                print("[DATABASE] schema.sql imported successfully.")
+                cursor = conn.conn.cursor()
+                cursor.execute("SHOW TABLES")
+                tables = [list(r.values())[0] if isinstance(r, dict) else r[0] for r in cursor.fetchall()]
+                cursor.close()
             
-            # V3: Alter chapters table to ensure content columns exist
+            has_data = False
+            if 'chapters' in tables:
+                row = conn.execute("SELECT COUNT(*) as count FROM chapters").fetchone()
+                if row and row['count'] > 0:
+                    has_data = True
+            
+            if not has_data:
+                print("[DATABASE] Seeding database using seed.sql...")
+                execute_sql_file(conn, "seed.sql")
+                print("[DATABASE] seed.sql imported successfully.")
+            
+            admin_row = conn.execute("SELECT * FROM users WHERE email = %s", ('admin@chemlove.com',)).fetchone()
+            if not admin_row:
+                print("[DATABASE] Creating default admin account...")
+                hashed_pw = generate_password_hash("admin123")
+                conn.execute(
+                    """
+                    INSERT INTO users (name, email, password_hash, institution, role, class_level, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    ("Administrator", "admin@chemlove.com", hashed_pw, "ChemLove HQ", "admin", "all", "active")
+                )
+                print("[DATABASE] Default admin account (admin@chemlove.com / admin123) verified.")
+                
+            # Perform any incremental alterations if needed (V3/V4 Guided Learning schema columns check/additions)
             v3_columns = {
                 "overview_content": "LONGTEXT NULL",
                 "key_points_content": "LONGTEXT NULL",
@@ -242,9 +325,8 @@ def init_db():
                 try:
                     conn.execute(f"ALTER TABLE chapters ADD COLUMN {col} {col_def}")
                 except Exception:
-                    pass  # Column already exists
+                    pass
 
-            # V4: Add section-level tracking columns to chapter_progress
             v4_progress_cols = {
                 "overview_completed":    "BOOLEAN DEFAULT FALSE",
                 "keypoints_completed":   "BOOLEAN DEFAULT FALSE",
@@ -260,9 +342,8 @@ def init_db():
                 try:
                     conn.execute(f"ALTER TABLE chapter_progress ADD COLUMN {col} {col_def}")
                 except Exception:
-                    pass  # Column already exists
+                    pass
 
-            # Notifications Multi-Filter Schema Update
             v5_notification_cols = {
                 "target_role": "VARCHAR(50) DEFAULT 'all'",
                 "target_institution": "VARCHAR(255) DEFAULT 'all'",
@@ -274,48 +355,14 @@ def init_db():
                 except Exception:
                     pass
             
-            # Create notification_reads table
-            try:
-                conn.execute("""
-                CREATE TABLE IF NOT EXISTS notification_reads (
-                    user_id INT NOT NULL,
-                    notification_id INT NOT NULL,
-                    read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (user_id, notification_id),
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE
-                )
-                """)
-            except Exception as e:
-                print(f"[DATABASE] Error creating notification_reads: {e}")
-                
-            # Add avatar column to users table if it does not exist
             try:
                 conn.execute("ALTER TABLE users ADD COLUMN avatar VARCHAR(100) DEFAULT 'account_circle'")
             except Exception:
                 pass
             
-            # Create lab_attempts table
-            try:
-                conn.execute("""
-                CREATE TABLE IF NOT EXISTS lab_attempts (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    user_id INT NOT NULL,
-                    experiment_name VARCHAR(255) NOT NULL,
-                    mode VARCHAR(50) NOT NULL,
-                    duration_seconds INT NOT NULL,
-                    mistakes_count INT NOT NULL DEFAULT 0,
-                    accuracy_percentage INT NOT NULL DEFAULT 100,
-                    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-                """)
-            except Exception as e:
-                print(f"[DATABASE] Error creating lab_attempts: {e}")
-                    
-        print("[DATABASE] MySQL connection and Guided Learning V4 schemas verified successfully.")
+        print("[DATABASE] MySQL connection and database distribution bootstrap checked successfully.")
     except Exception as e:
-        print(f"[DATABASE] WARNING: Could not complete database v3 initialization: {e}")
+        print(f"[DATABASE] ERROR: Startup database bootstrap failed: {e}")
 
 
 # Database initialization deferred to before_request to prevent block during serverless imports
