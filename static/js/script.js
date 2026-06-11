@@ -1490,6 +1490,7 @@ function handleDrop(e) {
 
 function updateLabUIOnDrop(el) {
   const liq = document.getElementById('flask-liquid-0');
+  const liqMobile = document.getElementById('flask-liquid-mobile');
   
   // Update liquid color based on the chemical dropped
   const colorType = getChemicalType(el.formula || el.symbol);
@@ -1499,9 +1500,16 @@ function updateLabUIOnDrop(el) {
   else if (colorType === 'base') targetColor = '#0055ff'; // deep blue
   else if (el.symbol === 'CH4') targetColor = '#ffcc00'; // yellow
   
-  liq.style.fill = targetColor;
-  liq.style.fillOpacity = Math.min(0.6 + (droppedElements.length * 0.15), 1);
-  liq.classList.remove('opacity-0');
+  if (liq) {
+    liq.style.fill = targetColor;
+    liq.style.fillOpacity = Math.min(0.6 + (droppedElements.length * 0.15), 1);
+    liq.classList.remove('opacity-0');
+  }
+  if (liqMobile) {
+    liqMobile.style.fill = targetColor;
+    liqMobile.style.fillOpacity = Math.min(0.6 + (droppedElements.length * 0.15), 1);
+    liqMobile.classList.remove('opacity-0');
+  }
   
   // Update the liquid path to simulate rising level
   const drops = Math.min(droppedElements.length, 5);
@@ -1520,11 +1528,26 @@ function updateLabUIOnDrop(el) {
   const step = (w2 - w1) / 8;
   const wavePath = `M ${w1} ${yBase} L ${w1+step} ${yWave} L ${w1+step*2} ${yBase} L ${w1+step*3} ${yWave} L ${w1+step*4} ${yBase} L ${w1+step*5} ${yWave} L ${w1+step*6} ${yBase} L ${w1+step*7} ${yWave} L ${w2} ${yBase} L 160 170 L 40 170 Z`;
   
-  liq.setAttribute('d', wavePath);
+  if (liq) liq.setAttribute('d', wavePath);
+  if (liqMobile) liqMobile.setAttribute('d', wavePath);
+  
+  // Update meniscus position dynamically
+  const rx = (w2 - w1) / 2;
+  const meniscus = document.getElementById('liquid-meniscus');
+  const meniscusMobile = document.getElementById('liquid-meniscus-mobile');
+  if (meniscus) {
+    meniscus.setAttribute('cy', yBase);
+    meniscus.setAttribute('rx', rx);
+  }
+  if (meniscusMobile) {
+    meniscusMobile.setAttribute('cy', yBase);
+    meniscusMobile.setAttribute('rx', rx);
+  }
   
   // Start bubbles if it's the first element
   if (droppedElements.length === 1) {
     startBubbles(0);
+    startBubbles('mobile');
   }
   
   updateLiveTelemetry();
@@ -1709,14 +1732,44 @@ function resetLab() {
   document.getElementById('lab-status').className = 'mt-4 mb-8 border border-cyan-500/30 bg-[#1e4d58] text-[#acedff] px-10 py-4 font-bold text-2xl uppercase text-center rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.2)] z-20';
   
   const liq = document.getElementById('flask-liquid-0');
-  liq.style.fillOpacity = 0.3;
-  liq.style.fill = '#3b82f6';
-  liq.setAttribute('d', 'M 62 130 L 70 125 L 80 130 L 90 125 L 100 130 L 110 125 L 120 130 L 130 125 L 138 130 L 160 170 L 40 170 Z');
-  liq.classList.remove('success', 'error', 'partial', 'metal', 'nonmetal', 'acid', 'base', 'organic');
-  liq.classList.add('opacity-0');
+  if (liq) {
+    liq.style.fillOpacity = 0.3;
+    liq.style.fill = '#3b82f6';
+    liq.setAttribute('d', 'M 62 130 L 70 125 L 80 130 L 90 125 L 100 130 L 110 125 L 120 130 L 130 125 L 138 130 L 160 170 L 40 170 Z');
+    liq.classList.remove('success', 'error', 'partial', 'metal', 'nonmetal', 'acid', 'base', 'organic');
+    liq.classList.add('opacity-0');
+  }
   
-  document.getElementById(`bubbles-container-0`).innerHTML = '';
-  document.getElementById(`reaction-glow-0`).classList.add('opacity-0');
+  const liqMobile = document.getElementById('flask-liquid-mobile');
+  if (liqMobile) {
+    liqMobile.style.fillOpacity = 0.3;
+    liqMobile.style.fill = '#3b82f6';
+    liqMobile.setAttribute('d', 'M 62 130 L 70 125 L 80 130 L 90 125 L 100 130 L 110 125 L 120 130 L 130 125 L 138 130 L 160 170 L 40 170 Z');
+    liqMobile.classList.remove('success', 'error', 'partial', 'metal', 'nonmetal', 'acid', 'base', 'organic');
+    liqMobile.classList.add('opacity-0');
+  }
+  
+  const b0 = document.getElementById(`bubbles-container-0`);
+  if (b0) b0.innerHTML = '';
+  const bm = document.getElementById(`bubbles-container-mobile`);
+  if (bm) bm.innerHTML = '';
+  
+  const g0 = document.getElementById(`reaction-glow-0`);
+  if (g0) g0.classList.add('opacity-0');
+  const gm = document.getElementById(`reaction-glow-mobile`);
+  if (gm) gm.classList.add('opacity-0');
+  
+  // Reset meniscus
+  const meniscus = document.getElementById('liquid-meniscus');
+  const meniscusMobile = document.getElementById('liquid-meniscus-mobile');
+  if (meniscus) {
+    meniscus.setAttribute('cy', 130);
+    meniscus.setAttribute('rx', 38);
+  }
+  if (meniscusMobile) {
+    meniscusMobile.setAttribute('cy', 130);
+    meniscusMobile.setAttribute('rx', 38);
+  }
   
   const resultArea = document.getElementById('result-area');
   if (resultArea) resultArea.classList.add('hidden');
@@ -1791,9 +1844,15 @@ function handleReactionSuccess(rxn) {
   document.getElementById('lab-status').className = 'mt-4 mb-8 border border-cyan-400/50 bg-[#004e5c] text-[#acedff] px-10 py-4 font-bold text-2xl uppercase text-center rounded-xl shadow-[0_0_25px_rgba(6,182,212,0.4)] z-20';
   
   // Visual Effects
-  document.getElementById('reaction-glow-0').classList.remove('opacity-0');
+  const g0 = document.getElementById('reaction-glow-0');
+  if (g0) g0.classList.remove('opacity-0');
+  const gm = document.getElementById('reaction-glow-mobile');
+  if (gm) gm.classList.remove('opacity-0');
+  
   const liq = document.getElementById('flask-liquid-0');
-  liq.style.fill = '#4cd7f6';
+  if (liq) liq.style.fill = '#4cd7f6';
+  const liqMobile = document.getElementById('flask-liquid-mobile');
+  if (liqMobile) liqMobile.style.fill = '#4cd7f6';
   
   // Update Gauges
   const isExothermic = rxn.explanation.toLowerCase().includes('exothermic') || rxn.explanation.toLowerCase().includes('releases heat');
@@ -1888,14 +1947,20 @@ function triggerBlastEffect() {
   centerArea.classList.add('animate-blast-shake');
 
   const liq = document.getElementById('flask-liquid-0');
+  const liqMobile = document.getElementById('flask-liquid-mobile');
   const oldFill = liq ? liq.style.fill : null;
+  const oldFillMobile = liqMobile ? liqMobile.style.fill : null;
   if (liq) liq.style.fill = '#ff4400';
+  if (liqMobile) liqMobile.style.fill = '#ff4400';
 
   setTimeout(() => {
     if (blast.parentNode) blast.remove();
     centerArea.classList.remove('animate-blast-shake');
     if (liq && document.body.contains(liq)) {
         liq.style.fill = oldFill;
+    }
+    if (liqMobile && document.body.contains(liqMobile)) {
+        liqMobile.style.fill = oldFillMobile;
     }
   }, 1000);
 }

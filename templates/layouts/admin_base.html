@@ -88,7 +88,8 @@
         }
     </style>
 </head>
-<body class="bg-background text-on-surface font-body grid-bg min-h-screen relative overflow-x-hidden flex flex-col">
+<body class="bg-background text-on-surface font-body min-h-screen relative overflow-x-hidden flex flex-col">
+    <canvas class="particle-canvas" id="particles"></canvas>
     {% if current_user and current_user.is_impersonating %}
     <div class="bg-gradient-to-r from-rose-600 to-pink-600 text-white py-3 px-4 text-center text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-3 relative z-50 shadow-md">
         <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
@@ -834,6 +835,7 @@
             });
         });
     </script>
+    <script src="{{ url_for('static', filename='js/particles.js') }}"></script>
 </body>
 </html>
 

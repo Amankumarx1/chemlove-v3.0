@@ -40,6 +40,7 @@
     </script>
 </head>
 <body class="bg-surface text-on-surface font-body selection:bg-tertiary selection:text-on-tertiary flex flex-col min-h-screen">
+    <canvas class="particle-canvas" id="particles"></canvas>
     {% if current_user and current_user.is_impersonating %}
     <div class="bg-gradient-to-r from-rose-600 to-pink-600 text-white py-3 px-4 text-center text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-3 relative z-50 shadow-md">
         <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
@@ -88,6 +89,7 @@
     </script>
 
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/particles.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
