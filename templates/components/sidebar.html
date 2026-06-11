@@ -1,5 +1,5 @@
 <aside id="dashboard-sidebar"
-    class="fixed left-0 top-0 z-20 h-screen w-64 border-r border-white/5 bg-[#0e1416]/50 backdrop-blur-xl flex flex-col pt-6 px-4 hidden md:flex transition-all duration-300">
+    class="fixed left-0 top-0 z-30 h-screen w-64 border-r border-white/5 bg-[#0e1416]/90 backdrop-blur-xl flex flex-col pt-6 px-4 -translate-x-full md:translate-x-0 transition-transform duration-300">
 
     <style>
         /* Prevent flashing outline / focus ring on student/teacher sidebar menu items */
@@ -29,15 +29,20 @@
     </style>
 
     <!-- Fixed Brand Logo Block -->
-    <div class="px-3 pb-4 mb-4 border-b border-white/5 flex items-center gap-3 shrink-0">
-        <span class="material-symbols-outlined text-cyan-400 text-3xl shrink-0 animate-pulse">science</span>
-        <div class="truncate">
-            <div class="font-black text-lg tracking-tight text-white uppercase leading-none">Chem<span
-                    class="text-cyan-400">Love</span></div>
-            <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight mt-1">
-                Virtual Lab & LMS
+    <div class="px-3 pb-4 mb-4 border-b border-white/5 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-cyan-400 text-3xl shrink-0 animate-pulse">science</span>
+            <div class="truncate">
+                <div class="font-black text-lg tracking-tight text-white uppercase leading-none">Chem<span
+                        class="text-cyan-400">Love</span></div>
+                <div class="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight mt-1">
+                    Virtual Lab & LMS
+                </div>
             </div>
         </div>
+        <button onclick="toggleDashboardSidebar(false)" class="md:hidden text-slate-400 hover:text-white p-1 flex items-center" aria-label="Close sidebar">
+            <span class="material-symbols-outlined text-xl">close</span>
+        </button>
     </div>
 
     <div class="flex-grow overflow-y-auto pr-1 space-y-6 scrollbar-thin">

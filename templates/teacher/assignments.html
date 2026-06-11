@@ -3,12 +3,12 @@
 {% block title %}ChemLove | Assignments Management{% endblock %}
 
 {% block dashboard_content %}
-    <div class="flex justify-between items-center mb-8">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <div>
-            <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">Assignment Center</h1>
+            <h1 class="text-3xl md:text-4xl font-black tracking-tight leading-none uppercase">Assignment Center</h1>
             <p class="text-slate-400 mt-2 text-sm">Author, schedule, and grade worksheets linked to standard syllabus chapters.</p>
         </div>
-        <button onclick="openAssignmentModal()" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-primary hover:text-on-primary hover:border-transparent hover:scale-102 active:scale-98 font-bold text-xs uppercase px-6 py-3 rounded-xl flex items-center gap-1.5 shadow-lg shadow-cyan-500/10 whitespace-nowrap shrink-0 transition-all duration-300">
+        <button onclick="openAssignmentModal()" class="bg-cyan-950/20 text-cyan-400 border border-cyan-500/20 hover:bg-primary hover:text-on-primary hover:border-transparent hover:scale-102 active:scale-98 font-bold text-xs uppercase px-6 py-3 rounded-xl flex items-center gap-1.5 shadow-lg shadow-cyan-500/10 whitespace-nowrap shrink-0 transition-all duration-300 self-start sm:self-auto">
             <span class="material-symbols-outlined text-sm">add</span> Create Assignment
         </button>
     </div>
@@ -38,7 +38,7 @@
                     <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Description / Aim</label>
                     <textarea id="assign-desc-input" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none h-20" placeholder="Write instructions..."></textarea>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Chapter Link</label>
                         <select id="assign-chapter-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary"></select>
@@ -48,7 +48,7 @@
                         <select id="assign-lab-select" class="w-full bg-[#0e1416] border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary"></select>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5">Total Marks</label>
                         <input type="number" id="assign-marks-input" value="100" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 font-semibold text-white focus:outline-none focus:border-primary">
@@ -88,7 +88,7 @@
 
             data.assignments.forEach(a => {
                 const card = document.createElement('div');
-                card.className = 'glass-morphism p-6 rounded-2xl flex justify-between items-center hover:border-cyan-500/20 transition-all';
+                card.className = 'glass-morphism p-6 rounded-2xl flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 hover:border-cyan-500/20 transition-all';
                 card.innerHTML = `
                     <div class="space-y-1.5">
                         <div class="flex items-center gap-2">
