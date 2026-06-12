@@ -132,6 +132,16 @@ else:
         "database": os.getenv("MYSQL_DATABASE", "chemlove")
     }
 
+if HAS_NATIVE_MYSQL:
+    # Filter config for mysql.connector which raises error on unknown arguments (e.g. ssl-mode)
+    valid_keys = {
+        'host', 'port', 'user', 'password', 'database',
+        'ssl_ca', 'ssl_cert', 'ssl_key', 'ssl_capath', 'ssl_cipher',
+        'charset', 'collation', 'connection_timeout', 'autocommit',
+        'pool_name', 'pool_size'
+    }
+    db_config = {k: v for k, v in db_config.items() if k in valid_keys}
+
 # Perform bootstrap connection to ensure target database exists before creating the pool
 try:
     target_db = db_config.get("database", "chemlove")
