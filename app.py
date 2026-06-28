@@ -60,12 +60,44 @@ except (ImportError, Exception):
             
     MySQLConnectionPool = MockMySQLConnectionPool
     HAS_NATIVE_MYSQL = False
-from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, session, url_for
+from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, session, url_for, abort
 from werkzeug.security import check_password_hash, generate_password_hash
 from authlib.integrations.flask_client import OAuth
-
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_talisman import Talisman
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
+import bleach
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "change-this-secret-key")
+
+# Security Configuration
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=__import__("datetime").timedelta(hours=2)
+)
+
+csrf = CSRFProtect(app)
+talisman = Talisman(app, content_security_policy=None)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["1000 per day", "200 per hour"],
+    storage_uri="memory://"
+)
+ph = PasswordHasher()
+
+@app.template_filter('clean_html')
+def clean_html_filter(text):
+    if text is None:
+        return ""
+    allowed_tags = ['p', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'br', 'span', 'div', 'img']
+    allowed_attrs = {'*': ['class', 'style'], 'a': ['href', 'target'], 'img': ['src', 'alt', 'width', 'height']}
+    return bleach.clean(str(text), tags=allowed_tags, attributes=allowed_attrs)
 
 oauth = OAuth(app)
 google = oauth.register(
@@ -207,9 +239,35 @@ class MySQLConnectionWrapper:
     def __enter__(self):
         if not self.pool:
             raise RuntimeError("Database connection pool is not initialized.")
-        self.conn = self.pool.get_connection()
-        self.cursor = self.conn.cursor(dictionary=True)
-        return self
+        try:
+            self.conn = self.pool.get_connection()
+            self.cursor = self.conn.cursor(dictionary=True)
+            return self
+        except Exception as e:
+            global db_config
+            configured_host = db_config.get("host", "localhost")
+            if configured_host not in ("localhost", "127.0.0.1"):
+                print(f"[DATABASE] Connection to remote host '{configured_host}' failed: {e}. Attempting local fallback...")
+                try:
+                    fallback_config = {
+                        "host": "localhost",
+                        "port": 3306,
+                        "user": "root",
+                        "password": "2518",
+                        "database": db_config.get("database", "chemlove")
+                    }
+                    if HAS_NATIVE_MYSQL:
+                        import mysql.connector
+                        self.conn = mysql.connector.connect(**fallback_config)
+                    else:
+                        import pymysql
+                        self.conn = MockConnection(pymysql.connect(**fallback_config))
+                    self.cursor = self.conn.cursor(dictionary=True)
+                    print("[DATABASE] Successfully fell back to local MySQL server.")
+                    return self
+                except Exception as fe:
+                    print(f"[DATABASE] Local fallback connection failed: {fe}")
+            raise e
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.cursor:
@@ -312,7 +370,7 @@ def init_db():
             admin_row = conn.execute("SELECT * FROM users WHERE email = %s", ('admin@chemlove.com',)).fetchone()
             if not admin_row:
                 print("[DATABASE] Creating default admin account...")
-                hashed_pw = generate_password_hash("admin123")
+                hashed_pw = ph.hash("admin123")
                 conn.execute(
                     """
                     INSERT INTO users (name, email, password_hash, institution, role, class_level, status)
@@ -1049,6 +1107,7 @@ def auth_page():
 
 
 @app.route('/signup', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def signup():
     user = get_current_user()
     if user:
@@ -1093,10 +1152,14 @@ def signup():
                 INSERT INTO users(name, email, password_hash, institution, role, class_level, status, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
                 """,
-                (name, email, generate_password_hash(password), institution, role,
+                (name, email, ph.hash(password), institution, role,
                  class_level if role == 'student' else None),
             )
             user_id = cursor.lastrowid
+            
+            conn.execute("INSERT INTO user_history (user_id, event_type, event_data) VALUES (%s, %s, %s)",
+                         (user_id, 'registration', json.dumps({'role': role, 'ip': request.remote_addr})))
+
 
             if role == 'student':
                 conn.execute(
@@ -1120,6 +1183,7 @@ def signup():
 
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def login():
     user = get_current_user()
     if user:
@@ -1132,7 +1196,40 @@ def login():
         with get_db() as conn:
             user = conn.execute("SELECT * FROM users WHERE email = %s", (email,)).fetchone()
 
-        if not user or not check_password_hash(user['password_hash'], password):
+        if not user:
+            try:
+                ph.hash(password)
+            except Exception:
+                pass
+            flash('Invalid email or password.', 'error')
+            return redirect(url_for('login'))
+
+        # Check lockout
+        if user.get('lockout_until') and user['lockout_until'] > datetime.now(timezone.utc).replace(tzinfo=None):
+            flash('Account is locked due to multiple failed login attempts. Try again later.', 'error')
+            return redirect(url_for('login'))
+
+        valid = False
+        try:
+            valid = ph.verify(user['password_hash'], password)
+            if ph.check_needs_rehash(user['password_hash']):
+                with get_db() as conn:
+                    conn.execute("UPDATE users SET password_hash = %s WHERE id = %s", (ph.hash(password), user['id']))
+        except VerifyMismatchError:
+            valid = False
+        except Exception:
+            # Fallback for PBKDF2 (Werkzeug default) Migration
+            if check_password_hash(user['password_hash'], password):
+                valid = True
+                with get_db() as conn:
+                    conn.execute("UPDATE users SET password_hash = %s WHERE id = %s", (ph.hash(password), user['id']))
+
+        if not valid:
+            with get_db() as conn:
+                failed = user.get('failed_login_attempts', 0) + 1
+                lockout = datetime.now(timezone.utc).replace(tzinfo=None) + __import__("datetime").timedelta(minutes=15) if failed >= 5 else None
+                conn.execute("UPDATE users SET failed_login_attempts = %s, lockout_until = %s WHERE id = %s", (failed, lockout, user['id']))
+                conn.execute("INSERT INTO audit_logs (user_id, action, details) VALUES (%s, %s, %s)", (user['id'], 'failed_login', json.dumps({'ip': request.remote_addr})))
             flash('Invalid email or password.', 'error')
             return redirect(url_for('login'))
 
@@ -1140,7 +1237,12 @@ def login():
             flash('This account has been suspended. Please contact the administrator.', 'error')
             return redirect(url_for('login'))
 
+        with get_db() as conn:
+            conn.execute("UPDATE users SET failed_login_attempts = 0, lockout_until = NULL, last_login_at = %s WHERE id = %s", (datetime.now(timezone.utc).replace(tzinfo=None), user['id']))
+
+        session.clear() # Prevent session fixation
         session['user_id'] = user['id']
+        session.permanent = True
         add_history(user['id'], "login_success")
         flash('Login successful.', 'success')
         return redirect_by_role(user)

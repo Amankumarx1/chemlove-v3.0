@@ -56,6 +56,7 @@
         <!-- Content Workspace -->
         <div class="lg:col-span-3">
             <form method="POST" action="/admin/chapters/{{ chapter.id }}/builder" class="space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <!-- Overview Content -->
                 <div id="tab-overview" class="builder-tab-pane glass-morphism p-6 rounded-3xl space-y-4">
                     <h3 class="text-sm font-black uppercase tracking-widest text-white mb-2 flex items-center gap-2">

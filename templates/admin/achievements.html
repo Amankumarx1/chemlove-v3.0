@@ -31,6 +31,7 @@
             <span class="material-symbols-outlined text-sm">edit</span>
           </button>
           <form method="POST" onsubmit="return confirm('Delete this badge?')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <input type="hidden" name="action" value="delete">
             <input type="hidden" name="id" value="{{ badge.id }}">
             <button type="submit" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 transition-all">
@@ -64,6 +65,7 @@
       </button>
     </div>
     <form method="POST" class="p-5 space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <input type="hidden" name="action" value="create">
       <div>
         <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1.5">Badge Name</label>
@@ -107,6 +109,7 @@
       </button>
     </div>
     <form method="POST" id="edit-badge-form" class="p-5 space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <input type="hidden" name="action" value="edit">
       <input type="hidden" name="id" id="edit-badge-id">
       <div>

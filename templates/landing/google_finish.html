@@ -63,6 +63,7 @@
 
             <!-- Onboarding Form -->
             <form id="googleFinishForm" class="space-y-4" method="POST" action="/auth/google/finish">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <!-- Academic Institution -->
                 <div class="space-y-1.5">
                     <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Academic Institution *</label>

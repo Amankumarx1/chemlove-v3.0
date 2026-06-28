@@ -99,7 +99,7 @@
     </div>
 
     <!-- Mobile Page Title -->
-    <div class="lg:hidden flex items-center gap-3 pt-1">
+    <div class="hidden items-center gap-3 pt-1">
         <div class="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
             <span class="material-symbols-outlined text-cyan-400 text-base">science</span>
         </div>
@@ -109,9 +109,9 @@
         </div>
     </div>
 
-    <!-- Tabs: centered text-based sized buttons in the middle -->
-    <div class="flex justify-center items-center my-2 shrink-0">
-        <div class="flex flex-wrap justify-center bg-surface-container p-1 rounded-2xl border border-white/5 shadow-xl max-w-max gap-1">
+    <!-- Tabs: horizontal scrollable on mobile, centered on desktop -->
+    <div class="flex justify-start md:justify-center items-center my-2 shrink-0 w-full overflow-x-auto scrollbar-none px-4">
+        <div class="flex flex-nowrap bg-surface-container p-1 rounded-2xl border border-white/5 shadow-xl min-w-max gap-1">
             <button id="tab-btn-lab" onclick="switchLabTab('lab')"
                 class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all bg-primary text-on-primary shadow-[0_0_15px_rgba(6,182,212,0.3)]">
                 Simulator
@@ -134,10 +134,6 @@
             <button id="tab-btn-missions" onclick="switchLabTab('missions')"
                 class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface">
                 Missions
-            </button>
-            <button id="tab-btn-spectroscopy" onclick="switchLabTab('spectroscopy')"
-                class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface">
-                Spectroscopy
             </button>
             <button id="tab-btn-organic" onclick="switchLabTab('organic')"
                 class="px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-on-surface">
@@ -309,7 +305,7 @@
                 </div>
 
                 <!-- Telemetry View -->
-                <div id="right-view-telemetry" class="space-y-3 flex flex-col flex-1 min-h-0">
+                <div id="right-view-telemetry" class="space-y-3 flex flex-col flex-1 shrink-0">
                     <div class="border-b border-white/10 pb-2 flex justify-between items-center shrink-0">
                         <h3 class="font-bold text-sm uppercase italic text-cyan-400">Telemetry</h3>
                         <div class="w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping"></div>
@@ -445,7 +441,7 @@
                     onclick="openMobileShelf()"
                     title="Tap to add chemicals">
                     <!-- SVG Flask (mobile) -->
-                    <svg class="h-52 w-auto aspect-square relative z-10 drop-shadow-[0_0_20px_rgba(6,182,212,0.15)]" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <svg class="w-52 h-52 relative z-10 drop-shadow-[0_0_20px_rgba(6,182,212,0.15)]" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                         <defs>
                             <radialGradient id="reaction-glow-grad-mobile">
                                 <stop offset="0%" stop-color="#4cd7f6" stop-opacity="0.75" />
@@ -508,9 +504,9 @@
                         <g id="bubbles-container-mobile" class="pointer-events-none" clip-path="url(#flask-inner-clip-mobile)"></g>
                     </svg>
                     <!-- Tap hint -->
-                    <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-full">
-                        <span class="material-symbols-outlined text-cyan-400 text-xs">touch_app</span>
-                        <span class="text-[9px] font-bold uppercase text-cyan-400 tracking-widest">Tap to add chemical</span>
+                    <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-cyan-500/15 border border-cyan-500/30 px-3.5 py-1.5 rounded-full whitespace-nowrap backdrop-blur-md shadow-lg select-none">
+                        <span class="material-symbols-outlined text-cyan-400 text-xs leading-none">touch_app</span>
+                        <span class="text-[9px] font-black uppercase text-cyan-400 tracking-widest leading-none">Tap to add chemical</span>
                     </div>
                 </div>
             </div>
@@ -574,12 +570,12 @@
     <!-- ═══ MOBILE FIXED BOTTOM ACTION BAR ═══ -->
     <div class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#0e1416]/95 backdrop-blur-xl border-t border-white/10 px-4 py-3 flex items-center gap-2 safe-area-bottom" id="mobile-action-bar">
         <button onclick="openMobileShelf()"
-            class="flex-1 h-12 kinetic-gradient text-on-primary font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 shadow-lg active:scale-95 transition-transform">
+            class="flex-1 h-12 kinetic-gradient text-on-primary font-black text-[10px] uppercase tracking-wide rounded-xl flex items-center justify-center gap-1 shadow-lg active:scale-95 transition-transform whitespace-nowrap px-2">
             <span class="material-symbols-outlined text-base">add</span>
             Add Chemical
         </button>
         <button onclick="runReactionCheck()"
-            class="flex-1 h-12 bg-surface-container-high border border-cyan-500/20 text-cyan-400 font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 hover:bg-cyan-950/20 active:scale-95 transition-transform">
+            class="flex-1 h-12 bg-surface-container-high border border-cyan-500/20 text-cyan-400 font-black text-[10px] uppercase tracking-wide rounded-xl flex items-center justify-center gap-1 hover:bg-cyan-950/20 active:scale-95 transition-transform whitespace-nowrap px-2">
             <span class="material-symbols-outlined text-base">biotech</span>
             Analyze
         </button>
@@ -976,50 +972,6 @@
     </div>
 </div>
 
-<!-- ═══ SPECTROSCOPY LAB ═══ -->
-<div id="page-spectroscopy" class="hidden">
-    <div class="bg-surface border border-white/10 rounded-3xl p-6 flex flex-col relative shadow-2xl overflow-y-auto" style="height: calc(100vh - 9rem);">
-        <div class="mb-6 border-b border-white/10 pb-4">
-            <h2 class="text-xl font-black uppercase text-white">Spectroscopy Lab Analyzer</h2>
-            <p class="text-xs text-slate-400 mt-1">Select a chemical compound to view its characteristic Infrared (IR) and Nuclear Magnetic Resonance (NMR) spectra.</p>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1">
-            <!-- Left Side: Compound Selector -->
-            <div class="lg:col-span-1 bg-surface-container border border-white/5 p-4 rounded-xl flex flex-col gap-2 h-max">
-                <label class="font-bold text-[9px] uppercase tracking-wider text-slate-500">Select Compound</label>
-                <button onclick="showSpectra('Methane')" class="spec-compound-btn active w-full p-3 rounded-lg border border-cyan-500/20 bg-cyan-950/20 text-cyan-400 font-bold text-xs text-left uppercase">Methane (CH4)</button>
-                <button onclick="showSpectra('Benzene')" class="spec-compound-btn w-full p-3 rounded-lg border border-white/5 bg-surface text-slate-300 font-bold text-xs text-left uppercase hover:bg-white/5">Benzene (C6H6)</button>
-                <button onclick="showSpectra('Ethanol')" class="spec-compound-btn w-full p-3 rounded-lg border border-white/5 bg-surface text-slate-300 font-bold text-xs text-left uppercase hover:bg-white/5">Ethanol (C2H5OH)</button>
-                <button onclick="showSpectra('Water')" class="spec-compound-btn w-full p-3 rounded-lg border border-white/5 bg-surface text-slate-300 font-bold text-xs text-left uppercase hover:bg-white/5">Water (H2O)</button>
-            </div>
-
-            <!-- Right Side: Spectra Displays -->
-            <div class="lg:col-span-3 space-y-6">
-                <!-- IR spectrum -->
-                <div class="bg-surface-container border border-white/5 p-6 rounded-2xl">
-                    <h3 class="text-xs font-black uppercase tracking-wider text-cyan-400 mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">analytics</span> Infrared (IR) Spectrum
-                    </h3>
-                    <div id="ir-spectra-container" class="h-40 bg-black/40 rounded-xl relative overflow-hidden border border-white/5 p-2">
-                        <!-- Custom SVG spectrum drawn by JS -->
-                    </div>
-                </div>
-
-                <!-- NMR spectrum -->
-                <div class="bg-surface-container border border-white/5 p-6 rounded-2xl">
-                    <h3 class="text-xs font-black uppercase tracking-wider text-cyan-400 mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">stacked_bar_chart</span> 1H-NMR Chemical Shifts
-                    </h3>
-                    <div id="nmr-spectra-container" class="h-40 bg-black/40 rounded-xl relative overflow-hidden border border-white/5 p-2">
-                        <!-- Custom SVG spectrum drawn by JS -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- ═══ ORGANIC REACTION SIMULATOR ═══ -->
 <div id="page-organic" class="hidden">
     <div class="bg-surface border border-white/10 rounded-3xl p-6 flex flex-col relative shadow-2xl overflow-y-auto" style="height: calc(100vh - 9rem);">
@@ -1089,7 +1041,7 @@
 <script src="https://3dmol.org/build/3Dmol-min.js"></script>
 <!-- jspdf client-side PDF exporter CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script src="{{ url_for('static', filename='js/script.js') }}?v={{ range(10000, 99999)|random }}"></script>
 <script>
     // ══════════════════════════════════════════════════════════
     // TAB SWITCHING
@@ -1100,7 +1052,6 @@
             titration: document.getElementById('page-page-titration') || document.getElementById('page-titration'),
             guided: document.getElementById('page-guided'),
             missions: document.getElementById('page-missions'),
-            spectroscopy: document.getElementById('page-spectroscopy'),
             organic: document.getElementById('page-organic'),
             ptable: document.getElementById('page-ptable')
         };
@@ -1110,7 +1061,6 @@
             titration: document.getElementById('tab-btn-titration'),
             guided: document.getElementById('tab-btn-guided'),
             missions: document.getElementById('tab-btn-missions'),
-            spectroscopy: document.getElementById('tab-btn-spectroscopy'),
             organic: document.getElementById('tab-btn-organic'),
             ptable: document.getElementById('tab-btn-ptable')
         };
@@ -1136,8 +1086,6 @@
             if (typeof initTitrationPage === 'function') initTitrationPage();
         } else if (mode === 'guided') {
             if (typeof startGuidedExperiment === 'function') startGuidedExperiment('oxygen');
-        } else if (mode === 'spectroscopy') {
-            if (typeof showSpectra === 'function') showSpectra('Methane');
         } else if (mode === 'organic') {
             if (typeof playOrganicSim === 'function') playOrganicSim('SN2');
         } else if (mode === 'ptable') {
@@ -1279,6 +1227,7 @@
     // ══════════════════════════════════════════════════════════
     // MOBILE STATUS SYNC — mirror desktop telemetry to mobile cards
     // ══════════════════════════════════════════════════════════
+    let lastSyncedResultHtml = '';
     function syncMobileTelemetry() {
         const mirrors = [
             ['temp-val', 'temp-val-m'],
@@ -1293,23 +1242,39 @@
         mirrors.forEach(([src, dst]) => {
             const s = document.getElementById(src);
             const d = document.getElementById(dst);
-            if (s && d) d.textContent = s.textContent;
+            if (s && d && d.textContent !== s.textContent) {
+                d.textContent = s.textContent;
+            }
         });
         // Sync temp bar
         const tb = document.getElementById('temp-bar');
         const tbm = document.getElementById('temp-bar-m');
-        if (tb && tbm) tbm.style.width = tb.style.width;
+        if (tb && tbm && tbm.style.width !== tb.style.width) {
+            tbm.style.width = tb.style.width;
+        }
         // Sync dropped elements chips
         const de = document.getElementById('dropped-elements');
         const dem = document.getElementById('dropped-elements-mobile');
-        if (de && dem) dem.innerHTML = de.innerHTML;
+        if (de && dem && dem.innerHTML !== de.innerHTML) {
+            dem.innerHTML = de.innerHTML;
+        }
         // Sync result area
         const ra = document.getElementById('result-area');
         const ram = document.getElementById('result-area-mobile');
         if (ra && ram) {
             if (!ra.classList.contains('hidden')) {
-                ram.classList.remove('hidden');
-                ram.innerHTML = ra.innerHTML;
+                if (ram.classList.contains('hidden')) {
+                    ram.classList.remove('hidden');
+                }
+                if (lastSyncedResultHtml !== ra.innerHTML) {
+                    ram.innerHTML = ra.innerHTML;
+                    lastSyncedResultHtml = ra.innerHTML;
+                }
+            } else {
+                if (!ram.classList.contains('hidden')) {
+                    ram.classList.add('hidden');
+                }
+                lastSyncedResultHtml = '';
             }
         }
     }
@@ -1390,24 +1355,53 @@
         const container = document.getElementById('mol-viewer-container');
         const canvas = document.getElementById('mol-canvas');
         const info = document.getElementById('mol-viewer-info');
-        if (!container || !canvas) return;
-        container.classList.remove('hidden');
-        info.textContent = `Loading ${compoundName}...`;
-        canvas.innerHTML = '';
+        
+        const containerMobile = document.getElementById('mol-viewer-container-mobile');
+        const canvasMobile = document.getElementById('mol-canvas-mobile');
+        const infoMobile = document.getElementById('mol-viewer-info-mobile');
+
+        if (container && canvas) {
+            container.classList.remove('hidden');
+            info.textContent = `Loading ${compoundName}...`;
+            canvas.innerHTML = '';
+        }
+        if (containerMobile && canvasMobile) {
+            containerMobile.classList.remove('hidden');
+            infoMobile.textContent = `Loading ${compoundName}...`;
+            canvasMobile.innerHTML = '';
+        }
+
         const url = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(compoundName)}/SDF?record_type=3d`;
         fetch(url)
             .then(res => { if (!res.ok) throw new Error("Not found"); return res.text(); })
             .then(sdfData => {
-                info.textContent = `${compoundName}`;
-                let viewer = $3Dmol.createViewer($(canvas), { backgroundColor: '#0d1315' });
-                viewer.addModel(sdfData, "sdf");
-                viewer.setStyle({}, {stick: {colorscheme: "Jmol", radius: 0.18}, sphere: {colorscheme: "Jmol", radius: 0.4}});
-                viewer.zoomTo();
-                viewer.render();
+                if (container && canvas) {
+                    info.textContent = `${compoundName}`;
+                    let viewer = $3Dmol.createViewer($(canvas), { backgroundColor: '#0d1315' });
+                    viewer.addModel(sdfData, "sdf");
+                    viewer.setStyle({}, {stick: {colorscheme: "Jmol", radius: 0.18}, sphere: {colorscheme: "Jmol", radius: 0.4}});
+                    viewer.zoomTo();
+                    viewer.render();
+                }
+                if (containerMobile && canvasMobile) {
+                    infoMobile.textContent = `${compoundName}`;
+                    let viewerMobile = $3Dmol.createViewer($(canvasMobile), { backgroundColor: '#0d1315' });
+                    viewerMobile.addModel(sdfData, "sdf");
+                    viewerMobile.setStyle({}, {stick: {colorscheme: "Jmol", radius: 0.18}, sphere: {colorscheme: "Jmol", radius: 0.4}});
+                    viewerMobile.zoomTo();
+                    viewerMobile.render();
+                }
             })
             .catch(err => {
-                info.textContent = `Structure: ${compoundName}`;
-                canvas.innerHTML = `<div class="absolute inset-0 flex flex-col items-center justify-center text-[10px] text-slate-500 font-mono bg-black/60 p-4 text-center"><span class="material-symbols-outlined text-cyan-500 text-2xl animate-spin mb-1">help</span>3D Model Not Cached.</div>`;
+                const notFoundHtml = `<div class="absolute inset-0 flex flex-col items-center justify-center text-[10px] text-slate-500 font-mono bg-black/60 p-4 text-center"><span class="material-symbols-outlined text-cyan-500 text-2xl animate-spin mb-1">help</span>3D Model Not Cached.</div>`;
+                if (container && canvas) {
+                    info.textContent = `Structure: ${compoundName}`;
+                    canvas.innerHTML = notFoundHtml;
+                }
+                if (containerMobile && canvasMobile) {
+                    infoMobile.textContent = `Structure: ${compoundName}`;
+                    canvasMobile.innerHTML = notFoundHtml;
+                }
             });
     };
 

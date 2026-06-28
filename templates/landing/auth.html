@@ -316,6 +316,7 @@
                     <div class="my-auto w-full">
                         <!-- Login form post -->
                         <form id="loginForm" class="space-y-4 mt-6" method="POST" action="/login">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <div class="space-y-1.5">
                                 <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Email
                                     Address</label>
@@ -387,6 +388,7 @@
                     <div class="my-auto w-full">
                         <!-- Sign Up form post -->
                         <form id="signupForm" class="space-y-4" method="POST" action="/signup">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="space-y-1">
                                     <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Full

@@ -704,6 +704,10 @@ CREATE TABLE `users` (
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `mobile` varchar(20) DEFAULT NULL,
   `avatar` varchar(100) DEFAULT 'account_circle',
+  `failed_login_attempts` int NOT NULL DEFAULT 0,
+  `lockout_until` timestamp NULL DEFAULT NULL,
+  `last_login_at` timestamp NULL DEFAULT NULL,
+  `password_changed_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
   CONSTRAINT `chk_role` CHECK ((`role` in (_utf8mb4'student',_utf8mb4'teacher',_utf8mb4'admin',_utf8mb4'content_manager')))

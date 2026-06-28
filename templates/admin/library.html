@@ -43,6 +43,7 @@
                             </td>
                             <td class="py-4 px-4">
                                 <form method="POST" action="/admin/library" class="flex items-center justify-center gap-2 max-w-xs mx-auto">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <input type="hidden" name="category_name" value="{{ s.category_name }}">
                                     <select name="access_mode" class="px-3 py-1.5 rounded-xl bg-slate-950 border border-white/5 text-[10px] text-white focus:border-cyan-500 focus:ring-0">
                                         <option value="OPEN" {% if s.access_mode == 'OPEN' %}selected{% endif %}>OPEN (Unrestricted)</option>

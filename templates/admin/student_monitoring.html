@@ -45,6 +45,7 @@
                 <div class="space-y-4">
                     <!-- Issue Certificate -->
                     <form method="POST" action="/admin/student-monitoring/{{ student.id }}" class="border-b border-white/5 pb-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="issue_certificate">
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Issue Verified Certificate</label>
                         <div class="flex gap-2">
@@ -61,6 +62,7 @@
 
                     <!-- Edit Batch / Class level -->
                     <form method="POST" action="/admin/student-monitoring/{{ student.id }}" class="border-b border-white/5 pb-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="move_batch">
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Change Grade Batch</label>
                         <div class="flex gap-2">
@@ -78,6 +80,7 @@
 
                     <!-- Account Access Control Toggle -->
                     <form method="POST" action="/admin/student-monitoring/{{ student.id }}" class="pt-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="toggle_access">
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Syllabus Access Restriction</label>
                         {% if student.status == 'active' %}

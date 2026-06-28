@@ -90,6 +90,7 @@
         </div>
         <div class="shrink-0">
           <form method="POST" onsubmit="return confirm('Delete this notification?')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <input type="hidden" name="action" value="delete">
             <input type="hidden" name="id" value="{{ n.id }}">
             <button type="submit" class="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase bg-rose-950/20 border border-rose-500/10 text-rose-400 hover:bg-rose-900/30 transition-all">
@@ -118,6 +119,7 @@
       </button>
     </div>
     <form method="POST" class="p-5 space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <input type="hidden" name="action" value="create">
       
       <!-- Title -->

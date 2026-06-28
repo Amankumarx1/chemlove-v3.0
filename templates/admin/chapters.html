@@ -55,6 +55,7 @@
                                     </a>
                                     <!-- Delete Chapter -->
                                     <form method="POST" action="/admin/chapters" onsubmit="return confirm('Are you absolutely sure you want to delete this chapter? All content and quizzes will be purged.');" class="inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="id" value="{{ ch.id }}">
                                         <button type="submit" title="Purge Chapter" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-rose-500 hover:bg-rose-950/20 hover:border-rose-500/20 transition-all flex items-center">
@@ -87,6 +88,7 @@
             </div>
             
             <form method="POST" action="/admin/chapters" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="action" value="create">
                 
                 <div>

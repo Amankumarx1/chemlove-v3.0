@@ -69,6 +69,7 @@
             <td class="px-4 py-3 text-slate-400">{{ cert.issued_at or 'N/A' }}</td>
             <td class="px-4 py-3 flex gap-2">
               <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="id" value="{{ cert.id }}">
                 <input type="hidden" name="status" value="{{ 'revoked' if cert.status == 'issued' else 'issued' }}">
@@ -79,6 +80,7 @@
                 </button>
               </form>
               <form method="POST" onsubmit="return confirm('Permanently delete this certificate?')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="{{ cert.id }}">
                 <button type="submit" class="px-2 py-1 rounded-lg text-[9px] font-black uppercase bg-rose-950/40 text-rose-400 hover:bg-rose-900/40 border border-white/10 transition-all">
@@ -106,6 +108,7 @@
       </button>
     </div>
     <form method="POST" class="p-5 space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <input type="hidden" name="action" value="create">
       <div>
         <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1.5">Student</label>

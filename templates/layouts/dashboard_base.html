@@ -57,18 +57,42 @@
         {% include 'components/sidebar.html' %}
 
         <!-- Main Content Area Wrapper -->
-        <div class="flex-grow md:pl-64 flex flex-col min-h-screen min-w-0 w-full">
+        <div class="flex-grow md:pl-[296px] flex flex-col min-h-screen min-w-0 w-full transition-all duration-300">
             <!-- Top Header Navbar -->
-            <header class="h-16 border-b border-white/5 bg-[#0e1416]/10 backdrop-blur-md px-4 md:px-8 flex items-center gap-3 relative z-20 shrink-0">
-                <!-- Mobile Hamburger Menu Button -->
-                <button onclick="toggleDashboardSidebar(true)" class="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 flex items-center justify-center" aria-label="Open navigation">
-                    <span class="material-symbols-outlined text-xl">menu</span>
-                </button>
+            <header class="fixed top-4 left-4 right-4 md:left-[312px] md:right-8 z-40 h-16 rounded-[20px] px-6 flex items-center justify-between shrink-0 liquid-glass">
+                <div class="flex items-center gap-3">
+                    <!-- Mobile Hamburger Menu Button -->
+                    <button onclick="toggleDashboardSidebar(true)" class="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 flex items-center justify-center" aria-label="Open navigation">
+                        <span class="material-symbols-outlined text-xl">menu</span>
+                    </button>
+                    <!-- Active Section Title -->
+                    <h1 class="text-xs md:text-sm font-extrabold text-white uppercase tracking-wider">
+                        {% block header_title %}
+                            {% if request.path.startswith('/student/dashboard') %}Overview
+                            {% elif request.path.startswith('/student/courses') %}My Courses
+                            {% elif request.path.startswith('/student/chapters') %}Chapters
+                            {% elif request.path.startswith('/student/reactions') %}Reactions
+                            {% elif request.path.startswith('/student/experiments') %}Experiments
+                            {% elif request.path.startswith('/student/certificates') %}Certificates
+                            {% elif request.path.startswith('/student/assignments') %}Assignments
+                            {% elif request.path.startswith('/student/quizzes') %}Quizzes
+                            {% elif request.path.startswith('/student/balance-game') %}Equation Game
+                            {% elif request.path.startswith('/student/virtual-lab') %}Virtual Lab
+                            {% elif request.path.startswith('/teacher/dashboard') %}Overview
+                            {% elif request.path.startswith('/teacher/courses') %}My Courses
+                            {% elif request.path.startswith('/teacher/content') %}Content Library
+                            {% elif request.path.startswith('/teacher/students') %}Students
+                            {% elif request.path.startswith('/teacher/classes') %}Classes
+                            {% elif request.path.startswith('/teacher/assignments') %}Assignments
+                            {% elif request.path.startswith('/teacher/quizzes') %}Quizzes
+                            {% elif request.path.startswith('/teacher/reports') %}Reports
+                            {% elif request.path.startswith('/profile') %}Profile
+                            {% else %}Overview{% endif %}
+                        {% endblock %}
+                    </h1>
+                </div>
 
-                <!-- Push right side content to the right -->
-                <div class="flex-grow"></div>
-
-                <!-- Right side: notifications + user -->
+                <!-- Right side: notifications + theme + user -->
                 <div class="flex items-center gap-2">
                     <!-- Notifications Bell -->
                     <div class="relative" id="user-notification-container">
@@ -88,13 +112,34 @@
                         </div>
                     </div>
 
+                    <!-- Theme Toggle -->
+                    <button onclick="toggleTheme()" class="p-2 border border-white/5 rounded-xl bg-[#0e1416]/40 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/20 hover:bg-cyan-950/10 transition-all flex items-center justify-center relative" title="Toggle Theme">
+                        <span class="material-symbols-outlined text-base" id="theme-toggle-icon">dark_mode</span>
+                    </button>
+
+                    <!-- Divider -->
+                    <div class="h-6 w-[1px] bg-white/10 mx-1"></div>
+
                     <!-- User Menu Dropdown -->
                     <div class="relative inline-block text-left" id="user-menu-container">
-                        <button id="user-menu-btn" type="button" class="flex items-center gap-2 bg-[#171d1e]/40 hover:bg-slate-800/40 border border-white/10 px-3 py-2 rounded-xl text-xs font-bold uppercase transition-all shadow-md">
-                            <span class="material-symbols-outlined text-base text-cyan-400">{{ current_user.avatar or 'account_circle' }}</span>
-                            <span class="text-white hidden sm:inline">{{ current_user.name }}</span>
-                            <span id="user-menu-arrow" class="material-symbols-outlined text-xs text-slate-500 transition-transform duration-300">keyboard_arrow_down</span>
-                        </button>
+                        <div id="user-menu-btn" class="flex items-center gap-3 pl-2 pr-1 py-1 rounded-2xl hover:bg-white/5 transition-all cursor-pointer select-none">
+                            <div class="text-right hidden sm:block">
+                                <div class="text-xs font-black text-white leading-none">{{ current_user.name }}</div>
+                                <div class="text-[8px] text-slate-400 font-black uppercase tracking-wider leading-none mt-1">
+                                    {% if current_user.role == 'student' %}Trust Score: 55{% else %}{{ current_user.role }}{% endif %}
+                                </div>
+                            </div>
+                            <!-- Cartoon Avatar or Initials Fallback -->
+                            <div class="w-9 h-9 rounded-full bg-cyan-950/40 border border-white/10 flex items-center justify-center text-cyan-400 font-bold overflow-hidden shadow-inner shrink-0">
+                                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed={{ current_user.name | urlencode }}" 
+                                     alt="Avatar" 
+                                     class="w-full h-full object-cover"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="hidden w-full h-full items-center justify-center bg-gradient-to-br from-cyan-500/20 to-blue-500/20 text-cyan-300 text-sm font-black">
+                                    {{ current_user.name[0]|upper }}
+                                </div>
+                            </div>
+                        </div>
                         <!-- Dropdown Menu -->
                         <div id="user-menu-dropdown" class="hidden absolute right-0 mt-2.5 w-48 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-2 z-50 animate-[fadeIn_0.2s_ease-out]">
                             <div class="space-y-1">
@@ -109,6 +154,7 @@
                                 </a>
                                 <div class="border-t border-white/5 my-1"></div>
                                 <form method="POST" action="/logout" class="block w-full">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-950/20 transition-all text-left">
                                         <span class="material-symbols-outlined text-sm">logout</span> Logout
                                     </button>
@@ -119,7 +165,7 @@
                 </div>
             </header>
 
-            <main class="p-4 md:p-8 w-full md:max-w-7xl md:mx-auto relative z-10 flex-grow">
+            <main class="p-4 md:p-8 pt-24 md:pt-24 w-full md:max-w-7xl md:mx-auto relative z-10 flex-grow">
                 {% block dashboard_content %}{% endblock %}
             </main>
         </div>
@@ -308,6 +354,32 @@
                     }
                 });
             }
+        });
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const toggleIcon = document.getElementById('theme-toggle-icon');
+            const isDark = html.classList.contains('dark');
+            const newTheme = isDark ? 'light' : 'dark';
+            if (typeof saveThemePreference === 'function') {
+                saveThemePreference(newTheme);
+            } else {
+                html.classList.toggle('dark', !isDark);
+                html.classList.toggle('light', isDark);
+            }
+            if (toggleIcon) {
+                toggleIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const toggleIcon = document.getElementById('theme-toggle-icon');
+                if (toggleIcon) {
+                    const isDark = document.documentElement.classList.contains('dark');
+                    toggleIcon.textContent = isDark ? 'dark_mode' : 'light_mode';
+                }
+            }, 150);
         });
     </script>
     <script src="{{ url_for('static', filename='js/particles.js') }}"></script>

@@ -1392,6 +1392,7 @@ function filterChemicalShelf() {
   const query = document.getElementById('shelf-search')?.value.trim() || '';
   renderLabPage(query);
 }
+window.filterChemicalShelf = filterChemicalShelf;
 
 function renderLabPage(query = '') {
   const grid = document.getElementById('elements-grid');
@@ -1436,6 +1437,7 @@ function renderLabPage(query = '') {
     <div class="group bg-surface-container border border-white/5 p-4 rounded-xl flex flex-col gap-1 cursor-grab active:cursor-grabbing hover:border-primary/30 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative" 
          draggable="true" 
          id="element-${originalIndex}"
+         data-chem-id="${originalIndex}"
          ondragstart="handleDragStart(event, ${originalIndex})"
          ondragend="handleDragEnd(event)">
         ${dot}
@@ -1444,6 +1446,24 @@ function renderLabPage(query = '') {
     </div>
   `}).join('');
 }
+
+window.addChemicalById = function(index) {
+  const el = ELEMENTS[index];
+  if (el) {
+    droppedElements.push(el);
+    updateLabUIOnDrop(el);
+    
+    addLabLog(`MOLECULAR_INJECTION: ${el.symbol} ADDED TO CHAMBER`, 'text-tertiary');
+    
+    // Update count display
+    const elCount = document.getElementById('el-count');
+    if (elCount) elCount.textContent = `${droppedElements.length} CHEMICALS ADDED`;
+    
+    // Render chips in sequence control
+    renderDroppedChips();
+  }
+};
+
 
 function handleDragStart(e, index) {
   const el = ELEMENTS[index];
@@ -1734,60 +1754,88 @@ function removeElement(index) {
 }
 
 function resetLab() {
-  droppedElements = [];
-  document.getElementById('el-count').textContent = `0 CHEMICALS ADDED`;
-  document.getElementById('dropped-elements').innerHTML = '';
-  document.getElementById('lab-status').textContent = 'READY FOR EXPERIMENT';
-  document.getElementById('lab-status').className = 'mt-4 mb-8 border border-cyan-500/30 bg-[#1e4d58] text-[#acedff] px-10 py-4 font-bold text-2xl uppercase text-center rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.2)] z-20';
-  
-  const liq = document.getElementById('flask-liquid-0');
-  if (liq) {
-    liq.style.fillOpacity = 0.3;
-    liq.style.fill = '#3b82f6';
-    liq.setAttribute('d', 'M 62 130 L 70 125 L 80 130 L 90 125 L 100 130 L 110 125 L 120 130 L 130 125 L 138 130 L 160 170 L 40 170 Z');
-    liq.classList.remove('success', 'error', 'partial', 'metal', 'nonmetal', 'acid', 'base', 'organic');
-    liq.classList.add('opacity-0');
+  try {
+    droppedElements = [];
+    
+    const countEl = document.getElementById('el-count');
+    if (countEl) countEl.textContent = `0 CHEMICALS ADDED`;
+    
+    const countMobileEl = document.getElementById('el-count-mobile');
+    if (countMobileEl) countMobileEl.textContent = `0 Chemicals Added`;
+    
+    const droppedEl = document.getElementById('dropped-elements');
+    if (droppedEl) droppedEl.innerHTML = '';
+    
+    const droppedMobileEl = document.getElementById('dropped-elements-mobile');
+    if (droppedMobileEl) droppedMobileEl.innerHTML = '';
+    
+    const statusEl = document.getElementById('lab-status');
+    if (statusEl) {
+      statusEl.textContent = 'READY FOR EXPERIMENT';
+      statusEl.className = 'mt-4 mb-8 border border-cyan-500/30 bg-[#1e4d58] text-[#acedff] px-10 py-4 font-bold text-2xl uppercase text-center rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.2)] z-20';
+    }
+    
+    const statusMobileEl = document.getElementById('lab-status-mobile');
+    if (statusMobileEl) {
+      statusMobileEl.textContent = 'READY FOR EXPERIMENT';
+      statusMobileEl.className = 'border border-cyan-500/30 bg-[#1e4d58] text-[#acedff] px-4 py-3 font-black text-sm uppercase text-center tracking-widest';
+    }
+    
+    const liq = document.getElementById('flask-liquid-0');
+    if (liq) {
+      liq.style.fillOpacity = 0.3;
+      liq.style.fill = '#3b82f6';
+      liq.setAttribute('d', 'M 62 130 L 70 125 L 80 130 L 90 125 L 100 130 L 110 125 L 120 130 L 130 125 L 138 130 L 160 170 L 40 170 Z');
+      liq.classList.remove('success', 'error', 'partial', 'metal', 'nonmetal', 'acid', 'base', 'organic');
+      liq.classList.add('opacity-0');
+    }
+    
+    const liqMobile = document.getElementById('flask-liquid-mobile');
+    if (liqMobile) {
+      liqMobile.style.fillOpacity = 0.3;
+      liqMobile.style.fill = '#3b82f6';
+      liqMobile.setAttribute('d', 'M 62 130 L 70 125 L 80 130 L 90 125 L 100 130 L 110 125 L 120 130 L 130 125 L 138 130 L 160 170 L 40 170 Z');
+      liqMobile.classList.remove('success', 'error', 'partial', 'metal', 'nonmetal', 'acid', 'base', 'organic');
+      liqMobile.classList.add('opacity-0');
+    }
+    
+    const b0 = document.getElementById(`bubbles-container-0`);
+    if (b0) b0.innerHTML = '';
+    const bm = document.getElementById(`bubbles-container-mobile`);
+    if (bm) bm.innerHTML = '';
+    
+    const g0 = document.getElementById(`reaction-glow-0`);
+    if (g0) g0.classList.add('opacity-0');
+    const gm = document.getElementById(`reaction-glow-mobile`);
+    if (gm) gm.classList.add('opacity-0');
+    
+    // Reset meniscus
+    const meniscus = document.getElementById('liquid-meniscus');
+    const meniscusMobile = document.getElementById('liquid-meniscus-mobile');
+    if (meniscus) {
+      meniscus.setAttribute('cy', 130);
+      meniscus.setAttribute('rx', 38);
+    }
+    if (meniscusMobile) {
+      meniscusMobile.setAttribute('cy', 130);
+      meniscusMobile.setAttribute('rx', 38);
+    }
+    
+    const resultArea = document.getElementById('result-area');
+    if (resultArea) resultArea.classList.add('hidden');
+    
+    const resultAreaMobile = document.getElementById('result-area-mobile');
+    if (resultAreaMobile) resultAreaMobile.classList.add('hidden');
+    
+    // Reset Gauges
+    updateGauges(24.5, 7.02, 100);
+    
+    addLabLog(`SYSTEM_FLUSHED: ALL_REAGENTS_CLEARED`, 'text-secondary');
+  } catch (err) {
+    console.error("Error running resetLab():", err);
   }
-  
-  const liqMobile = document.getElementById('flask-liquid-mobile');
-  if (liqMobile) {
-    liqMobile.style.fillOpacity = 0.3;
-    liqMobile.style.fill = '#3b82f6';
-    liqMobile.setAttribute('d', 'M 62 130 L 70 125 L 80 130 L 90 125 L 100 130 L 110 125 L 120 130 L 130 125 L 138 130 L 160 170 L 40 170 Z');
-    liqMobile.classList.remove('success', 'error', 'partial', 'metal', 'nonmetal', 'acid', 'base', 'organic');
-    liqMobile.classList.add('opacity-0');
-  }
-  
-  const b0 = document.getElementById(`bubbles-container-0`);
-  if (b0) b0.innerHTML = '';
-  const bm = document.getElementById(`bubbles-container-mobile`);
-  if (bm) bm.innerHTML = '';
-  
-  const g0 = document.getElementById(`reaction-glow-0`);
-  if (g0) g0.classList.add('opacity-0');
-  const gm = document.getElementById(`reaction-glow-mobile`);
-  if (gm) gm.classList.add('opacity-0');
-  
-  // Reset meniscus
-  const meniscus = document.getElementById('liquid-meniscus');
-  const meniscusMobile = document.getElementById('liquid-meniscus-mobile');
-  if (meniscus) {
-    meniscus.setAttribute('cy', 130);
-    meniscus.setAttribute('rx', 38);
-  }
-  if (meniscusMobile) {
-    meniscusMobile.setAttribute('cy', 130);
-    meniscusMobile.setAttribute('rx', 38);
-  }
-  
-  const resultArea = document.getElementById('result-area');
-  if (resultArea) resultArea.classList.add('hidden');
-  
-  // Reset Gauges
-  updateGauges(24.5, 7.02, 100);
-  
-  addLabLog(`SYSTEM_FLUSHED: ALL_REAGENTS_CLEARED`, 'text-secondary');
 }
+window.resetLab = resetLab;
 
 function addLabLog(msg, colorClass = 'text-white') {
   const log = document.getElementById('lab-log');
@@ -1835,6 +1883,7 @@ function runReactionCheck() {
     }
   }, 1500);
 }
+window.runReactionCheck = runReactionCheck;
 
 function handleReactionSuccess(rxn) {
   addLabLog(`REACTION_SUCCESS: ${rxn.name.toUpperCase()}`, 'text-green-400');
@@ -1890,32 +1939,32 @@ function handleReactionSuccess(rxn) {
   const res = document.getElementById('result-area');
   if(!res) return;
   
-  const reactantsHtml = rxn.reactants.split(',').map(r => `<div class="bg-[#1e4d58] text-[#acedff] px-6 py-3 border border-cyan-500/20 rounded-xl font-mono">${r.trim()}</div>`).join('<span class="text-tertiary font-black text-3xl">+</span>');
-  const productsHtml = rxn.products.split(',').map(p => `<div class="bg-[#640039] text-[#ffd9e4] px-6 py-3 border border-[#ff79b4]/20 rounded-xl font-mono">${p.trim()}</div>`).join('<span class="text-tertiary font-black text-3xl">+</span>');
+  const reactantsHtml = rxn.reactants.split(',').map(r => `<div class="bg-[#1e4d58] text-[#acedff] px-3.5 py-1.5 md:px-5 md:py-2.5 border border-cyan-500/20 rounded-xl font-mono text-xs md:text-lg">${r.trim()}</div>`).join('<span class="text-tertiary font-black text-xs md:text-xl">+</span>');
+  const productsHtml = rxn.products.split(',').map(p => `<div class="bg-[#640039] text-[#ffd9e4] px-3.5 py-1.5 md:px-5 md:py-2.5 border border-[#ff79b4]/20 rounded-xl font-mono text-xs md:text-lg">${p.trim()}</div>`).join('<span class="text-tertiary font-black text-xs md:text-xl">+</span>');
   const type = getReactionType(rxn.name || rxn.equation);
 
   res.innerHTML = `
     <div class="mt-8 flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out]">
       <!-- Badges -->
-      <div class="flex justify-center gap-4">
-        <div class="bg-[#004e5c] text-[#acedff] px-4 py-2 font-bold uppercase border border-cyan-500/30 rounded-xl flex items-center gap-2 shadow-lg">
-          <span class="material-symbols-outlined text-sm">check_circle</span> Reaction Successful!
+      <div class="flex justify-center gap-2">
+        <div class="bg-[#004e5c] text-[#acedff] px-3 py-1.5 text-[10px] font-black uppercase border border-cyan-500/30 rounded-xl flex items-center gap-1.5 shadow-lg whitespace-nowrap">
+          <span class="material-symbols-outlined text-xs">check_circle</span> Reaction Successful!
         </div>
-        <div class="bg-secondary-container text-secondary-fixed-dim px-4 py-2 font-bold uppercase border border-secondary/20 rounded-xl shadow-lg">
+        <div class="bg-secondary-container text-secondary-fixed-dim px-3 py-1.5 text-[10px] font-black uppercase border border-secondary/20 rounded-xl shadow-lg whitespace-nowrap">
           ${type}
         </div>
       </div>
 
       <!-- Title & Conditions -->
-      <div class="text-center">
-        <h2 class="font-black text-3xl md:text-4xl uppercase tracking-tight mb-2 text-on-surface">${rxn.name}</h2>
-        <p class="font-bold text-xs md:text-sm uppercase tracking-widest text-slate-500">${rxn.conditions ? 'CONDITIONS: ' + rxn.conditions : 'CONDITIONS: STANDARD AMBIENT'}</p>
+      <div class="text-center px-4">
+        <h2 class="font-black text-xl md:text-3xl uppercase tracking-tight mb-1 text-on-surface leading-tight">${rxn.name}</h2>
+        <p class="font-bold text-[9px] md:text-xs uppercase tracking-widest text-slate-500 leading-normal">${rxn.conditions ? 'CONDITIONS: ' + rxn.conditions : 'CONDITIONS: STANDARD AMBIENT'}</p>
       </div>
 
       <!-- Visual Equation Box -->
-      <div class="bg-surface-container border border-white/5 p-6 md:p-8 rounded-2xl flex flex-wrap justify-center items-center gap-4 md:gap-6 text-xl md:text-3xl font-black">
+      <div class="bg-surface-container border border-white/5 p-4 md:p-6 rounded-2xl flex flex-wrap justify-center items-center gap-2 md:gap-4 text-xs md:text-lg font-black">
         ${reactantsHtml}
-        <span class="text-cyan-400 material-symbols-outlined text-4xl md:text-5xl font-black mx-2">arrow_forward</span>
+        <span class="text-cyan-400 material-symbols-outlined text-sm md:text-2xl font-black mx-1">arrow_forward</span>
         ${productsHtml}
       </div>
 
@@ -1997,9 +2046,13 @@ function handleReactionInvalid() {
           <div class="no-reaction-title text-[#ff79b4]">${reason.title}</div>
           <div class="no-reaction-reason text-slate-400">${reason.reason}</div>
         </div>
-        <div class="bg-surface-container-high border border-white/10 p-5 rounded-2xl text-center shadow-lg">
-          <p class="font-bold text-xs uppercase text-slate-500 mb-3">Try a Known Reaction</p>
-          <button class="btn btn-primary text-xs" onclick="navigate('reactions')">Browse Reaction Catalog →</button>
+        <div class="bg-surface-container-high border border-white/10 p-5 rounded-2xl text-center shadow-lg flex flex-col sm:flex-row justify-center gap-3">
+          <button class="w-full sm:w-auto h-11 bg-[#0e1416] border border-white/10 text-slate-300 font-bold text-xs uppercase px-6 rounded-xl hover:bg-white/5 hover:text-white transition-all flex items-center justify-center gap-1.5" onclick="resetLab()">
+             <span class="material-symbols-outlined text-base">rotate_left</span> Retry / Flush
+          </button>
+          <button class="w-full sm:w-auto h-11 kinetic-gradient text-on-primary font-bold text-xs uppercase px-6 rounded-xl hover:scale-[1.01] transition-all flex items-center justify-center gap-1.5" onclick="navigate('reactions')">
+             Browse Catalog <span class="material-symbols-outlined text-base">arrow_forward</span>
+          </button>
         </div>
       </div>
     `;

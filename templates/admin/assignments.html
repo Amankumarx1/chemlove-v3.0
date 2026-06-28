@@ -61,6 +61,7 @@
                                         <span class="material-symbols-outlined text-sm">edit</span>
                                     </button>
                                     <form method="POST" action="/admin/assignments" onsubmit="return confirm('Are you sure you want to delete this assignment?');" class="inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="id" value="{{ a.id }}">
                                         <button type="submit" title="Delete Assignment" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-rose-500 hover:bg-rose-950/20 hover:border-rose-500/20 transition-all flex items-center">
@@ -93,6 +94,7 @@
             </div>
             
             <form method="POST" action="/admin/assignments" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="action" value="create">
                 
                 <div>
@@ -174,6 +176,7 @@
             </div>
             
             <form method="POST" action="/admin/assignments" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="id" id="edit-assignment-id">
                 

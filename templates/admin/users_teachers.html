@@ -79,6 +79,7 @@
                                     </button>
                                     <!-- Delete form/button -->
                                     <form method="POST" action="/admin/users/teachers" onsubmit="return confirm('Are you absolutely sure you want to delete this teacher? All associated records and classes will be affected.');" class="inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="id" value="{{ u.id }}">
                                         <button type="submit" title="Purge Teacher" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-rose-500 hover:bg-rose-950/20 hover:border-rose-500/20 transition-all flex items-center">
@@ -111,6 +112,7 @@
             </div>
             
             <form method="POST" action="/admin/users/teachers" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="action" value="create">
                 <input type="hidden" name="role" value="teacher">
                 
@@ -154,6 +156,7 @@
             </div>
             
             <form method="POST" action="/admin/users/teachers" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="id" id="edit-user-id">
                 <input type="hidden" name="role" value="teacher">
@@ -196,6 +199,7 @@
             </div>
             
             <form method="POST" action="/admin/users/teachers" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="action" value="reset_password">
                 <input type="hidden" name="id" id="reset-user-id">
                 
