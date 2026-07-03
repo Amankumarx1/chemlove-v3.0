@@ -5,7 +5,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>{% block title %}ChemLove | Remove Fear from Chemistry{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -73,20 +73,34 @@
     </div>
 
     <!-- Sync Session with LocalStorage -->
-    <script>
-        {% if current_user %}
-        localStorage.setItem('chemLove_session', JSON.stringify({
-            id: {{ current_user.id }},
-            name: "{{ current_user.name }}",
-            email: "{{ current_user.email }}",
-            institution: "{{ current_user.institution }}",
-            role: "{{ current_user.role }}",
-            classLevel: "{{ current_user.classLevel or '' }}"
-        }));
-        {% else %}
-        localStorage.removeItem('chemLove_session');
-        {% endif %}
+    {% if current_user %}
+    <script type="application/json" id="user-session-data">
+        {
+            "id": {{ current_user.id }},
+            "name": {{ current_user.name | tojson }},
+            "email": {{ current_user.email | tojson }},
+            "institution": {{ current_user.institution | tojson }},
+            "role": {{ current_user.role | tojson }},
+            "classLevel": {{ (current_user.classLevel or '') | tojson }}
+        }
     </script>
+    <script>
+        (function() {
+            const dataEl = document.getElementById('user-session-data');
+            if (dataEl) {
+                try {
+                    localStorage.setItem('chemLove_session', dataEl.textContent.trim());
+                } catch (e) {
+                    console.error('Error syncing user session data', e);
+                }
+            }
+        })();
+    </script>
+    {% else %}
+    <script>
+        localStorage.removeItem('chemLove_session');
+    </script>
+    {% endif %}
 
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/particles.js') }}"></script>

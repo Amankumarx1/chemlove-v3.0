@@ -1,4 +1,4 @@
-﻿{% extends 'layouts/admin_base.html' %}
+{% extends 'layouts/admin_base.html' %}
 
 {% block title %}ChemLove Admin | Student Control{% endblock %}
 
@@ -63,11 +63,11 @@
                             <td class="py-4 px-4">
                                 <div class="flex items-center justify-center gap-2">
                                     <!-- Impersonate button -->
-                                    <a href="/admin/impersonate/{{ u.id }}" title="Impersonate student" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-cyan-400 hover:bg-cyan-950/20 hover:border-cyan-500/20 transition-all flex items-center">
+                                    <a href="/admin/impersonate/{{ u.public_id }}" title="Impersonate student" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-cyan-400 hover:bg-cyan-950/20 hover:border-cyan-500/20 transition-all flex items-center">
                                         <span class="material-symbols-outlined text-sm">login</span>
                                     </a>
                                     <!-- Monitor profile details -->
-                                    <a href="/admin/student-monitoring/{{ u.id }}" title="Detailed Telemetry" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-pink-400 hover:bg-pink-950/20 hover:border-pink-500/20 transition-all flex items-center">
+                                    <a href="/admin/student-monitoring/{{ u.public_id }}" title="Detailed Telemetry" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-pink-400 hover:bg-pink-950/20 hover:border-pink-500/20 transition-all flex items-center">
                                         <span class="material-symbols-outlined text-sm">monitoring</span>
                                     </a>
                                     <!-- Edit button -->

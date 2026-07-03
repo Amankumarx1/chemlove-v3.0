@@ -1,4 +1,4 @@
-﻿{% extends 'layouts/admin_base.html' %}
+{% extends 'layouts/admin_base.html' %}
 
 {% block title %}ChemLove Admin | Chapter Builder{% endblock %}
 
@@ -55,7 +55,7 @@
 
         <!-- Content Workspace -->
         <div class="lg:col-span-3">
-            <form method="POST" action="/admin/chapters/{{ chapter.id }}/builder" class="space-y-6">
+            <form method="POST" action="/admin/chapters/{{ chapter.public_id }}/builder" class="space-y-6">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <!-- Overview Content -->
                 <div id="tab-overview" class="builder-tab-pane glass-morphism p-6 rounded-3xl space-y-4">

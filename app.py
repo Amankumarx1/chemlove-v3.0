@@ -2,6 +2,7 @@ import os
 import json
 import glob
 import re
+import uuid
 from datetime import datetime, timezone, date
 from functools import wraps
 
@@ -289,6 +290,80 @@ def get_db():
     return MySQLConnectionWrapper(pool)
 
 
+def run_migration_on_startup():
+    print("[MIGRATION] Starting startup migration...")
+    tables = [
+        "users",
+        "courses",
+        "chapters",
+        "lessons",
+        "experiments",
+        "labs",
+        "reactions",
+        "quizzes",
+        "assignments",
+        "tests",
+        "badges",
+        "certificates",
+        "announcements"
+    ]
+    import uuid
+    try:
+        with get_db() as conn:
+            for table in tables:
+                print(f"[MIGRATION] Processing table: {table}")
+                tbl_check = conn.execute(f"SHOW TABLES LIKE '{table}'").fetchone()
+                if not tbl_check:
+                    print(f"[MIGRATION] Table '{table}' does not exist. Skipping.")
+                    continue
+                
+                col_check = conn.execute(f"SHOW COLUMNS FROM `{table}` LIKE 'public_id'").fetchone()
+                if not col_check:
+                    print(f"[MIGRATION] Adding public_id column to '{table}'...")
+                    conn.execute(f"ALTER TABLE `{table}` ADD COLUMN public_id VARCHAR(36) DEFAULT NULL")
+                else:
+                    print(f"[MIGRATION] public_id column already exists in '{table}'.")
+
+                rows = conn.execute(f"SELECT * FROM `{table}`").fetchall()
+                print(f"[MIGRATION] Found {len(rows)} records in '{table}'.")
+                
+                updated_count = 0
+                for row in rows:
+                    row_dict = dict(row)
+                    if not row_dict.get("public_id"):
+                        new_uuid = str(uuid.uuid4())
+                        conn.execute(
+                            f"UPDATE `{table}` SET public_id = %s WHERE id = %s",
+                            (new_uuid, row_dict["id"])
+                        )
+                        updated_count += 1
+                        
+                if updated_count > 0:
+                    print(f"[MIGRATION] Generated UUIDs for {updated_count} records.")
+                else:
+                    print("[MIGRATION] All records already have UUIDs.")
+                    
+                try:
+                    conn.execute(f"ALTER TABLE `{table}` DROP INDEX `idx_{table}_public_id`")
+                except Exception:
+                    pass
+                try:
+                    conn.execute(f"ALTER TABLE `{table}` DROP INDEX `public_id`")
+                except Exception:
+                    pass
+                    
+                print(f"[MIGRATION] Enforcing NOT NULL UNIQUE constraints on '{table}'.public_id...")
+                conn.execute(f"ALTER TABLE `{table}` MODIFY COLUMN public_id VARCHAR(36) NOT NULL")
+                conn.execute(f"ALTER TABLE `{table}` ADD UNIQUE KEY `idx_{table}_public_id` (public_id)")
+                print(f"[MIGRATION] Constraints and unique index successfully created on '{table}'.")
+        print("[MIGRATION] Startup migration completed successfully!")
+    except Exception as e:
+        print(f"[MIGRATION] ERROR: Startup migration failed: {e}")
+
+run_migration_on_startup()
+
+
+
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
@@ -373,10 +448,10 @@ def init_db():
                 hashed_pw = ph.hash("admin123")
                 conn.execute(
                     """
-                    INSERT INTO users (name, email, password_hash, institution, role, class_level, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO users (public_id, name, email, password_hash, institution, role, class_level, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     """,
-                    ("Administrator", "admin@chemlove.com", hashed_pw, "ChemLove HQ", "admin", "all", "active")
+                    (str(uuid.uuid4()), "Administrator", "admin@chemlove.com", hashed_pw, "ChemLove HQ", "admin", "all", "active")
                 )
                 print("[DATABASE] Default admin account (admin@chemlove.com / admin123) verified.")
                 
@@ -427,6 +502,18 @@ def init_db():
                 conn.execute("ALTER TABLE users ADD COLUMN avatar VARCHAR(100) DEFAULT 'account_circle'")
             except Exception:
                 pass
+
+            # Auth security columns
+            for col, col_def in [
+                ("failed_login_attempts", "INT NOT NULL DEFAULT 0"),
+                ("lockout_until", "TIMESTAMP NULL DEFAULT NULL"),
+                ("last_login_at", "TIMESTAMP NULL DEFAULT NULL"),
+                ("password_changed_at", "TIMESTAMP NULL DEFAULT NULL")
+            ]:
+                try:
+                    conn.execute(f"ALTER TABLE users ADD COLUMN {col} {col_def}")
+                except Exception:
+                    pass
             
         print("[DATABASE] MySQL connection and database distribution bootstrap checked successfully.")
     except Exception as e:
@@ -555,13 +642,16 @@ def all_chapters():
         return []
 
 
-def get_chapter(chapter_id):
+def get_chapter(chapter_identifier):
     try:
         with get_db() as conn:
-            row = conn.execute("SELECT * FROM chapters WHERE id = %s", (chapter_id,)).fetchone()
+            if isinstance(chapter_identifier, int) or (isinstance(chapter_identifier, str) and chapter_identifier.isdigit()):
+                row = conn.execute("SELECT * FROM chapters WHERE id = %s", (chapter_identifier,)).fetchone()
+            else:
+                row = conn.execute("SELECT * FROM chapters WHERE public_id = %s", (chapter_identifier,)).fetchone()
         return parse_chapter_json_fields(row) if row else None
     except Exception as e:
-        print(f"Error fetching chapter {chapter_id}: {e}")
+        print(f"Error fetching chapter {chapter_identifier}: {e}")
         return None
 
 
@@ -585,13 +675,16 @@ def all_badges():
         return []
 
 
-def get_badge(badge_id):
+def get_badge(badge_identifier):
     try:
         with get_db() as conn:
-            row = conn.execute("SELECT * FROM badges WHERE id = %s", (badge_id,)).fetchone()
+            if isinstance(badge_identifier, int) or (isinstance(badge_identifier, str) and badge_identifier.isdigit()):
+                row = conn.execute("SELECT * FROM badges WHERE id = %s", (badge_identifier,)).fetchone()
+            else:
+                row = conn.execute("SELECT * FROM badges WHERE public_id = %s", (badge_identifier,)).fetchone()
         return dict(row) if row else None
     except Exception as e:
-        print(f"Error fetching badge {badge_id}: {e}")
+        print(f"Error fetching badge {badge_identifier}: {e}")
         return None
 
 
@@ -605,13 +698,16 @@ def all_experiments():
         return []
 
 
-def get_experiment(experiment_id):
+def get_experiment(experiment_identifier):
     try:
         with get_db() as conn:
-            row = conn.execute("SELECT * FROM experiments WHERE id = %s", (experiment_id,)).fetchone()
+            if isinstance(experiment_identifier, int) or (isinstance(experiment_identifier, str) and experiment_identifier.isdigit()):
+                row = conn.execute("SELECT * FROM experiments WHERE id = %s", (experiment_identifier,)).fetchone()
+            else:
+                row = conn.execute("SELECT * FROM experiments WHERE public_id = %s", (experiment_identifier,)).fetchone()
         return parse_experiment_json_fields(row) if row else None
     except Exception as e:
-        print(f"Error fetching experiment {experiment_id}: {e}")
+        print(f"Error fetching experiment {experiment_identifier}: {e}")
         return None
 
 
@@ -643,8 +739,12 @@ def all_quizzes():
         return []
 
 
-def get_quiz(chapter_id):
+def get_quiz(chapter_identifier):
     try:
+        chapter_data = get_chapter(chapter_identifier)
+        if not chapter_data:
+            return None
+        chapter_id = chapter_data['id']
         with get_db() as conn:
             quiz_row = conn.execute("SELECT * FROM quizzes WHERE chapter_id = %s", (chapter_id,)).fetchone()
         if not quiz_row:
@@ -665,13 +765,11 @@ def get_quiz(chapter_id):
                 q_info['answer'] = q_info['option_a']
             enriched_questions.append(q_info)
         
-        with get_db() as conn:
-            ch_row = conn.execute("SELECT title FROM chapters WHERE id = %s", (chapter_id,)).fetchone()
-        q_dict['chapter'] = ch_row['title'] if ch_row else "Chemistry"
+        q_dict['chapter'] = chapter_data['title']
         q_dict['questions'] = enriched_questions
         return q_dict
     except Exception as e:
-        print(f"Error fetching quiz for chapter {chapter_id}: {e}")
+        print(f"Error fetching quiz for chapter {chapter_identifier}: {e}")
         return None
 
 
@@ -1149,10 +1247,10 @@ def signup():
 
             cursor = conn.execute(
                 """
-                INSERT INTO users(name, email, password_hash, institution, role, class_level, status, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
+                INSERT INTO users(public_id, name, email, password_hash, institution, role, class_level, status, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
                 """,
-                (name, email, ph.hash(password), institution, role,
+                (str(uuid.uuid4()), name, email, ph.hash(password), institution, role,
                  class_level if role == 'student' else None),
             )
             user_id = cursor.lastrowid
@@ -1377,10 +1475,10 @@ def auth_google_finish():
         with get_db() as conn:
             cursor = conn.execute(
                 """
-                INSERT INTO users(name, email, password_hash, institution, role, class_level, status, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
+                INSERT INTO users(public_id, name, email, password_hash, institution, role, class_level, status, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
                 """,
-                (pending['name'], pending['email'], generate_password_hash(rand_pass), institution, role,
+                (str(uuid.uuid4()), pending['name'], pending['email'], generate_password_hash(rand_pass), institution, role,
                  class_level if role == 'student' else None)
             )
             user_id = cursor.lastrowid
@@ -1418,11 +1516,17 @@ def logout():
     return redirect(url_for('home'))
 
 
-@app.route('/admin/impersonate/<int:target_uid>')
+@app.route('/admin/impersonate/<string:target_uuid>')
 @admin_required
-def admin_impersonate(target_uid):
+def admin_impersonate(target_uuid):
+    if target_uuid.isdigit():
+        with get_db() as conn:
+            target_user = conn.execute("SELECT public_id FROM users WHERE id = %s", (target_uuid,)).fetchone()
+            if target_user:
+                return redirect(url_for('admin_impersonate', target_uuid=target_user['public_id']), code=301)
+
     with get_db() as conn:
-        target_user = conn.execute("SELECT * FROM users WHERE id = %s", (target_uid,)).fetchone()
+        target_user = conn.execute("SELECT * FROM users WHERE public_id = %s", (target_uuid,)).fetchone()
     
     if not target_user:
         flash("Target user not found.", "error")
@@ -1434,9 +1538,9 @@ def admin_impersonate(target_uid):
 
     admin_id = session.get("user_id")
     session["impersonator_user_id"] = admin_id
-    session["user_id"] = target_uid
+    session["user_id"] = target_user["id"]
 
-    log_audit("impersonate_user", f"Admin impersonating {target_user['name']} (ID: {target_uid})")
+    log_audit("impersonate_user", f"Admin impersonating {target_user['name']} (ID: {target_user['id']})")
     flash(f"Now impersonating {target_user['name']} ({target_user['role']})", "success")
     return redirect_by_role(target_user)
 
@@ -1600,7 +1704,7 @@ def student_dashboard():
     if user.get('last_assessment_id'):
         try:
             with get_db() as conn:
-                q_row = conn.execute("SELECT id, title, chapter_id FROM quizzes WHERE id = %s", (user['last_assessment_id'],)).fetchone()
+                q_row = conn.execute("SELECT q.id, q.title, q.chapter_id, c.public_id AS chapter_public_id FROM quizzes q JOIN chapters c ON q.chapter_id = c.id WHERE q.id = %s", (user['last_assessment_id'],)).fetchone()
                 if q_row:
                     last_assessment = dict(q_row)
         except Exception as e:
@@ -1611,48 +1715,90 @@ def student_dashboard():
     try:
         with get_db() as conn:
             courses = conn.execute("SELECT id FROM courses WHERE class_level = %s AND status = 'active'", (class_level,)).fetchall()
-            for crs in courses:
-                mods = conn.execute("SELECT id, title FROM modules WHERE course_id = %s ORDER BY order_index ASC", (crs['id'],)).fetchall()
-                for m in mods:
-                    chaps = conn.execute("SELECT id, title, chapter_number FROM chapters WHERE module_id = %s ORDER BY chapter_number ASC", (m['id'],)).fetchall()
-                    for ch in chaps:
-                        lessons = conn.execute("SELECT id, title FROM lessons WHERE chapter_id = %s AND status = 'published' ORDER BY order_index ASC", (ch['id'],)).fetchall()
-                        qz = conn.execute("SELECT id, title FROM quizzes WHERE chapter_id = %s", (ch['id'],)).fetchone()
+            course_ids = [c['id'] for c in courses]
+            
+            if course_ids:
+                format_strings = ','.join(['%s'] * len(course_ids))
+                mods = conn.execute(
+                    f"SELECT id, title, course_id FROM modules WHERE course_id IN ({format_strings}) ORDER BY order_index ASC",
+                    tuple(course_ids)
+                ).fetchall()
+                mod_ids = [m['id'] for m in mods]
+                
+                if mod_ids:
+                    format_strings_mods = ','.join(['%s'] * len(mod_ids))
+                    chaps = conn.execute(
+                        f"SELECT id, title, chapter_number, public_id, module_id FROM chapters WHERE module_id IN ({format_strings_mods}) ORDER BY chapter_number ASC",
+                        tuple(mod_ids)
+                    ).fetchall()
+                    chap_ids = [ch['id'] for ch in chaps]
+                    
+                    if chap_ids:
+                        format_strings_chaps = ','.join(['%s'] * len(chap_ids))
                         
-                        comp_lessons_count = 0
-                        enriched_lessons = []
-                        for ls in lessons:
-                            read_event = conn.execute(
-                                "SELECT id FROM user_history WHERE user_id = %s AND event_type = 'read_notes' AND event_data LIKE %s",
-                                (user['id'], f"%lesson_id={ls['id']}%")
-                            ).fetchone()
-                            completed = read_event is not None
-                            if completed:
-                                comp_lessons_count += 1
-                            enriched_lessons.append({**ls, "completed": completed})
-                            
-                        quiz_completed = False
-                        quiz_score = None
-                        if qz:
-                            attempt = conn.execute(
-                                "SELECT score FROM test_attempts ta JOIN tests t ON ta.test_id = t.id WHERE ta.student_id = %s AND t.chapter_id = %s",
-                                (user['id'], ch['id'])
-                            ).fetchone()
-                            if attempt:
-                                quiz_completed = True
-                                quiz_score = attempt['score']
+                        lessons_rows = conn.execute(
+                            f"SELECT id, title, chapter_id FROM lessons WHERE chapter_id IN ({format_strings_chaps}) AND status = 'published' ORDER BY order_index ASC",
+                            tuple(chap_ids)
+                        ).fetchall()
+                        
+                        quizzes_rows = conn.execute(
+                            f"SELECT id, title, public_id, chapter_id FROM quizzes WHERE chapter_id IN ({format_strings_chaps})",
+                            tuple(chap_ids)
+                        ).fetchall()
+                        
+                        read_events = conn.execute(
+                            "SELECT event_data FROM user_history WHERE user_id = %s AND event_type = 'read_notes'",
+                            (user['id'],)
+                        ).fetchall()
+                        
+                        import re
+                        completed_lessons = set()
+                        for ev in read_events:
+                            ev_data = ev['event_data'] or ""
+                            m_match = re.search(r"lesson_id=(\d+)", ev_data)
+                            if m_match:
+                                completed_lessons.add(int(m_match.group(1)))
                                 
-                        ch_completed = (len(lessons) > 0 and comp_lessons_count == len(lessons))
-                        roadmap.append({
-                            "chapter_id": ch['id'],
-                            "chapter_title": ch['title'],
-                            "chapter_number": ch['chapter_number'],
-                            "lessons": enriched_lessons,
-                            "quiz": dict(qz) if qz else None,
-                            "quiz_completed": quiz_completed,
-                            "quiz_score": quiz_score,
-                            "completed": ch_completed
-                        })
+                        attempts_rows = conn.execute(
+                            f"SELECT ta.score, t.chapter_id FROM test_attempts ta JOIN tests t ON ta.test_id = t.id WHERE ta.student_id = %s AND t.chapter_id IN ({format_strings_chaps})",
+                            (user['id'],) + tuple(chap_ids)
+                        ).fetchall()
+                        
+                        scores_by_chapter = {att['chapter_id']: att['score'] for att in attempts_rows}
+                        
+                        lessons_by_chapter = {}
+                        for ls in lessons_rows:
+                            ls_dict = dict(ls)
+                            ch_id = ls_dict['chapter_id']
+                            if ch_id not in lessons_by_chapter:
+                                lessons_by_chapter[ch_id] = []
+                            completed = ls_dict['id'] in completed_lessons
+                            lessons_by_chapter[ch_id].append({**ls_dict, "completed": completed})
+                            
+                        quizzes_by_chapter = {q['chapter_id']: dict(q) for q in quizzes_rows}
+                        
+                        for ch in chaps:
+                            ch_id = ch['id']
+                            ch_lessons = lessons_by_chapter.get(ch_id, [])
+                            qz = quizzes_by_chapter.get(ch_id, None)
+                            
+                            comp_lessons_count = sum(1 for ls in ch_lessons if ls['completed'])
+                            ch_completed = (len(ch_lessons) > 0 and comp_lessons_count == len(ch_lessons))
+                            
+                            quiz_score = scores_by_chapter.get(ch_id, None)
+                            quiz_completed = quiz_score is not None
+                            
+                            roadmap.append({
+                                "chapter_id": ch_id,
+                                "chapter_uuid": ch['public_id'],
+                                "chapter_title": ch['title'],
+                                "chapter_number": ch['chapter_number'],
+                                "lessons": ch_lessons,
+                                "quiz": qz,
+                                "quiz_completed": quiz_completed,
+                                "quiz_score": quiz_score,
+                                "completed": ch_completed
+                            })
     except Exception as e:
         print(f"Error compiling roadmap: {e}")
         
@@ -1694,33 +1840,70 @@ def student_chapters():
         ).fetchall()
     chapters = [parse_chapter_json_fields(row) for row in rows]
     
-    # Lock/Unlock logic: lock next chapters if previous chapter has not been completed
-    for i, ch in enumerate(chapters):
-        if i == 0:
-            ch["locked"] = False
-        else:
-            prev_ch = chapters[i-1]
+    if chapters:
+        chap_ids = [ch['id'] for ch in chapters]
+        format_strings_chaps = ','.join(['%s'] * len(chap_ids))
+        try:
             with get_db() as conn:
-                lessons = conn.execute("SELECT id FROM lessons WHERE chapter_id = %s", (prev_ch["id"],)).fetchall()
-                comp_count = 0
-                for ls in lessons:
-                    read_event = conn.execute(
-                        "SELECT id FROM user_history WHERE user_id = %s AND event_type = 'read_notes' AND event_data LIKE %s",
-                        (user['id'], f"%lesson_id={ls['id']}%")
-                    ).fetchone()
-                    if read_event:
-                        comp_count += 1
-                prev_completed = (len(lessons) > 0 and comp_count == len(lessons))
-                ch["locked"] = not prev_completed
+                lessons_rows = conn.execute(
+                    f"SELECT id, chapter_id FROM lessons WHERE chapter_id IN ({format_strings_chaps}) AND status = 'published'",
+                    tuple(chap_ids)
+                ).fetchall()
+                
+                read_events = conn.execute(
+                    "SELECT event_data FROM user_history WHERE user_id = %s AND event_type = 'read_notes'",
+                    (user['id'],)
+                ).fetchall()
+                
+            import re
+            completed_lessons = set()
+            for ev in read_events:
+                ev_data = ev['event_data'] or ""
+                m_match = re.search(r"lesson_id=(\d+)", ev_data)
+                if m_match:
+                    completed_lessons.add(int(m_match.group(1)))
+                    
+            lessons_by_chapter = {}
+            for ls in lessons_rows:
+                ch_id = ls['chapter_id']
+                if ch_id not in lessons_by_chapter:
+                    lessons_by_chapter[ch_id] = []
+                lessons_by_chapter[ch_id].append(ls['id'])
+                
+            completed_chapters = {}
+            for ch in chapters:
+                ch_id = ch['id']
+                ch_lessons = lessons_by_chapter.get(ch_id, [])
+                if len(ch_lessons) > 0:
+                    ch_completed = all(lid in completed_lessons for lid in ch_lessons)
+                else:
+                    ch_completed = False
+                completed_chapters[ch_id] = ch_completed
+                
+            for i, ch in enumerate(chapters):
+                if i == 0:
+                    ch["locked"] = False
+                else:
+                    prev_ch = chapters[i-1]
+                    ch["locked"] = not completed_chapters.get(prev_ch["id"], False)
+        except Exception as e:
+            print(f"Error checking chapter lock/unlock: {e}")
+            for ch in chapters:
+                ch["locked"] = False
                 
     return render_template('student/chapters.html', current_user=user, chapters=chapters, selected_class=selected_class, active_tab='chapters')
 
 
-@app.route('/student/chapter/<int:chapter_id>')
+@app.route('/student/chapter/<string:chapter_uuid>')
 @student_required
-def student_chapter_view(chapter_id):
+def student_chapter_view(chapter_uuid):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('student_chapter_view', chapter_uuid=chapter_data['public_id']), code=301)
+
     user = get_current_user()
-    chapter_data = get_chapter(chapter_id)
+    chapter_data = get_chapter(chapter_uuid)
     if not chapter_data:
         flash('Chapter not found.', 'error')
         return redirect(url_for('student_chapters'))
@@ -1745,6 +1928,7 @@ def student_chapter_view(chapter_id):
         flash('Unauthorized chapter access.', 'error')
         return redirect(url_for('student_chapters'))
         
+    chapter_id = chapter_data['id']
     # Update last opened chapter
     try:
         with get_db() as conn:
@@ -1889,15 +2073,20 @@ def get_chapter_mastery(user_id, chapter_id):
     }
 
 
-@app.route('/api/chapter/<int:chapter_id>/section/<string:section_name>', methods=['GET'])
+@app.route('/api/chapter/<string:chapter_uuid>/section/<string:section_name>', methods=['GET'])
 @student_required
-def api_chapter_section_view(chapter_id, section_name):
+def api_chapter_section_view(chapter_uuid, section_name):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('api_chapter_section_view', chapter_uuid=chapter_data['public_id'], section_name=section_name), code=301)
+
     user = get_current_user()
-    chapter_data = get_chapter(chapter_id)
+    chapter_data = get_chapter(chapter_uuid)
     if not chapter_data:
         return jsonify({"error": "Chapter not found"}), 404
         
-    quiz_data = get_quiz(chapter_id)
+    quiz_data = get_quiz(chapter_uuid)
     
     sections_has_content = {
         "overview": bool(chapter_data.get("overview_content") or chapter_data.get("notes")),
@@ -1956,14 +2145,20 @@ def api_chapter_section_view(chapter_id, section_name):
     })
 
 
-@app.route('/api/chapter/<int:chapter_id>/section/<string:section_name>/complete', methods=['POST'])
+@app.route('/api/chapter/<string:chapter_uuid>/section/<string:section_name>/complete', methods=['POST'])
 @student_required
-def api_chapter_section_complete(chapter_id, section_name):
+def api_chapter_section_complete(chapter_uuid, section_name):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('api_chapter_section_complete', chapter_uuid=chapter_data['public_id'], section_name=section_name), code=301)
+
     user = get_current_user()
-    chapter_data = get_chapter(chapter_id)
+    chapter_data = get_chapter(chapter_uuid)
     if not chapter_data:
         return jsonify({"error": "Chapter not found"}), 404
         
+    chapter_id = chapter_data['id']
     mastery_before = get_chapter_mastery(user["id"], chapter_id)
     already_chapter_completed = (mastery_before["mastery_percent"] >= 100)
     
@@ -2012,10 +2207,15 @@ def api_chapter_section_complete(chapter_id, section_name):
     })
 
 
-@app.route('/api/chapter/<int:chapter_id>/quiz', methods=['GET'])
+@app.route('/api/chapter/<string:chapter_uuid>/quiz', methods=['GET'])
 @student_required
-def api_chapter_quiz_data(chapter_id):
-    quiz_data = get_quiz(chapter_id)
+def api_chapter_quiz_data(chapter_uuid):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('api_chapter_quiz_data', chapter_uuid=chapter_data['public_id']), code=301)
+
+    quiz_data = get_quiz(chapter_uuid)
     if not quiz_data:
         return jsonify({"error": "Quiz not found"}), 404
     return jsonify({
@@ -2024,11 +2224,16 @@ def api_chapter_quiz_data(chapter_id):
     })
 
 
-@app.route('/student/chapter/<int:chapter_id>/next')
+@app.route('/student/chapter/<string:chapter_uuid>/next')
 @student_required
-def student_chapter_next(chapter_id):
+def student_chapter_next(chapter_uuid):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('student_chapter_next', chapter_uuid=chapter_data['public_id']), code=301)
+
     user = get_current_user()
-    chapter = get_chapter(chapter_id)
+    chapter = get_chapter(chapter_uuid)
     if not chapter:
         flash('Chapter not found.', 'error')
         return redirect(url_for('student_chapters'))
@@ -2036,13 +2241,13 @@ def student_chapter_next(chapter_id):
     try:
         with get_db() as conn:
             next_ch = conn.execute("""
-                SELECT id FROM chapters 
+                SELECT public_id FROM chapters 
                 WHERE class_level = %s AND chapter_number > %s AND status = 'published'
                 ORDER BY chapter_number ASC LIMIT 1
             """, (chapter['class_level'], chapter['chapter_number'])).fetchone()
             
             if next_ch:
-                return redirect(url_for('student_chapter_view', chapter_id=next_ch['id']))
+                return redirect(url_for('student_chapter_view', chapter_uuid=next_ch['public_id']))
             else:
                 flash('Congratulations! You have completed the last chapter for this class level.', 'success')
                 return redirect(url_for('student_chapters'))
@@ -2067,11 +2272,12 @@ SECTION_DB_MAP = {
 }
 
 
-def get_chapter_v4_state(user_id, chapter_id):
+def get_chapter_v4_state(user_id, chapter_identifier):
     """Return section availability and progress state for a chapter."""
-    chapter_data = get_chapter(chapter_id)
+    chapter_data = get_chapter(chapter_identifier)
     if not chapter_data:
         return None
+    chapter_id = chapter_data['id']
 
     quiz_data = get_quiz(chapter_id)
 
@@ -2152,10 +2358,10 @@ def get_chapter_v4_state(user_id, chapter_id):
     }
 
 
-def _chapter_section_view(chapter_id, section_slug, template_name):
+def _chapter_section_view(chapter_uuid, section_slug, template_name):
     """Shared handler for all section sub-pages."""
     user = get_current_user()
-    state = get_chapter_v4_state(user['id'], chapter_id)
+    state = get_chapter_v4_state(user['id'], chapter_uuid)
     if not state:
         flash('Chapter not found.', 'error')
         return redirect(url_for('student_chapters'))
@@ -2166,7 +2372,7 @@ def _chapter_section_view(chapter_id, section_slug, template_name):
         idx = active_slugs.index(section_slug)
     except ValueError:
         # Section is skipped — redirect to roadmap
-        return redirect(url_for('student_chapter_view', chapter_id=chapter_id))
+        return redirect(url_for('student_chapter_view', chapter_uuid=chapter_uuid))
 
     prev_slug = active_slugs[idx - 1] if idx > 0 else None
     next_slug = active_slugs[idx + 1] if idx < len(active_slugs) - 1 else None
@@ -2180,16 +2386,25 @@ def _chapter_section_view(chapter_id, section_slug, template_name):
         section_slug=section_slug,
         prev_slug=prev_slug,
         next_slug=next_slug,
-        chapter_id=chapter_id,
+        chapter_uuid=chapter_uuid,
         active_tab='chapters',
     )
 
 
-@app.route('/student/chapter/<int:chapter_id>/overview')
+@app.route('/student/chapter/<string:chapter_uuid>/overview')
 @student_required
-def student_chapter_overview(chapter_id):
-    # Auto-complete overview on visit
+def student_chapter_overview(chapter_uuid):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('student_chapter_overview', chapter_uuid=chapter_data['public_id']), code=301)
+
     user = get_current_user()
+    chapter_data = get_chapter(chapter_uuid)
+    if not chapter_data:
+        flash('Chapter not found.', 'error')
+        return redirect(url_for('student_chapters'))
+    chapter_id = chapter_data['id']
     try:
         with get_db() as conn:
             conn.execute("""
@@ -2199,13 +2414,23 @@ def student_chapter_overview(chapter_id):
             """, (user['id'], chapter_id))
     except Exception as e:
         print(f"Error marking overview complete: {e}")
-    return _chapter_section_view(chapter_id, 'overview', 'student/chapter_section.html')
+    return _chapter_section_view(chapter_uuid, 'overview', 'student/chapter_section.html')
 
 
-@app.route('/student/chapter/<int:chapter_id>/key-points')
+@app.route('/student/chapter/<string:chapter_uuid>/key-points')
 @student_required
-def student_chapter_keypoints(chapter_id):
+def student_chapter_keypoints(chapter_uuid):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('student_chapter_keypoints', chapter_uuid=chapter_data['public_id']), code=301)
+
     user = get_current_user()
+    chapter_data = get_chapter(chapter_uuid)
+    if not chapter_data:
+        flash('Chapter not found.', 'error')
+        return redirect(url_for('student_chapters'))
+    chapter_id = chapter_data['id']
     try:
         with get_db() as conn:
             conn.execute("""
@@ -2215,13 +2440,23 @@ def student_chapter_keypoints(chapter_id):
             """, (user['id'], chapter_id))
     except Exception as e:
         print(f"Error marking keypoints complete: {e}")
-    return _chapter_section_view(chapter_id, 'key-points', 'student/chapter_section.html')
+    return _chapter_section_view(chapter_uuid, 'key-points', 'student/chapter_section.html')
 
 
-@app.route('/student/chapter/<int:chapter_id>/formulas')
+@app.route('/student/chapter/<string:chapter_uuid>/formulas')
 @student_required
-def student_chapter_formulas(chapter_id):
+def student_chapter_formulas(chapter_uuid):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('student_chapter_formulas', chapter_uuid=chapter_data['public_id']), code=301)
+
     user = get_current_user()
+    chapter_data = get_chapter(chapter_uuid)
+    if not chapter_data:
+        flash('Chapter not found.', 'error')
+        return redirect(url_for('student_chapters'))
+    chapter_id = chapter_data['id']
     try:
         with get_db() as conn:
             conn.execute("""
@@ -2231,13 +2466,23 @@ def student_chapter_formulas(chapter_id):
             """, (user['id'], chapter_id))
     except Exception as e:
         print(f"Error marking formulas complete: {e}")
-    return _chapter_section_view(chapter_id, 'formulas', 'student/chapter_section.html')
+    return _chapter_section_view(chapter_uuid, 'formulas', 'student/chapter_section.html')
 
 
-@app.route('/student/chapter/<int:chapter_id>/reactions')
+@app.route('/student/chapter/<string:chapter_uuid>/reactions')
 @student_required
-def student_chapter_reactions(chapter_id):
+def student_chapter_reactions(chapter_uuid):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('student_chapter_reactions', chapter_uuid=chapter_data['public_id']), code=301)
+
     user = get_current_user()
+    chapter_data = get_chapter(chapter_uuid)
+    if not chapter_data:
+        flash('Chapter not found.', 'error')
+        return redirect(url_for('student_chapters'))
+    chapter_id = chapter_data['id']
     try:
         with get_db() as conn:
             conn.execute("""
@@ -2247,13 +2492,23 @@ def student_chapter_reactions(chapter_id):
             """, (user['id'], chapter_id))
     except Exception as e:
         print(f"Error marking reactions complete: {e}")
-    return _chapter_section_view(chapter_id, 'reactions', 'student/chapter_section.html')
+    return _chapter_section_view(chapter_uuid, 'reactions', 'student/chapter_section.html')
 
 
-@app.route('/student/chapter/<int:chapter_id>/experiments')
+@app.route('/student/chapter/<string:chapter_uuid>/experiments')
 @student_required
-def student_chapter_experiments(chapter_id):
+def student_chapter_experiments(chapter_uuid):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('student_chapter_experiments', chapter_uuid=chapter_data['public_id']), code=301)
+
     user = get_current_user()
+    chapter_data = get_chapter(chapter_uuid)
+    if not chapter_data:
+        flash('Chapter not found.', 'error')
+        return redirect(url_for('student_chapters'))
+    chapter_id = chapter_data['id']
     try:
         with get_db() as conn:
             conn.execute("""
@@ -2263,26 +2518,43 @@ def student_chapter_experiments(chapter_id):
             """, (user['id'], chapter_id))
     except Exception as e:
         print(f"Error marking experiments complete: {e}")
-    return _chapter_section_view(chapter_id, 'experiments', 'student/chapter_section.html')
+    return _chapter_section_view(chapter_uuid, 'experiments', 'student/chapter_section.html')
 
 
-@app.route('/student/chapter/<int:chapter_id>/practice')
+@app.route('/student/chapter/<string:chapter_uuid>/practice')
 @student_required
-def student_chapter_practice(chapter_id):
-    return _chapter_section_view(chapter_id, 'practice', 'student/chapter_section.html')
+def student_chapter_practice(chapter_uuid):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('student_chapter_practice', chapter_uuid=chapter_data['public_id']), code=301)
+    return _chapter_section_view(chapter_uuid, 'practice', 'student/chapter_section.html')
 
 
-@app.route('/student/chapter/<int:chapter_id>/quiz')
+@app.route('/student/chapter/<string:chapter_uuid>/quiz')
 @student_required
-def student_chapter_quiz(chapter_id):
-    return _chapter_section_view(chapter_id, 'quiz', 'student/chapter_section.html')
+def student_chapter_quiz(chapter_uuid):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('student_chapter_quiz', chapter_uuid=chapter_data['public_id']), code=301)
+    return _chapter_section_view(chapter_uuid, 'quiz', 'student/chapter_section.html')
 
 
-@app.route('/api/chapter/<int:chapter_id>/complete-section', methods=['POST'])
+@app.route('/api/chapter/<string:chapter_uuid>/complete-section', methods=['POST'])
 @student_required
-def api_chapter_complete_section(chapter_id):
+def api_chapter_complete_section(chapter_uuid):
     """Mark a section as completed."""
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('api_chapter_complete_section', chapter_uuid=chapter_data['public_id']), code=301)
+
     user = get_current_user()
+    chapter_data = get_chapter(chapter_uuid)
+    if not chapter_data:
+        return jsonify({'error': 'Chapter not found'}), 404
+    chapter_id = chapter_data['id']
     payload = request.get_json(silent=True) or {}
     section_name = payload.get('section')  # DB key: overview, keypoints, etc.
     if not section_name:
@@ -2297,18 +2569,24 @@ def api_chapter_complete_section(chapter_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-    state = get_chapter_v4_state(user['id'], chapter_id)
+    state = get_chapter_v4_state(user['id'], chapter_uuid)
     return jsonify({'ok': True, 'mastery': state['mastery'], 'section_states': state['section_states']})
 
 
-@app.route('/api/chapter/<int:chapter_id>/complete-chapter', methods=['POST'])
+@app.route('/api/chapter/<string:chapter_uuid>/complete-chapter', methods=['POST'])
 @student_required
-def api_chapter_complete(chapter_id):
+def api_chapter_complete(chapter_uuid):
     """Mark chapter as 100% complete, award XP, update all section flags."""
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('api_chapter_complete', chapter_uuid=chapter_data['public_id']), code=301)
+
     user = get_current_user()
-    chapter_data = get_chapter(chapter_id)
+    chapter_data = get_chapter(chapter_uuid)
     if not chapter_data:
         return jsonify({'error': 'Chapter not found'}), 404
+    chapter_id = chapter_data['id']
 
     xp_reward = 150
 
@@ -2368,16 +2646,21 @@ def api_chapter_complete(chapter_id):
     return jsonify({
         'ok': True,
         'xp_earned': 0 if already_done else xp_reward,
-        'redirect': f'/student/chapter/{chapter_id}'
+        'redirect': f'/student/chapter/{chapter_uuid}'
     })
 
 
-@app.route('/api/chapter/<int:chapter_id>/v4-state', methods=['GET'])
+@app.route('/api/chapter/<string:chapter_uuid>/v4-state', methods=['GET'])
 @student_required
-def api_chapter_v4_state(chapter_id):
+def api_chapter_v4_state(chapter_uuid):
     """Get current V4 state for the chapter roadmap page."""
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('api_chapter_v4_state', chapter_uuid=chapter_data['public_id']), code=301)
+
     user = get_current_user()
-    state = get_chapter_v4_state(user['id'], chapter_id)
+    state = get_chapter_v4_state(user['id'], chapter_uuid)
     if not state:
         return jsonify({'error': 'Chapter not found'}), 404
     return jsonify({
@@ -2641,15 +2924,21 @@ def student_experiments():
     return render_template('student/experiments.html', current_user=user, experiments=experiments, selected_class=selected_class, active_tab='experiments')
 
 
-@app.route('/student/experiment/<int:experiment_id>')
+@app.route('/student/experiment/<string:experiment_uuid>')
 @student_required
-def student_experiment_view(experiment_id):
+def student_experiment_view(experiment_uuid):
+    if experiment_uuid.isdigit():
+        exp = get_experiment(experiment_uuid)
+        if exp:
+            return redirect(url_for('student_experiment_view', experiment_uuid=exp['public_id']), code=301)
+
     user = get_current_user()
-    exp = get_experiment(experiment_id)
+    exp = get_experiment(experiment_uuid)
     if not exp:
         flash('Experiment content not found.', 'error')
         return redirect(url_for('student_experiments'))
-        
+
+    experiment_id = exp['id']
     # Check class boundaries and status
     try:
         with get_db() as conn:
@@ -2704,7 +2993,7 @@ def student_quizzes():
     try:
         with get_db() as conn:
             quiz_rows = conn.execute("""
-                SELECT q.*, c.class_level FROM quizzes q
+                SELECT q.*, c.class_level, c.public_id AS chapter_public_id FROM quizzes q
                 JOIN chapters c ON q.chapter_id = c.id
                 WHERE c.class_level = %s
                   AND c.status = 'published'
@@ -2742,11 +3031,22 @@ def student_quizzes():
     return render_template('student/quizzes.html', current_user=user, quizzes=quizzes, selected_class=selected_class, active_tab='quizzes')
 
 
-@app.route('/student/quiz/<int:chapter_id>')
+@app.route('/student/quiz/<string:chapter_uuid>')
 @student_required
-def student_quiz_view(chapter_id):
+def student_quiz_view(chapter_uuid):
+    if chapter_uuid.isdigit():
+        chapter_data = get_chapter(chapter_uuid)
+        if chapter_data:
+            return redirect(url_for('student_quiz_view', chapter_uuid=chapter_data['public_id']), code=301)
+
     user = get_current_user()
-    quiz_data = get_quiz(chapter_id)
+    chapter_data = get_chapter(chapter_uuid)
+    if not chapter_data:
+        flash('Chapter not found.', 'error')
+        return redirect(url_for('student_quizzes'))
+
+    chapter_id = chapter_data['id']
+    quiz_data = get_quiz(chapter_uuid)
     if not quiz_data:
         flash('Quiz not found.', 'error')
         return redirect(url_for('student_quizzes'))
@@ -2907,6 +3207,7 @@ def api_student_recommendations():
             if first_incomplete:
                 recommendations["next_chapter"] = {
                     "id": first_incomplete["id"],
+                    "public_id": first_incomplete["public_id"],
                     "title": first_incomplete["title"],
                     "chapter_number": first_incomplete["chapter_number"],
                     "description": first_incomplete["description"]
@@ -2915,6 +3216,7 @@ def api_student_recommendations():
                 if exp_row:
                     recommendations["suggested_experiment"] = {
                         "id": exp_row["id"],
+                        "public_id": exp_row["public_id"],
                         "title": exp_row["title"],
                         "aim": exp_row["aim"]
                     }
@@ -2923,6 +3225,7 @@ def api_student_recommendations():
                     recommendations["practice_quiz"] = {
                         "id": quiz_row["id"],
                         "chapter_id": first_incomplete["id"],
+                        "chapter_public_id": first_incomplete["public_id"],
                         "title": quiz_row["title"]
                     }
             else:
@@ -2930,6 +3233,7 @@ def api_student_recommendations():
                     rev = completed_chapters[0]
                     recommendations["next_chapter"] = {
                         "id": rev["id"],
+                        "public_id": rev["public_id"],
                         "title": f"Revise: {rev['title']}",
                         "chapter_number": rev["chapter_number"],
                         "description": "You have completed this chapter! Time for revision."
@@ -2942,6 +3246,7 @@ def api_student_recommendations():
                     recommendations["revision_material"] = {
                         "id": les_row["id"],
                         "chapter_id": rev_chap["id"],
+                        "chapter_public_id": rev_chap["public_id"],
                         "title": f"Review {les_row['title']}",
                         "chapter_title": rev_chap["title"]
                     }
@@ -3258,8 +3563,8 @@ def handle_user_crud_logic(redirect_url):
                     flash("A user with this email registry already exists.", "error")
                     return redirect(redirect_url)
                 cursor = conn.execute(
-                    "INSERT INTO users (name, email, password_hash, institution, role, class_level, status) VALUES (%s, %s, %s, %s, %s, %s, 'active')",
-                    (name, email, pwd_hash, institution, role, class_level)
+                    "INSERT INTO users (public_id, name, email, password_hash, institution, role, class_level, status) VALUES (%s, %s, %s, %s, %s, %s, %s, 'active')",
+                    (str(uuid.uuid4()), name, email, pwd_hash, institution, role, class_level)
                 )
                 new_uid = cursor.lastrowid
                 if role == 'student':
@@ -3439,16 +3744,23 @@ def admin_users_content_managers():
     return render_template('admin/users_content_managers.html', current_user=get_current_user(), users=users, search_query=search_query, active_tab='content_managers')
 
 
-@app.route('/admin/student-monitoring/<int:user_id>', methods=['GET', 'POST'])
+@app.route('/admin/student-monitoring/<string:user_uuid>', methods=['GET', 'POST'])
 @admin_required
-def admin_student_monitoring(user_id):
+def admin_student_monitoring(user_uuid):
+    if user_uuid.isdigit():
+        with get_db() as conn:
+            student_row = conn.execute("SELECT public_id FROM users WHERE id = %s AND role = 'student'", (user_uuid,)).fetchone()
+            if student_row:
+                return redirect(url_for('admin_student_monitoring', user_uuid=student_row['public_id']), code=301)
+
     with get_db() as conn:
-        student_row = conn.execute("SELECT * FROM users WHERE id = %s AND role = 'student'", (user_id,)).fetchone()
+        student_row = conn.execute("SELECT * FROM users WHERE public_id = %s AND role = 'student'", (user_uuid,)).fetchone()
         
     if not student_row:
         flash("Student profile not found.", "error")
         return redirect(url_for('admin_control_center'))
 
+    user_id = student_row['id']
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'issue_certificate':
@@ -3459,8 +3771,8 @@ def admin_student_monitoring(user_id):
                 try:
                     with get_db() as conn:
                         conn.execute(
-                            "INSERT INTO certificates (student_id, course_id, verification_id, status) VALUES (%s, %s, %s, 'issued')",
-                            (user_id, course_id, verification_id)
+                            "INSERT INTO certificates (public_id, student_id, course_id, verification_id, status) VALUES (%s, %s, %s, %s, 'issued')",
+                            (str(uuid.uuid4()), user_id, course_id, verification_id)
                         )
                     log_audit("issue_certificate", f"Manually issued certificate {verification_id} for course ID {course_id} to student ID {user_id}")
                     flash(f"Manually issued verified certificate: {verification_id}", "success")
@@ -3491,7 +3803,7 @@ def admin_student_monitoring(user_id):
             except Exception as e:
                 flash(f"Error toggling status: {e}", "error")
                 
-        return redirect(url_for('admin_student_monitoring', user_id=user_id))
+        return redirect(url_for('admin_student_monitoring', user_uuid=student_row['public_id']))
 
     student = dict(student_row)
     student["classLevel"] = student_row["class_level"]
@@ -3573,16 +3885,23 @@ def admin_student_monitoring(user_id):
     )
 
 
-@app.route('/admin/teacher-monitoring/<int:user_id>', methods=['GET', 'POST'])
+@app.route('/admin/teacher-monitoring/<string:user_uuid>', methods=['GET', 'POST'])
 @admin_required
-def admin_teacher_monitoring(user_id):
+def admin_teacher_monitoring(user_uuid):
+    if user_uuid.isdigit():
+        with get_db() as conn:
+            teacher_row = conn.execute("SELECT public_id FROM users WHERE id = %s AND role = 'teacher'", (user_uuid,)).fetchone()
+            if teacher_row:
+                return redirect(url_for('admin_teacher_monitoring', user_uuid=teacher_row['public_id']), code=301)
+
     with get_db() as conn:
-        teacher_row = conn.execute("SELECT * FROM users WHERE id = %s AND role = 'teacher'", (user_id,)).fetchone()
+        teacher_row = conn.execute("SELECT * FROM users WHERE public_id = %s AND role = 'teacher'", (user_uuid,)).fetchone()
         
     if not teacher_row:
         flash("Teacher profile not found.", "error")
         return redirect(url_for('admin_control_center'))
 
+    user_id = teacher_row['id']
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'assign_course':
@@ -3632,7 +3951,7 @@ def admin_teacher_monitoring(user_id):
             except Exception as e:
                 flash(f"Error toggling status: {e}", "error")
                 
-        return redirect(url_for('admin_teacher_monitoring', user_id=user_id))
+        return redirect(url_for('admin_teacher_monitoring', user_uuid=teacher_row['public_id']))
 
     teacher = dict(teacher_row)
     
@@ -3756,9 +4075,9 @@ def admin_courses():
                 try:
                     with get_db() as conn:
                         conn.execute("""
-                            INSERT INTO courses (title, description, category, class_level, subject_id, status)
-                            VALUES (%s, %s, %s, %s, %s, 'active')
-                        """, (title, description, category, class_level, subject_id))
+                            INSERT INTO courses (public_id, title, description, category, class_level, subject_id, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, 'active')
+                        """, (str(uuid.uuid4()), title, description, category, class_level, subject_id))
                     log_audit("create_course", f"Created course {title} for Class {class_level}")
                     flash("Course registered successfully.", "success")
                 except Exception as e:
@@ -3819,9 +4138,9 @@ def admin_chapters():
                 try:
                     with get_db() as conn:
                         conn.execute("""
-                            INSERT INTO chapters (title, description, class_level, chapter_number, learning_objectives, key_points, important_laws, formulas, constants, important_reactions, notes, real_life_applications, virtual_labs, practice_questions, common_mistakes, chapter_weightage, next_chapter)
-                            VALUES (%s, %s, %s, %s, '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]')
-                        """, (title, description, class_level, chapter_number))
+                            INSERT INTO chapters (public_id, title, description, class_level, chapter_number, learning_objectives, key_points, important_laws, formulas, constants, important_reactions, notes, real_life_applications, virtual_labs, practice_questions, common_mistakes, chapter_weightage, next_chapter)
+                            VALUES (%s, %s, %s, %s, %s, '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]')
+                        """, (str(uuid.uuid4()), title, description, class_level, chapter_number))
                     log_audit("create_chapter", f"Created chapter {title} for Class {class_level}")
                     flash("Chapter registered successfully.", "success")
                 except Exception as e:
@@ -3839,16 +4158,23 @@ def admin_chapters():
     return render_template('admin/chapters.html', current_user=user, chapters=chapters, courses=courses, active_tab='chapters')
 
 
-@app.route('/admin/chapters/<int:chapter_id>/builder', methods=['GET', 'POST'])
+@app.route('/admin/chapters/<string:chapter_uuid>/builder', methods=['GET', 'POST'])
 @content_manager_or_admin_required
-def admin_chapter_builder(chapter_id):
+def admin_chapter_builder(chapter_uuid):
+    if chapter_uuid.isdigit():
+        with get_db() as conn:
+            chapter = conn.execute("SELECT public_id FROM chapters WHERE id = %s", (chapter_uuid,)).fetchone()
+            if chapter:
+                return redirect(url_for('admin_chapter_builder', chapter_uuid=chapter['public_id']), code=301)
+
     user = get_current_user()
     with get_db() as conn:
-        chapter = conn.execute("SELECT * FROM chapters WHERE id = %s", (chapter_id,)).fetchone()
+        chapter = conn.execute("SELECT * FROM chapters WHERE public_id = %s", (chapter_uuid,)).fetchone()
         if not chapter:
             flash("Chapter not found.", "error")
             return redirect(url_for('admin_chapters'))
             
+        chapter_id = chapter['id']
         if request.method == 'POST':
             # Update chapter data fields
             title = request.form.get('title')
@@ -3872,7 +4198,7 @@ def admin_chapter_builder(chapter_id):
                   key_points, important_reactions, formulas, notes, practice_questions, chapter_id))
             log_audit("update_chapter_builder", f"Updated chapter builder content for chapter {title} (ID: {chapter_id})")
             flash("Chapter content updated successfully.", "success")
-            return redirect(url_for('admin_chapter_builder', chapter_id=chapter_id))
+            return redirect(url_for('admin_chapter_builder', chapter_uuid=chapter['public_id']))
 
         quizzes = conn.execute("SELECT * FROM quizzes WHERE chapter_id = %s", (chapter_id,)).fetchall()
         reactions = conn.execute("SELECT * FROM reactions WHERE chapter_id = %s", (chapter_id,)).fetchall()
@@ -3962,17 +4288,24 @@ def student_courses():
     return render_template('student/courses.html', current_user=user, enrollments=enrollments, active_tab='courses')
 
 
-@app.route('/student/course/<int:course_id>')
+@app.route('/student/course/<string:course_uuid>')
 @student_required
-def student_course_view(course_id):
+def student_course_view(course_uuid):
+    if course_uuid.isdigit():
+        with get_db() as conn:
+            course = conn.execute("SELECT public_id FROM courses WHERE id = %s", (course_uuid,)).fetchone()
+            if course:
+                return redirect(url_for('student_course_view', course_uuid=course['public_id']), code=301)
+
     user = get_current_user()
     try:
         with get_db() as conn:
-            course = conn.execute("SELECT * FROM courses WHERE id = %s", (course_id,)).fetchone()
+            course = conn.execute("SELECT * FROM courses WHERE public_id = %s", (course_uuid,)).fetchone()
             if not course or course['status'] not in ('active', 'published'):
                 flash("Course not found.", "error")
                 return redirect(url_for('student_courses'))
                 
+            course_id = course['id']
             access_mode = get_access_mode()
             if access_mode == 'STRICT' and course['class_level'] != user['classLevel']:
                 flash("Course not found or unauthorized.", "error")
@@ -4132,8 +4465,8 @@ def api_admin_courses():
         try:
             with get_db() as conn:
                 cursor = conn.execute(
-                    "INSERT INTO courses (title, description, category, class_level, status) VALUES (%s, %s, %s, %s, %s)",
-                    (title, description, category, class_level, status)
+                    "INSERT INTO courses (public_id, title, description, category, class_level, status) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (str(uuid.uuid4()), title, description, category, class_level, status)
                 )
                 course_id = cursor.lastrowid
                 
@@ -4369,8 +4702,8 @@ def api_admin_lessons():
         try:
             with get_db() as conn:
                 cursor = conn.execute(
-                    "INSERT INTO lessons (chapter_id, title, content, order_index, status, publish_at) VALUES (%s, %s, %s, %s, %s, %s)",
-                    (chapter_id, title, content, order_index, status, publish_at)
+                    "INSERT INTO lessons (public_id, chapter_id, title, content, order_index, status, publish_at) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (str(uuid.uuid4()), chapter_id, title, content, order_index, status, publish_at)
                 )
                 lesson_id = cursor.lastrowid
                 
@@ -4703,8 +5036,8 @@ def api_admin_certificates():
         try:
             with get_db() as conn:
                 cursor = conn.execute(
-                    "INSERT INTO certificates (student_id, course_id, verification_id, status) VALUES (%s, %s, %s, %s)",
-                    (student_id, course_id, verification_id, status)
+                    "INSERT INTO certificates (public_id, student_id, course_id, verification_id, status) VALUES (%s, %s, %s, %s, %s)",
+                    (str(uuid.uuid4()), student_id, course_id, verification_id, status)
                 )
                 cert_id = cursor.lastrowid
             log_audit("issue_certificate", f"Issued certificate {verification_id} to student ID {student_id}")
@@ -4798,8 +5131,8 @@ def api_student_update_progress():
                     import uuid
                     verification_id = f"CERT-CHEM-{uuid.uuid4().hex[:8].upper()}"
                     conn.execute(
-                        "INSERT INTO certificates (student_id, course_id, verification_id, status) VALUES (%s, %s, %s, 'issued')",
-                        (user["id"], course_id, verification_id)
+                        "INSERT INTO certificates (public_id, student_id, course_id, verification_id, status) VALUES (%s, %s, %s, %s, 'issued')",
+                        (str(uuid.uuid4()), user["id"], course_id, verification_id)
                     )
                     log_audit("issue_certificate", f"Auto-issued certificate {verification_id} to student ID {user['id']} on course 100% completion")
                     
@@ -5279,11 +5612,12 @@ def api_tests():
         with get_db() as conn:
             cursor = conn.execute(
                 """
-                INSERT INTO tests(title, classroom_id, chapter_id, quiz_content_id, duration_minutes,
+                INSERT INTO tests(public_id, title, classroom_id, chapter_id, quiz_content_id, duration_minutes,
                                   total_marks, start_date, end_date, difficulty, status, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'scheduled', NOW())
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'scheduled', NOW())
                 """,
                 (
+                    str(uuid.uuid4()),
                     title,
                     classroom_id,
                     payload.get("chapter_id")    or None,
@@ -5441,6 +5775,94 @@ def api_admin_users():
     return jsonify({"ok": True})
 
 
+@app.route('/api/admin/global-search', methods=['GET'])
+@limiter.limit("60 per minute")
+def api_admin_global_search():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    if user.get('role') not in ('admin', 'teacher', 'content_manager'):
+        return jsonify({"error": "Forbidden"}), 403
+
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({"results": []})
+
+    results = []
+    like_query = f"%{query}%"
+
+    try:
+        with get_db() as conn:
+            # 1. Search Users (Students/Teachers/Admins)
+            users_rows = conn.execute(
+                "SELECT id, name, email, role FROM users WHERE name LIKE %s OR email LIKE %s LIMIT 5",
+                (like_query, like_query)
+            ).fetchall()
+            for u in users_rows:
+                results.append({
+                    "type": "User",
+                    "title": u["name"],
+                    "subtitle": f"{u['role'].capitalize()} • {u['email']}",
+                    "url": f"/admin/users/{u['role']}s"
+                })
+
+            # 2. Search Courses
+            courses_rows = conn.execute(
+                "SELECT id, title FROM courses WHERE title LIKE %s LIMIT 5",
+                (like_query,)
+            ).fetchall()
+            for c in courses_rows:
+                results.append({
+                    "type": "Course",
+                    "title": c["title"],
+                    "subtitle": "Course Module",
+                    "url": "/admin/courses"
+                })
+
+            # 3. Search Chapters
+            chapters_rows = conn.execute(
+                "SELECT id, title FROM chapters WHERE title LIKE %s LIMIT 5",
+                (like_query,)
+            ).fetchall()
+            for ch in chapters_rows:
+                results.append({
+                    "type": "Chapter",
+                    "title": ch["title"],
+                    "subtitle": "Chapter Study Guide",
+                    "url": "/admin/chapters"
+                })
+
+            # 4. Search Labs
+            labs_rows = conn.execute(
+                "SELECT id, title FROM labs WHERE title LIKE %s LIMIT 5",
+                (like_query,)
+            ).fetchall()
+            for l in labs_rows:
+                results.append({
+                    "type": "Lab",
+                    "title": l["title"],
+                    "subtitle": "Interactive Experiment",
+                    "url": "/admin/labs"
+                })
+
+            # 5. Search Reactions
+            reactions_rows = conn.execute(
+                "SELECT id, name FROM reactions WHERE name LIKE %s LIMIT 5",
+                (like_query,)
+            ).fetchall()
+            for r in reactions_rows:
+                results.append({
+                    "type": "Reaction",
+                    "title": r["name"],
+                    "subtitle": "Chemical Equation",
+                    "url": "/admin/reactions"
+                })
+    except Exception as e:
+        print(f"[SEARCH ERROR] {e}")
+
+    return jsonify({"results": results})
+
+
 @app.route('/api/admin/analytics', methods=['GET'])
 @admin_required
 def api_admin_analytics():
@@ -5585,9 +6007,9 @@ def admin_certificates():
                 try:
                     with get_db() as conn:
                         conn.execute("""
-                            INSERT INTO certificates (student_id, course_id, verification_id, status)
-                            VALUES (%s, %s, %s, 'issued')
-                        """, (student_id, course_id, verification_id))
+                            INSERT INTO certificates (public_id, student_id, course_id, verification_id, status)
+                            VALUES (%s, %s, %s, %s, 'issued')
+                        """, (str(uuid.uuid4()), student_id, course_id, verification_id))
                     log_audit("create_certificate", f"Issued new certificate for student ID {student_id} for course ID {course_id}")
                     flash("Certificate issued successfully.", "success")
                 except Exception as e:
@@ -5641,9 +6063,9 @@ def admin_achievements():
                 try:
                     with get_db() as conn:
                         conn.execute("""
-                            INSERT INTO badges (name, description, icon, xp_reward)
-                            VALUES (%s, %s, %s, %s)
-                        """, (name, description, icon, xp_reward))
+                            INSERT INTO badges (public_id, name, description, icon, xp_reward)
+                            VALUES (%s, %s, %s, %s, %s)
+                        """, (str(uuid.uuid4()), name, description, icon, xp_reward))
                     log_audit("create_badge", f"Created badge achievement: {name}")
                     flash("Achievement registered.", "success")
                 except Exception as e:
@@ -5715,8 +6137,8 @@ def admin_communications():
                 try:
                     with get_db() as conn:
                         conn.execute(
-                            "INSERT INTO announcements (title, content, author_id, target_role, is_pinned, created_at) VALUES (%s, %s, %s, %s, %s, NOW())",
-                            (title, content, user['id'], target_role if target_role != 'all' else None, is_pinned)
+                            "INSERT INTO announcements (public_id, title, content, author_id, target_role, is_pinned, created_at) VALUES (%s, %s, %s, %s, %s, %s, NOW())",
+                            (str(uuid.uuid4()), title, content, user['id'], target_role if target_role != 'all' else None, is_pinned)
                         )
                     log_audit("create_announcement", f"Created announcement: {title}")
                     flash("Announcement published.", "success")
@@ -6078,9 +6500,9 @@ def admin_labs():
                 try:
                     with get_db() as conn:
                         conn.execute("""
-                            INSERT INTO labs (title, chapter_id, description, status)
-                            VALUES (%s, %s, %s, %s)
-                        """, (title, chapter_id or None, description, status))
+                            INSERT INTO labs (public_id, title, chapter_id, description, status)
+                            VALUES (%s, %s, %s, %s, %s)
+                        """, (str(uuid.uuid4()), title, chapter_id or None, description, status))
                     log_audit("create_lab", f"Created lab titration simulation: {title}")
                     flash("Lab registered successfully.", "success")
                 except Exception as e:
@@ -6145,9 +6567,9 @@ def admin_reactions():
                 try:
                     with get_db() as conn:
                         conn.execute("""
-                            INSERT INTO reactions (id, name, equation, reaction_type, class_level, chapter_id, reactants, products, conditions, explanation)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (rxn_id, name, equation, reaction_type, class_level, chapter_id or None, reactants, products, conditions, explanation))
+                            INSERT INTO reactions (id, public_id, name, equation, reaction_type, class_level, chapter_id, reactants, products, conditions, explanation)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (rxn_id, str(uuid.uuid4()), name, equation, reaction_type, class_level, chapter_id or None, reactants, products, conditions, explanation))
                     log_audit("create_reaction", f"Created reaction node: {name}")
                     flash("Reaction registered successfully.", "success")
                 except Exception as e:
@@ -6211,9 +6633,9 @@ def admin_quizzes():
                 try:
                     with get_db() as conn:
                         conn.execute("""
-                            INSERT INTO quizzes (chapter_id, title, total_marks, duration_minutes)
-                            VALUES (%s, %s, %s, %s)
-                        """, (chapter_id, title, total_marks, duration_minutes))
+                            INSERT INTO quizzes (public_id, chapter_id, title, total_marks, duration_minutes)
+                            VALUES (%s, %s, %s, %s, %s)
+                        """, (str(uuid.uuid4()), chapter_id, title, total_marks, duration_minutes))
                     log_audit("create_quiz", f"Created quiz: {title}")
                     flash("Quiz registered successfully.", "success")
                 except Exception as e:
@@ -6276,9 +6698,9 @@ def admin_assignments():
                 try:
                     with get_db() as conn:
                         conn.execute("""
-                            INSERT INTO assignments (title, description, classroom_id, chapter_id, lab_id, marks, due_date, status)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (title, description, classroom_id, chapter_id or None, lab_id or None, marks, due_date or None, status))
+                            INSERT INTO assignments (public_id, title, description, classroom_id, chapter_id, lab_id, marks, due_date, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (str(uuid.uuid4()), title, description, classroom_id, chapter_id or None, lab_id or None, marks, due_date or None, status))
                     log_audit("create_assignment", f"Created assignment: {title}")
                     flash("Assignment registered successfully.", "success")
                 except Exception as e:
@@ -6351,9 +6773,9 @@ def admin_tests():
                 try:
                     with get_db() as conn:
                         conn.execute("""
-                            INSERT INTO tests (title, classroom_id, chapter_id, quiz_content_id, duration_minutes, total_marks, start_date, end_date, difficulty, status)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (title, classroom_id, chapter_id or None, quiz_content_id or None, duration_minutes, total_marks, start_date or None, end_date or None, difficulty, status))
+                            INSERT INTO tests (public_id, title, classroom_id, chapter_id, quiz_content_id, duration_minutes, total_marks, start_date, end_date, difficulty, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (str(uuid.uuid4()), title, classroom_id, chapter_id or None, quiz_content_id or None, duration_minutes, total_marks, start_date or None, end_date or None, difficulty, status))
                     log_audit("create_test", f"Scheduled exam test: {title}")
                     flash("Test registered successfully.", "success")
                 except Exception as e:
@@ -6606,18 +7028,26 @@ def api_admin_chapters():
         return jsonify({"ok": True})
 
 
-@app.route('/admin/debug/chapter/<int:chapter_id>')
-def admin_debug_chapter(chapter_id):
+@app.route('/admin/debug/chapter/<string:chapter_uuid>')
+def admin_debug_chapter(chapter_uuid):
+    if chapter_uuid.isdigit():
+        with get_db() as conn:
+            row = conn.execute("SELECT public_id FROM chapters WHERE id = %s", (chapter_uuid,)).fetchone()
+            if row:
+                return redirect(url_for('admin_debug_chapter', chapter_uuid=row['public_id']), code=301)
+
     user = get_current_user()
     if not user or user['role'] not in ('admin', 'teacher'):
         return "Forbidden", 403
         
     try:
         with get_db() as conn:
-            row = conn.execute("SELECT * FROM chapters WHERE id = %s", (chapter_id,)).fetchone()
+            row = conn.execute("SELECT * FROM chapters WHERE public_id = %s", (chapter_uuid,)).fetchone()
             
         if not row:
-            return f"Chapter {chapter_id} not found", 404
+            return f"Chapter {chapter_uuid} not found", 404
+            
+        chapter_id = row['id']
             
         ch = dict(row)
         char_counts = {}

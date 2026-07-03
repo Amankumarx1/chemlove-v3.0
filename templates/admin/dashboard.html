@@ -1,4 +1,4 @@
-﻿{% extends 'layouts/admin_base.html' %}
+{% extends 'layouts/admin_base.html' %}
 
 {% block title %}ChemLove | Executive Dashboard{% endblock %}
 {% block breadcrumb_active %}Dashboard{% endblock %}
@@ -168,7 +168,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/chart.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // Initialize User Growth Chart

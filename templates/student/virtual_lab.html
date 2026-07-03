@@ -1040,7 +1040,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://3dmol.org/build/3Dmol-min.js"></script>
 <!-- jspdf client-side PDF exporter CDN -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/jspdf.umd.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/script.js') }}?v={{ range(10000, 99999)|random }}"></script>
 <script>
     // ══════════════════════════════════════════════════════════

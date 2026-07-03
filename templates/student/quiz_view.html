@@ -13,71 +13,85 @@
             <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-none uppercase">{{ quiz.title }}</h1>
             <p class="text-slate-400 mt-2 text-sm">Chapter: {{ quiz.chapter }}</p>
         </div>
-        <a href="/student/quizzes" class="flex items-center gap-1 bg-slate-800 border border-white/5 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-700/60 transition-all">
-            <span class="material-symbols-outlined text-sm">arrow_back</span> Exit Quiz
-        </a>
+        
+        <div class="flex items-center gap-3">
+            <a href="/student/quizzes" class="flex items-center gap-1 bg-slate-800 border border-white/5 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-700/60 transition-all">
+                <span class="material-symbols-outlined text-sm">arrow_back</span> Exit Quiz
+            </a>
+            <!-- Countdown Timer next to Exit Quiz -->
+            <div class="flex items-center gap-2 bg-slate-900/60 border border-white/5 px-4 py-2.5 rounded-xl text-slate-300 shadow-xl">
+                <span class="material-symbols-outlined text-sm text-cyan-400 animate-pulse">alarm</span>
+                <span id="header-timer" class="font-mono text-xs font-black text-white">00:00</span>
+            </div>
+        </div>
     </div>
 
-    <!-- Quiz Panel -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <!-- Left: Questions -->
-        <div class="lg:col-span-2 space-y-6">
-            <form id="quiz-form" onsubmit="submitQuiz(event)">
-                {% for q in quiz.questions %}
-                    <div class="glass-morphism p-8 rounded-3xl border border-white/5 bg-[#171d1e]/40 mb-6 space-y-4">
-                        <div class="flex justify-between items-start gap-4">
-                            <span class="text-xs font-black tracking-wider uppercase text-cyan-400 bg-cyan-950/40 px-3 py-1 rounded-lg">Question {{ loop.index }}</span>
-                        </div>
-                        <h3 class="text-base font-bold text-white leading-relaxed">{{ q.question }}</h3>
-                        
-                        <div class="grid grid-cols-1 gap-3 pt-2">
-                            {% for option in q.options %}
-                                <label class="flex items-center gap-3 p-4 rounded-xl border border-white/5 bg-black/10 hover:bg-slate-800/40 hover:border-cyan-500/20 cursor-pointer transition-all">
-                                    <input type="radio" name="q-{{ q.id }}" value="{{ option }}" required class="accent-cyan-400">
-                                    <span class="text-xs font-bold uppercase text-slate-300">{{ option }}</span>
-                                </label>
-                            {% endfor %}
-                        </div>
-                        
-                        <!-- Feedback Area for after submission -->
-                        <div id="feedback-q-{{ q.id }}" class="hidden text-xs font-bold uppercase p-3 rounded-lg border"></div>
+    <!-- Quiz Panel (Centered for better readability) -->
+    <div class="max-w-3xl mx-auto relative">
+        <form id="quiz-form" onsubmit="submitQuiz(event)">
+            {% for q in quiz.questions %}
+                <div class="glass-morphism p-8 rounded-3xl border border-white/5 bg-[#171d1e]/40 mb-6 space-y-4">
+                    <div class="flex justify-between items-start gap-4">
+                        <span class="text-xs font-black tracking-wider uppercase text-cyan-400 bg-cyan-950/40 px-3 py-1 rounded-lg">Question {{ loop.index }}</span>
                     </div>
-                {% endfor %}
-                
-                <button type="submit" id="submit-btn" class="w-full kinetic-gradient text-on-primary font-bold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:scale-[1.01] active:scale-98 transition-all">
-                    Submit Evaluation
-                </button>
-            </form>
-        </div>
+                    <h3 class="text-base font-bold text-white leading-relaxed">{{ q.question }}</h3>
+                    
+                    <div class="grid grid-cols-1 gap-3 pt-2">
+                        {% for option in q.options %}
+                            <label class="flex items-center gap-3 p-4 rounded-xl border border-white/5 bg-black/10 hover:bg-slate-800/40 hover:border-cyan-500/20 cursor-pointer transition-all">
+                                <input type="radio" name="q-{{ q.id }}" value="{{ option }}" required class="accent-cyan-400">
+                                <span class="text-xs font-bold uppercase text-slate-300">{{ option }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Feedback Area for after submission -->
+                    <div id="feedback-q-{{ q.id }}" class="hidden text-xs font-bold uppercase p-3 rounded-lg border"></div>
+                </div>
+            {% endfor %}
+            
+            <button type="submit" id="submit-btn" class="w-full kinetic-gradient text-on-primary font-bold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:scale-[1.01] active:scale-98 transition-all">
+                Submit Evaluation
+            </button>
+        </form>
+    </div>
 
-        <!-- Right: Timer & Scorecard -->
-        <div class="space-y-6">
-            <!-- Timer Card -->
-            <div class="glass-morphism p-6 rounded-3xl border border-white/5 bg-[#171d1e]/40 text-center space-y-4">
-                <span class="material-symbols-outlined text-4xl text-cyan-400">alarm</span>
-                <div>
-                    <h4 class="font-bold text-slate-500 uppercase text-[10px] tracking-widest mb-1">Time Remaining</h4>
-                    <div id="timer" class="font-mono text-3xl font-black text-white">10:00</div>
+    <!-- Results Modal Dialog Box (Hidden by default) -->
+    <div id="results-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity" onclick="closeResultsModal()"></div>
+        
+        <!-- Modal Card -->
+        <div class="relative w-full max-w-md glass-morphism rounded-3xl border border-white/10 shadow-2xl p-8 text-center space-y-6 animate-[scaleUp_0.3s_ease-out] z-10">
+            <span class="material-symbols-outlined text-6xl text-cyan-400 animate-bounce">emoji_events</span>
+            
+            <div>
+                <h3 class="text-2xl font-black text-white uppercase tracking-tight">Quiz Evaluation</h3>
+                <p class="text-slate-400 text-xs mt-1 uppercase tracking-widest leading-none truncate" id="modal-quiz-title">{{ quiz.title }}</p>
+            </div>
+            
+            <!-- Score details -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-900/60 border border-white/5 p-4 rounded-2xl">
+                    <div class="text-[9px] font-black uppercase text-slate-500 tracking-wider">Final Score</div>
+                    <div class="text-2xl font-black text-cyan-400 mt-1" id="modal-score">0 / 0</div>
+                </div>
+                <div class="bg-slate-900/60 border border-white/5 p-4 rounded-2xl">
+                    <div class="text-[9px] font-black uppercase text-slate-500 tracking-wider">Time Taken</div>
+                    <div class="text-2xl font-black text-amber-400 mt-1" id="modal-time-taken">0s</div>
                 </div>
             </div>
-
-            <!-- Scorecard / Result (Hidden by default) -->
-            <div id="scorecard" class="hidden glass-morphism p-8 rounded-3xl border border-emerald-500/20 bg-[#171d1e]/40 text-center space-y-6">
-                <span class="material-symbols-outlined text-5xl text-emerald-400">emoji_events</span>
-                <div>
-                    <h4 class="font-bold text-slate-400 uppercase text-xs tracking-widest mb-1">Final Score</h4>
-                    <div id="final-score" class="text-5xl font-black text-emerald-400">0 / 0</div>
-                </div>
-                
-                <div class="bg-black/20 border border-white/5 p-4 rounded-xl space-y-2">
-                    <div class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Evaluation Result</div>
-                    <div id="evaluation-text" class="text-xs font-black uppercase text-white">Mastery Level: 0%</div>
-                </div>
-
-                <a href="/student/quizzes" class="glass-morphism border-none bg-surface-container-high hover:bg-slate-800 text-on-surface text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-xl block transition-all">
-                    Return to Quizzes
-                </a>
+            
+            <!-- Mastery Level box -->
+            <div class="bg-cyan-950/20 border border-cyan-500/20 p-5 rounded-2xl space-y-1">
+                <div class="text-[10px] font-black uppercase text-cyan-400 tracking-widest">Mastery Level</div>
+                <div class="text-3xl font-black text-white" id="modal-mastery">0%</div>
+                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1" id="modal-xp-reward">🏆 +150 XP Earned</div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button type="button" onclick="closeResultsModal()" class="w-1/2 py-3 border border-white/10 hover:bg-slate-800/40 text-slate-300 font-bold text-xs uppercase rounded-xl transition-all tracking-wider">Close View</button>
+                <a href="/student/quizzes" class="w-1/2 py-3 kinetic-gradient text-on-primary font-bold text-xs uppercase rounded-xl text-center flex items-center justify-center shadow-lg hover:scale-102 transition-transform tracking-wider">Return to Hub</a>
             </div>
         </div>
     </div>
@@ -88,12 +102,17 @@
     // Quiz JSON data for validation
     const quizData = {{ quiz|tojson }};
     
-    // Simple Timer Logic
-    let timeLimitSeconds = quizData.time_limit_minutes * 60;
-    const timerDisplay = document.getElementById('timer');
+    // Dynamic Time Calculation: 1.5 minutes per MCQ question
+    const timeLimitSeconds = quizData.questions.length * 1.5 * 60;
+    let timeRemainingSeconds = timeLimitSeconds;
+    const timerDisplay = document.getElementById('header-timer');
+    const startTime = Date.now();
+    
+    // Set initial timer format
+    updateTimerDisplay(timeRemainingSeconds);
     
     const interval = setInterval(() => {
-        if (timeLimitSeconds <= 0) {
+        if (timeRemainingSeconds <= 0) {
             clearInterval(interval);
             timerDisplay.textContent = "00:00";
             alert("Time limit reached! Submitting quiz.");
@@ -101,15 +120,30 @@
             return;
         }
         
-        timeLimitSeconds--;
-        const minutes = Math.floor(timeLimitSeconds / 60);
-        const seconds = timeLimitSeconds % 60;
-        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        timeRemainingSeconds--;
+        updateTimerDisplay(timeRemainingSeconds);
     }, 1000);
+
+    function updateTimerDisplay(totalSecs) {
+        const minutes = Math.floor(totalSecs / 60);
+        const seconds = totalSecs % 60;
+        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
     
     function submitQuiz(event) {
         event.preventDefault();
         clearInterval(interval);
+        
+        // Calculate Time Taken
+        const timeTakenSeconds = Math.round((Date.now() - startTime) / 1000);
+        let timeTakenText = "";
+        if (timeTakenSeconds < 60) {
+            timeTakenText = `${timeTakenSeconds}s`;
+        } else {
+            const m = Math.floor(timeTakenSeconds / 60);
+            const s = timeTakenSeconds % 60;
+            timeTakenText = `${m}m ${s}s`;
+        }
         
         const form = document.getElementById('quiz-form');
         const formData = new FormData(form);
@@ -135,18 +169,18 @@
         document.getElementById('submit-btn').disabled = true;
         document.getElementById('submit-btn').classList.add('opacity-50', 'pointer-events-none');
         
-        // Show Scorecard
-        const scorecard = document.getElementById('scorecard');
-        scorecard.classList.remove('hidden');
-        
         const totalQs = quizData.questions.length;
-        document.getElementById('final-score').textContent = `${correctCount} / ${totalQs}`;
-        
         const percentage = Math.round((correctCount / totalQs) * 100);
-        document.getElementById('evaluation-text').textContent = `Mastery Level: ${percentage}%`;
         
-        // Award XP via event logging if score is good
+        // Populate modal data
+        document.getElementById('modal-score').textContent = `${correctCount} / ${totalQs}`;
+        document.getElementById('modal-time-taken').textContent = timeTakenText;
+        document.getElementById('modal-mastery').textContent = `${percentage}%`;
+        
+        const xpLabel = document.getElementById('modal-xp-reward');
         if (percentage >= 50) {
+            xpLabel.textContent = "🏆 +150 XP Earned";
+            xpLabel.className = "text-[9px] font-bold text-emerald-400 uppercase tracking-wider mt-1";
             if (typeof confetti === 'function') {
                 confetti({
                     particleCount: 180,
@@ -162,7 +196,17 @@
                     event_data: `chapter_id=${quizData.chapter_id},score=${correctCount}`
                 })
             }).catch(err => console.error('Failed to log quiz pass', err));
+        } else {
+            xpLabel.textContent = "❌ No XP Earned (Requires 50%)";
+            xpLabel.className = "text-[9px] font-bold text-red-400 uppercase tracking-wider mt-1";
         }
+        
+        // Open Modal
+        document.getElementById('results-modal').classList.remove('hidden');
+    }
+
+    function closeResultsModal() {
+        document.getElementById('results-modal').classList.add('hidden');
     }
 </script>
 {% endblock %}

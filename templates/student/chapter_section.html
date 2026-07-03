@@ -3,10 +3,10 @@
 {% block title %}ChemLove | {{ chapter_data.title }} — {{ section_slug | replace('-', ' ') | title }}{% endblock %}
 
 {% block dashboard_content %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/katex.min.css') }}">
+<script defer src="{{ url_for('static', filename='js/katex.min.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/auto-render.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/confetti.browser.min.js') }}"></script>
 
 <style>
 /* ── Sticky reading progress bar ── */
@@ -63,7 +63,7 @@
   <div class="glass-morphism rounded-3xl p-6 mb-6 border border-white/5 shadow-xl">
     {# Breadcrumb #}
     <div class="flex items-center gap-2 text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-4">
-      <a href="/student/chapter/{{ chapter_id }}" class="hover:text-cyan-400 transition-colors">{{ chapter_data.title }}</a>
+      <a href="/student/chapter/{{ chapter_uuid }}" class="hover:text-cyan-400 transition-colors">{{ chapter_data.title }}</a>
       <span class="material-symbols-outlined text-xs">chevron_right</span>
       <span class="text-slate-400">{{ section_slug | replace('-', ' ') | title }}</span>
     </div>
@@ -289,13 +289,13 @@
   <div class="bottom-nav">
     <div class="max-w-[960px] mx-auto flex items-center justify-between gap-4">
       {% if prev_slug %}
-      <a href="/student/chapter/{{ chapter_id }}/{{ prev_slug }}"
+      <a href="/student/chapter/{{ chapter_uuid }}/{{ prev_slug }}"
          class="flex items-center gap-2 px-5 py-2.5 bg-slate-800 border border-white/5 hover:bg-slate-700 text-slate-200 text-xs font-black uppercase tracking-wider rounded-xl transition-all">
         <span class="material-symbols-outlined text-sm">arrow_back</span>
         {{ prev_slug | replace('-', ' ') | title }}
       </a>
       {% else %}
-      <a href="/student/chapter/{{ chapter_id }}"
+      <a href="/student/chapter/{{ chapter_uuid }}"
          class="flex items-center gap-2 px-5 py-2.5 bg-slate-800/60 border border-white/5 hover:bg-slate-700 text-slate-400 text-xs font-bold uppercase tracking-wider rounded-xl transition-all">
         <span class="material-symbols-outlined text-sm">map</span>
         Roadmap
@@ -318,7 +318,7 @@
       {% elif section_slug == 'quiz' %}
       <span class="text-slate-600 text-xs font-bold uppercase tracking-wider">Complete quiz to continue</span>
       {% else %}
-      <a href="/student/chapter/{{ chapter_id }}/{{ next_slug }}"
+      <a href="/student/chapter/{{ chapter_uuid }}/{{ next_slug }}"
          class="flex items-center gap-2 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl transition-all">
         {{ next_slug | replace('-', ' ') | title }}
         <span class="material-symbols-outlined text-sm">arrow_forward</span>
@@ -327,7 +327,7 @@
       {% else %}
       {# Last section (quiz) — "Complete Chapter" shown after quiz result #}
       {% if section_slug != 'quiz' %}
-      <a href="/student/chapter/{{ chapter_id }}"
+      <a href="/student/chapter/{{ chapter_uuid }}"
          class="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl transition-all">
         Back to Roadmap
         <span class="material-symbols-outlined text-sm">flag</span>
@@ -385,7 +385,7 @@
 
 {% block scripts %}
 <script>
-const CHAPTER_ID = {{ chapter_id }};
+const CHAPTER_ID = '{{ chapter_uuid }}';
 const SECTION_SLUG = '{{ section_slug }}';
 
 // ── Reading progress bar ──

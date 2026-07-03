@@ -5,13 +5,13 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>{% block title %}ChemLove | Portal{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/interaction-system.css') }}">
     <script src="{{ url_for('static', filename='js/interaction-tracker.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script src="{{ url_for('static', filename='js/confetti.browser.min.js') }}"></script>
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -94,6 +94,9 @@
 
                 <!-- Right side: notifications + theme + user -->
                 <div class="flex items-center gap-2">
+                    <!-- Divider -->
+                    <div class="h-6 w-[1px] bg-white/10 mx-1"></div>
+
                     <!-- Notifications Bell -->
                     <div class="relative" id="user-notification-container">
                         <button id="user-notification-btn" class="p-2 border border-white/5 rounded-xl bg-[#0e1416]/40 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/20 hover:bg-cyan-950/10 transition-all flex items-center justify-center relative" title="Notifications">
@@ -101,7 +104,7 @@
                             <span id="user-notification-badge" class="hidden absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
                         </button>
                         <!-- Notifications Dropdown -->
-                        <div id="user-notification-dropdown" class="hidden absolute right-0 mt-2.5 w-72 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-4 z-50 animate-[fadeIn_0.2s_ease-out]">
+                        <div id="user-notification-dropdown" class="hidden absolute -right-16 sm:right-0 mt-2.5 w-[280px] sm:w-72 glass-morphism rounded-2xl border border-white/5 shadow-2xl p-4 z-50 animate-[fadeIn_0.2s_ease-out]">
                             <div class="flex justify-between items-center pb-2.5 border-b border-white/5 mb-2.5">
                                 <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Recent Notifications</span>
                                 <button id="user-mark-all-read" class="text-[9px] font-bold text-cyan-400 hover:underline hidden">Mark all read</button>
@@ -111,11 +114,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Theme Toggle -->
-                    <button onclick="toggleTheme()" class="p-2 border border-white/5 rounded-xl bg-[#0e1416]/40 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/20 hover:bg-cyan-950/10 transition-all flex items-center justify-center relative" title="Toggle Theme">
-                        <span class="material-symbols-outlined text-base" id="theme-toggle-icon">dark_mode</span>
-                    </button>
 
                     <!-- Divider -->
                     <div class="h-6 w-[1px] bg-white/10 mx-1"></div>
@@ -188,20 +186,34 @@
     </div>
 
     <!-- Sync Session with LocalStorage -->
-    <script>
-        {% if current_user %}
-        localStorage.setItem('chemLove_session', JSON.stringify({
-            id: {{ current_user.id }},
-            name: "{{ current_user.name }}",
-            email: "{{ current_user.email }}",
-            institution: "{{ current_user.institution }}",
-            role: "{{ current_user.role }}",
-            classLevel: "{{ current_user.classLevel or '' }}"
-        }));
-        {% else %}
-        localStorage.removeItem('chemLove_session');
-        {% endif %}
+    {% if current_user %}
+    <script type="application/json" id="user-session-data">
+        {
+            "id": {{ current_user.id }},
+            "name": {{ current_user.name | tojson }},
+            "email": {{ current_user.email | tojson }},
+            "institution": {{ current_user.institution | tojson }},
+            "role": {{ current_user.role | tojson }},
+            "classLevel": {{ (current_user.classLevel or '') | tojson }}
+        }
     </script>
+    <script>
+        (function() {
+            const dataEl = document.getElementById('user-session-data');
+            if (dataEl) {
+                try {
+                    localStorage.setItem('chemLove_session', dataEl.textContent.trim());
+                } catch (e) {
+                    console.error('Error syncing user session data', e);
+                }
+            }
+        })();
+    </script>
+    {% else %}
+    <script>
+        localStorage.removeItem('chemLove_session');
+    </script>
+    {% endif %}
 
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <script>
@@ -367,20 +379,7 @@
                 html.classList.toggle('dark', !isDark);
                 html.classList.toggle('light', isDark);
             }
-            if (toggleIcon) {
-                toggleIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
-            }
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                const toggleIcon = document.getElementById('theme-toggle-icon');
-                if (toggleIcon) {
-                    const isDark = document.documentElement.classList.contains('dark');
-                    toggleIcon.textContent = isDark ? 'dark_mode' : 'light_mode';
-                }
-            }, 150);
-        });
     </script>
     <script src="{{ url_for('static', filename='js/particles.js') }}"></script>
     {% block scripts %}{% endblock %}

@@ -158,7 +158,7 @@
                             </div>
                         </div>
                         {% if last_chapter %}
-                            <a href="/student/chapter/{{ last_chapter.id }}" class="btn-primary text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Continue</a>
+                            <a href="/student/chapter/{{ last_chapter.public_id }}" class="btn-primary text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Continue</a>
                         {% else %}
                             <a href="/student/chapters" class="bg-white/5 border border-white/5 text-slate-400 text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Explore</a>
                         {% endif %}
@@ -180,7 +180,7 @@
                             </div>
                         </div>
                         {% if last_experiment %}
-                            <a href="/student/experiment/{{ last_experiment.id }}" class="btn-primary text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Continue</a>
+                            <a href="/student/experiment/{{ last_experiment.public_id }}" class="btn-primary text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Continue</a>
                         {% else %}
                             <a href="/student/experiments" class="bg-white/5 border border-white/5 text-slate-400 text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Explore</a>
                         {% endif %}
@@ -202,7 +202,7 @@
                             </div>
                         </div>
                         {% if last_assessment %}
-                            <a href="/student/quiz/{{ last_assessment.chapter_id }}" class="btn-primary text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Continue</a>
+                            <a href="/student/quiz/{{ last_assessment.chapter_public_id }}" class="btn-primary text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Continue</a>
                         {% else %}
                             <a href="/student/quizzes" class="bg-white/5 border border-white/5 text-slate-400 text-center text-[10px] font-bold uppercase tracking-widest py-2 rounded-lg">Explore</a>
                         {% endif %}
@@ -256,7 +256,7 @@
                                     {% endif %}
                                 </div>
                                 {% endif %}
-                                <a href="/student/chapter/{{ node.chapter_id }}" class="btn-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl">Open</a>
+                                <a href="/student/chapter/{{ node.chapter_uuid }}" class="btn-primary text-[10px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl">Open</a>
                             </div>
                         </div>
                     </div>
@@ -314,7 +314,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/chart.js') }}"></script>
 <script>
     // 1. Fetch suggestions from engine
     async function loadSuggestions() {
@@ -335,7 +335,7 @@
                             <span class="text-[8px] font-black uppercase text-primary tracking-wider">Next Chapter</span>
                             <div class="text-xs font-bold text-white truncate mt-0.5">${data.next_chapter.title}</div>
                         </div>
-                        <a href="/student/chapter/${data.next_chapter.id}" class="shrink-0 bg-primary/10 border border-primary/20 text-primary text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-all">Go</a>
+                        <a href="/student/chapter/${data.next_chapter.public_id}" class="shrink-0 bg-primary/10 border border-primary/20 text-primary text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-all">Go</a>
                     </div>
                 `);
             }
@@ -346,7 +346,7 @@
                             <span class="text-[8px] font-black uppercase text-tertiary tracking-wider">Suggested Lab</span>
                             <div class="text-xs font-bold text-white truncate mt-0.5">${data.suggested_experiment.title}</div>
                         </div>
-                        <a href="/student/experiment/${data.suggested_experiment.id}" class="shrink-0 bg-tertiary/10 border border-tertiary/20 text-tertiary text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-tertiary/20 transition-all">Lab</a>
+                        <a href="/student/experiment/${data.suggested_experiment.public_id}" class="shrink-0 bg-tertiary/10 border border-tertiary/20 text-tertiary text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-tertiary/20 transition-all">Lab</a>
                     </div>
                 `);
             }
@@ -357,7 +357,7 @@
                             <span class="text-[8px] font-black uppercase text-pink-400 tracking-wider">Practice Quiz</span>
                             <div class="text-xs font-bold text-white truncate mt-0.5">${data.practice_quiz.title}</div>
                         </div>
-                        <a href="/student/quiz/${data.practice_quiz.chapter_id}" class="shrink-0 bg-pink-500/10 border border-pink-500/20 text-pink-300 text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-pink-500/20 transition-all">Quiz</a>
+                        <a href="/student/quiz/${data.practice_quiz.chapter_public_id}" class="shrink-0 bg-pink-500/10 border border-pink-500/20 text-pink-300 text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-pink-500/20 transition-all">Quiz</a>
                     </div>
                 `);
             }
@@ -368,7 +368,7 @@
                             <span class="text-[8px] font-black uppercase text-amber-500 tracking-wider">Revision Material</span>
                             <div class="text-xs font-bold text-white truncate mt-0.5">${data.revision_material.title}</div>
                         </div>
-                        <a href="/student/chapter/${data.revision_material.chapter_id}" class="shrink-0 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-amber-500/20 transition-all">Review</a>
+                        <a href="/student/chapter/${data.revision_material.chapter_public_id}" class="shrink-0 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-amber-500/20 transition-all">Review</a>
                     </div>
                 `);
             }

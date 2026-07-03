@@ -1342,7 +1342,7 @@ function renderDetailPage(rxnId) {
     </div>
 
     <div class="detail-section fade-in">
-      <div style="background:var(--primary-light);border:1.5px solid #bfdbfe;border-radius:14px;padding:18px;margin-bottom:16px">
+      <div class="equation-box">
         <div style="font-size:0.7rem;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Balanced Equation</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;color:var(--text)">${rxn.equation}</div>
       </div>
@@ -1361,7 +1361,7 @@ function renderDetailPage(rxnId) {
       <div class="applications-box"><p>${rxn.applications}</p></div>
     </div>` : ''}
 
-    <div class="detail-section fade-in" style="background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:28px;text-align:center">
+    <div class="detail-section lab-practice-box fade-in">
       <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:8px">Practice this reaction in the lab</h3>
       <p style="color:var(--muted);font-size:0.875rem;margin-bottom:16px">Try assembling the reactants in the virtual lab</p>
       <button class="btn btn-primary" onclick="navigate('lab')">Open Virtual Lab →</button>

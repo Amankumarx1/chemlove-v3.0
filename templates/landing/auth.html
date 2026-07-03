@@ -6,7 +6,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>ChemLove | Authentication</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
         rel="stylesheet" />
@@ -269,6 +269,29 @@
             .auth-card-inner.state-login .signup-form-side {
                 display: none !important;
             }
+
+            /* Make the forms container flow relative on mobile */
+            .auth-card-inner > div.absolute.inset-0 {
+                position: relative !important;
+                height: auto !important;
+                background-color: transparent !important;
+            }
+
+            /* Allow the form side to size itself automatically on mobile */
+            .form-side {
+                height: auto !important;
+                min-height: 520px;
+            }
+        }
+
+        /* Autofill style override to prevent browser from forcing white background in dark inputs */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #0e1416 inset !important;
+            -webkit-text-fill-color: #ffffff !important;
+            transition: background-color 5000s ease-in-out 0s;
         }
     </style>
 </head>
@@ -294,7 +317,7 @@
 
     <!-- Main Container -->
     <main class="flex-grow flex items-center justify-center py-6 px-6 relative z-10 auth-container">
-        <div class="w-full max-w-4xl h-[580px] relative auth-card-inner overflow-hidden {% if active_form == 'login' %}state-login{% else %}state-signup{% endif %}"
+        <div class="w-full max-w-4xl h-auto md:h-[580px] relative auth-card-inner overflow-hidden {% if active_form == 'login' %}state-login{% else %}state-signup{% endif %}"
             id="authCard">
 
             <!-- Global Header Tabs Centered at the top of the whole card container: Welcome Box design -->
@@ -389,15 +412,15 @@
                         <!-- Sign Up form post -->
                         <form id="signupForm" class="space-y-4" method="POST" action="/signup">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="space-y-1">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="space-y-1" id="signup-name-wrapper">
                                     <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Full
                                         Name</label>
                                     <input name="name"
                                         class="w-full bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-[#4cd7f6] focus:ring-1 focus:ring-[#4cd7f6] transition-all placeholder:text-slate-600"
                                         placeholder="Linus Pauling" type="text" required />
                                 </div>
-                                <div class="space-y-1">
+                                <div class="space-y-1" id="signup-email-wrapper">
                                     <label class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Email
                                         Address</label>
                                     <input name="email"
@@ -406,15 +429,15 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="space-y-1">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="space-y-1" id="signup-password-wrapper">
                                     <label
                                         class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Password</label>
                                     <input name="password"
                                         class="w-full bg-[#0e1416]/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-[#4cd7f6] focus:ring-1 focus:ring-[#4cd7f6] transition-all placeholder:text-slate-600"
                                         placeholder="••••••••" type="password" required />
                                 </div>
-                                <div class="space-y-1">
+                                <div class="space-y-1" id="signup-institution-wrapper">
                                     <label
                                         class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Academic
                                         Institution</label>
@@ -424,7 +447,7 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div class="space-y-1" id="signup-class-container">
                                     <label
                                         class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Academic
@@ -528,9 +551,13 @@
                                 </div>
                             </div>
 
-                            <button
-                                class="w-full py-3 kinetic-gradient text-white font-bold text-xs uppercase rounded-xl neon-cyan hover:scale-[0.98] transition-transform tracking-wider mt-3"
-                                type="submit">Create Account</button>
+                            <div class="flex gap-3 mt-3 w-full" id="signup-buttons-container">
+                                <button id="signup-back-btn" type="button" onclick="goToSignupStep(1)"
+                                    class="hidden w-1/3 py-3 border border-white/10 hover:bg-slate-800/20 text-slate-300 font-bold text-xs uppercase rounded-xl transition-all tracking-wider">Back</button>
+                                <button id="signup-submit-btn"
+                                    class="w-full py-3 kinetic-gradient text-white font-bold text-xs uppercase rounded-xl neon-cyan hover:scale-[0.98] transition-transform tracking-wider"
+                                    type="submit">Create Account</button>
+                            </div>
                         </form>
 
                         <!-- OR divider and google -->
@@ -676,6 +703,96 @@
     <script>
         // Navigation / Slider controller with dynamic URL update and history support
         // Uses history.replaceState to prevent user from getting stuck in history loops
+        let signupStep = 1;
+
+        function resetSignupStep() {
+            const isMobile = window.matchMedia('(max-width: 767px)').matches;
+            if (!isMobile) {
+                // Desktop
+                toggleSignupFields(true, true);
+                const submitBtn = document.getElementById('signup-submit-btn');
+                const backBtn = document.getElementById('signup-back-btn');
+                if (submitBtn) {
+                    submitBtn.textContent = "Create Account";
+                    submitBtn.className = "w-full py-3 kinetic-gradient text-white font-bold text-xs uppercase rounded-xl neon-cyan hover:scale-[0.98] transition-transform tracking-wider";
+                }
+                if (backBtn) backBtn.classList.add('hidden');
+                signupStep = 1;
+            } else {
+                // Mobile
+                goToSignupStep(signupStep);
+            }
+        }
+
+        function toggleSignupFields(showStep1, showStep2) {
+            const nameWrap = document.getElementById('signup-name-wrapper');
+            const emailWrap = document.getElementById('signup-email-wrapper');
+            const passWrap = document.getElementById('signup-password-wrapper');
+            const instWrap = document.getElementById('signup-institution-wrapper');
+            const classContainer = document.getElementById('signup-class-container');
+            const roleContainer = document.getElementById('signup-role-container');
+            const teacherSection = document.getElementById('teacher-verification-section');
+            const roleSelect = document.getElementById('signup-role-select');
+            
+            // Toggle Step 1 fields
+            if (nameWrap) nameWrap.classList.toggle('hidden', !showStep1);
+            if (emailWrap) emailWrap.classList.toggle('hidden', !showStep1);
+            if (passWrap) passWrap.classList.toggle('hidden', !showStep1);
+            
+            // Toggle Step 2 fields
+            if (instWrap) instWrap.classList.toggle('hidden', !showStep2);
+            if (roleContainer) roleContainer.classList.toggle('hidden', !showStep2);
+            
+            if (classContainer) {
+                if (showStep2) {
+                    if (roleSelect && roleSelect.value === 'teacher') {
+                        classContainer.classList.add('hidden');
+                    } else {
+                        classContainer.classList.remove('hidden');
+                    }
+                } else {
+                    classContainer.classList.add('hidden');
+                }
+            }
+            
+            if (teacherSection) {
+                if (showStep2 && roleSelect && roleSelect.value === 'teacher') {
+                    teacherSection.classList.remove('hidden');
+                    teacherSection.classList.remove('max-h-0', 'opacity-0');
+                    teacherSection.classList.add('max-h-[300px]', 'opacity-100');
+                } else {
+                    teacherSection.classList.add('hidden');
+                }
+            }
+        }
+
+        function goToSignupStep(step) {
+            const isMobile = window.matchMedia('(max-width: 767px)').matches;
+            if (!isMobile) return;
+            
+            signupStep = step;
+            const submitBtn = document.getElementById('signup-submit-btn');
+            const backBtn = document.getElementById('signup-back-btn');
+            
+            if (step === 1) {
+                toggleSignupFields(true, false);
+                if (submitBtn) {
+                    submitBtn.textContent = "Create Account";
+                    submitBtn.className = "w-full py-3 kinetic-gradient text-white font-bold text-xs uppercase rounded-xl neon-cyan hover:scale-[0.98] transition-transform tracking-wider";
+                }
+                if (backBtn) backBtn.classList.add('hidden');
+            } else if (step === 2) {
+                toggleSignupFields(false, true);
+                if (submitBtn) {
+                    submitBtn.textContent = "Complete Sign Up";
+                    submitBtn.className = "w-2/3 py-3 kinetic-gradient text-white font-bold text-xs uppercase rounded-xl neon-cyan hover:scale-[0.98] transition-transform tracking-wider";
+                }
+                if (backBtn) backBtn.classList.remove('hidden');
+            }
+        }
+
+        // Navigation / Slider controller with dynamic URL update and history support
+        // Uses history.replaceState to prevent user from getting stuck in history loops
         function navigateAuth(showLogin, e) {
             if (e) e.preventDefault();
             const cardInner = document.getElementById('authCard');
@@ -689,6 +806,7 @@
                 cardInner.classList.add('state-signup');
                 history.replaceState({ form: 'signup' }, '', '/signup');
                 document.title = "ChemLove | Sign Up";
+                resetSignupStep();
             }
         }
 
@@ -704,7 +822,12 @@
                 cardInner.classList.remove('state-login');
                 cardInner.classList.add('state-signup');
                 document.title = "ChemLove | Sign Up";
+                resetSignupStep();
             }
+        });
+
+        window.addEventListener('resize', () => {
+            resetSignupStep();
         });
 
         function selectSignupClass(classVal, label) {
@@ -771,12 +894,16 @@
             const teacherCodeError = document.getElementById('teacher-code-error');
             const signupForm = document.getElementById('signupForm');
 
+            // Initialize signup wizard step on load
+            resetSignupStep();
+
             if (roleSelect && classContainer && roleContainer) {
                 function updateRoleLayout() {
+                    const isMobile = window.matchMedia('(max-width: 767px)').matches;
                     if (roleSelect.value === 'teacher') {
                         classContainer.classList.add('hidden');
                         roleContainer.classList.add('col-span-2');
-                        if (teacherSection) {
+                        if (teacherSection && (!isMobile || signupStep === 2)) {
                             teacherSection.classList.remove('hidden');
                             setTimeout(() => {
                                 teacherSection.classList.remove('max-h-0', 'opacity-0');
@@ -787,7 +914,9 @@
                             teacherCodeInput.setAttribute('required', 'required');
                         }
                     } else {
-                        classContainer.classList.remove('hidden');
+                        if (!isMobile || signupStep === 2) {
+                            classContainer.classList.remove('hidden');
+                        }
                         roleContainer.classList.remove('col-span-2');
                         if (teacherSection) {
                             teacherSection.classList.remove('max-h-[300px]', 'opacity-100');
@@ -813,9 +942,41 @@
                 updateRoleLayout(); // initialize on load
             }
 
-            if (signupForm && roleSelect && teacherCodeInput && teacherCodeError) {
+            if (signupForm) {
                 signupForm.addEventListener('submit', async (e) => {
-                    if (roleSelect.value === 'teacher') {
+                    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+                    
+                    // 1. Mobile step 1 validation check
+                    if (isMobile && signupStep === 1) {
+                        e.preventDefault();
+                        
+                        const nameInput = signupForm.querySelector('input[name="name"]');
+                        const emailInput = signupForm.querySelector('input[name="email"]');
+                        const passwordInput = signupForm.querySelector('input[name="password"]');
+                        
+                        if (nameInput && !nameInput.value.trim()) {
+                            nameInput.reportValidity();
+                            return;
+                        }
+                        if (emailInput && (!emailInput.value.trim() || !emailInput.checkValidity())) {
+                            emailInput.reportValidity();
+                            return;
+                        }
+                        if (passwordInput && !passwordInput.value.trim()) {
+                            passwordInput.reportValidity();
+                            return;
+                        }
+                        
+                        goToSignupStep(2);
+                        return;
+                    }
+                    
+                    // 2. Teacher code verification
+                    const roleSelect = document.getElementById('signup-role-select');
+                    const teacherCodeInput = document.getElementById('signup-teacher-code');
+                    const teacherCodeError = document.getElementById('teacher-code-error');
+                    
+                    if (roleSelect && roleSelect.value === 'teacher' && teacherCodeInput && teacherCodeError) {
                         e.preventDefault();
                         const codeVal = teacherCodeInput.value.trim();
                         if (!codeVal) {
@@ -835,7 +996,7 @@
                             const result = await response.json();
                             if (result.valid) {
                                 teacherCodeError.classList.add('hidden');
-                                // Code is valid, submit programmatically
+                                // Force normal submission by programmatically submitting the form
                                 signupForm.submit();
                             } else {
                                 teacherCodeError.textContent = "Invalid Teacher Access Code.";

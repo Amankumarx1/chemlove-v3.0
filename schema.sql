@@ -63,6 +63,7 @@ CREATE TABLE `activity_logs` (
 
 CREATE TABLE `announcements` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `title` varchar(255) NOT NULL,
   `content` text NOT NULL,
   `author_id` int NOT NULL,
@@ -92,6 +93,7 @@ CREATE TABLE `assessment_progress` (
 
 CREATE TABLE `assignments` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `title` varchar(255) NOT NULL,
   `description` text,
   `classroom_id` int NOT NULL,
@@ -139,6 +141,7 @@ CREATE TABLE `audit_logs` (
 
 CREATE TABLE `badges` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `name` varchar(255) NOT NULL,
   `description` text,
   `icon` varchar(100) DEFAULT NULL,
@@ -176,6 +179,7 @@ CREATE TABLE `certificate_templates` (
 
 CREATE TABLE `certificates` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `student_id` int NOT NULL,
   `course_id` int NOT NULL,
   `verification_id` varchar(100) NOT NULL,
@@ -227,6 +231,7 @@ CREATE TABLE `chapter_section_progress` (
 
 CREATE TABLE `chapters` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `class_level` varchar(50) DEFAULT NULL,
   `chapter_number` int DEFAULT NULL,
   `title` varchar(255) NOT NULL,
@@ -325,6 +330,7 @@ CREATE TABLE `course_progress` (
 
 CREATE TABLE `courses` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `title` varchar(255) NOT NULL,
   `description` text,
   `category` varchar(100) DEFAULT NULL,
@@ -367,6 +373,7 @@ CREATE TABLE `enrollments` (
 
 CREATE TABLE `experiments` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `chapter_id` int DEFAULT NULL,
   `title` varchar(255) NOT NULL,
   `aim` longtext,
@@ -399,6 +406,7 @@ CREATE TABLE `lab_attempts` (
 
 CREATE TABLE `labs` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `title` varchar(255) NOT NULL,
   `chapter_id` int DEFAULT NULL,
   `description` text,
@@ -423,6 +431,7 @@ CREATE TABLE `lesson_progress` (
 
 CREATE TABLE `lessons` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `chapter_id` int NOT NULL,
   `title` varchar(255) NOT NULL,
   `content` text,
@@ -510,6 +519,7 @@ CREATE TABLE `quiz_questions` (
 
 CREATE TABLE `quizzes` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `chapter_id` int DEFAULT NULL,
   `title` varchar(255) NOT NULL,
   `total_marks` int NOT NULL DEFAULT '100',
@@ -522,6 +532,7 @@ CREATE TABLE `quizzes` (
 
 CREATE TABLE `reactions` (
   `id` varchar(50) NOT NULL,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `chapter_id` int DEFAULT NULL,
   `class_level` varchar(50) DEFAULT NULL,
   `name` varchar(255) NOT NULL,
@@ -647,6 +658,7 @@ CREATE TABLE `test_attempts` (
 
 CREATE TABLE `tests` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `title` varchar(255) NOT NULL,
   `classroom_id` int NOT NULL,
   `chapter_id` int DEFAULT NULL,
@@ -693,6 +705,7 @@ CREATE TABLE `user_history` (
 
 CREATE TABLE `users` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `public_id` varchar(36) NOT NULL UNIQUE,
   `name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password_hash` varchar(512) NOT NULL,

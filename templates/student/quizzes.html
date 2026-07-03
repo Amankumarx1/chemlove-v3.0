@@ -20,7 +20,8 @@
                 <div>
                     <div class="flex items-center justify-between mb-4">
                         <span class="text-[9px] font-black tracking-widest uppercase text-cyan-400 bg-cyan-950/40 px-2.5 py-1 rounded-full">Quiz {{ quiz.chapter_id }}</span>
-                        <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500">{{ quiz.time_limit_minutes }} Mins</span>
+                        {% set calculated_time = (quiz.questions|length * 1.5) %}
+                        <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500">{{ calculated_time|int if calculated_time == calculated_time|int else calculated_time }} MINS</span>
                     </div>
                     <h3 class="text-lg font-bold text-white uppercase tracking-tight mb-2">{{ quiz.title }}</h3>
                     <p class="text-xs text-slate-400 mb-6">Chapter: {{ quiz.chapter }}</p>
@@ -37,7 +38,7 @@
                     </div>
                 </div>
                 <div class="flex items-center justify-between pt-4 border-t border-white/5">
-                    <a href="/student/quiz/{{ quiz.chapter_id }}" class="kinetic-gradient text-on-primary text-xs font-bold uppercase tracking-wider py-2.5 px-5 rounded-xl hover:scale-102 transition-colors flex items-center gap-1.5">
+                    <a href="/student/quiz/{{ quiz.chapter_public_id }}" class="kinetic-gradient text-on-primary text-xs font-bold uppercase tracking-wider py-2.5 px-5 rounded-xl hover:scale-102 transition-colors flex items-center gap-1.5">
                         Start Quiz <span class="material-symbols-outlined text-xs">arrow_forward</span>
                     </a>
                 </div>

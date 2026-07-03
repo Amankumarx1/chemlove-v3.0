@@ -44,7 +44,7 @@
                 <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-6 w-full text-center">Manage Teacher Assignments</h3>
                 <div class="space-y-4">
                     <!-- Assign Course mapping -->
-                    <form method="POST" action="/admin/teacher-monitoring/{{ teacher.id }}" class="border-b border-white/5 pb-4">
+                    <form method="POST" action="/admin/teacher-monitoring/{{ teacher.public_id }}" class="border-b border-white/5 pb-4">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="assign_course">
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Assign Course Management</label>
@@ -61,7 +61,7 @@
                     </form>
 
                     <!-- Edit Department -->
-                    <form method="POST" action="/admin/teacher-monitoring/{{ teacher.id }}" class="border-b border-white/5 pb-4">
+                    <form method="POST" action="/admin/teacher-monitoring/{{ teacher.public_id }}" class="border-b border-white/5 pb-4">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="update_department">
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Adjust Department Code</label>
@@ -74,7 +74,7 @@
                     </form>
 
                     <!-- Disable access -->
-                    <form method="POST" action="/admin/teacher-monitoring/{{ teacher.id }}" class="pt-2">
+                    <form method="POST" action="/admin/teacher-monitoring/{{ teacher.public_id }}" class="pt-2">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="toggle_access">
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Login Access Restriction</label>
@@ -126,7 +126,7 @@
                                 <p class="text-[9px] text-slate-500 mt-1">Assigned on: {{ tc.assigned_at }}</p>
                             </div>
                             <!-- Remove course option -->
-                            <form method="POST" action="/admin/teacher-monitoring/{{ teacher.id }}">
+                            <form method="POST" action="/admin/teacher-monitoring/{{ teacher.public_id }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 <input type="hidden" name="action" value="remove_course">
                                 <input type="hidden" name="course_id" value="{{ tc.course_id }}">
