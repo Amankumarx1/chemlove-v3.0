@@ -17,3 +17,5 @@ env/
 
 # Local backups
 backups/
+
+.vercel

@@ -5,39 +5,12 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>{% block title %}ChemLove | Remove Fear from Chemistry{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
-    <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/interaction-system.css') }}">
     <script src="{{ url_for('static', filename='js/interaction-tracker.js') }}"></script>
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "primary": "#4cd7f6",
-                        "on-primary": "#001f26",
-                        "secondary": "#a1cedb",
-                        "tertiary": "#ffb0cd",
-                        "background": "#0e1416",
-                        "surface": "#0e1416",
-                        "primary-container": "#06b6d4",
-                        "tertiary-container": "#ff79b4",
-                        "surface-container": "#1b2122",
-                        "surface-container-low": "#171d1e",
-                        "surface-container-high": "#252b2d",
-                        "on-surface": "#dee3e6",
-                    },
-                    "fontFamily": {
-                        "headline": ["Inter"],
-                        "body": ["Inter"],
-                    }
-                },
-            },
-        }
-    </script>
     <script>
         // Global Fetch Interceptor for CSRF
         const originalFetch = window.fetch;
