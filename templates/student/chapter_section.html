@@ -18,7 +18,7 @@
 .rich-content h2 { font-size:1.2rem; font-weight:800; color:#67e8f9; margin:1.6rem 0 0.8rem; border-left:3px solid #06b6d4; padding-left:0.75rem; }
 .rich-content h3 { font-size:1rem; font-weight:700; color:#a5f3fc; margin:1.2rem 0 0.5rem; }
 .rich-content p { color:#cbd5e1; font-size:0.875rem; line-height:1.8; margin:0.75rem 0; }
-.rich-content ul { list-style:none; margin:0.75rem 0; padding:0; space-y:0.5rem; }
+.rich-content ul { list-style:none; margin:0.75rem 0; padding:0; }
 .rich-content ul li { position:relative; padding-left:1.4rem; color:#cbd5e1; font-size:0.875rem; line-height:1.7; margin-bottom:0.4rem; }
 .rich-content ul li::before { content:'•'; position:absolute; left:0; color:#06b6d4; font-weight:900; }
 .rich-content ol { list-style:none; counter-reset:ol-counter; margin:0.75rem 0; padding:0; }
@@ -384,6 +384,7 @@
 {% endblock %}
 
 {% block scripts %}
+<div id="quiz-data-store" class="hidden" data-quiz="{{ (quiz_data|tojson|safe) if (quiz_data and quiz_data.questions) else 'null' }}"></div>
 <script>
 const CHAPTER_ID = '{{ chapter_uuid }}';
 const SECTION_SLUG = '{{ section_slug }}';
@@ -468,8 +469,11 @@ async function completePracticeAndNavigate() {
 }
 
 // ── Quiz Engine ──
-{% if quiz_data and quiz_data.questions %}
-const QUIZ_DATA = {{ quiz_data | tojson }};
+const quizDataElement = document.getElementById('quiz-data-store');
+const quizDataStr = quizDataElement ? quizDataElement.getAttribute('data-quiz') : null;
+const QUIZ_DATA = quizDataStr && quizDataStr !== 'None' ? JSON.parse(quizDataStr) : null;
+
+if (QUIZ_DATA) {
 let quizAnswers = {};
 let quizCurrent = 0;
 let quizTimerInterval = null;
@@ -616,12 +620,12 @@ async function completeChapter() {
     console.error(e);
   }
 }
-{% else %}
-function startQuiz(){}
-function submitQuiz(){}
-function prevQuestion(){}
-function nextQuestion(){}
-{% endif %}
+} else {
+  window.startQuiz = function(){};
+  window.submitQuiz = function(){};
+  window.prevQuestion = function(){};
+  window.nextQuestion = function(){};
+}
 
 // ── AI Tutor Widget Logic ──
 function toggleAiTutor(open) {
@@ -702,8 +706,18 @@ async function handleAiChatSubmit(e) {
     rendered = rendered.replace(/^#{4}\s+(.+)$/gm, '<h4 class="font-bold text-xs uppercase text-cyan-400 mt-2 mb-1">$1</h4>');
     rendered = rendered.replace(/^#{3}\s+(.+)$/gm, '<h3 class="font-black text-xs uppercase text-white mt-3 mb-1.5">$1</h3>');
     rendered = rendered.replace(/^#{2}\s+(.+)$/gm, '<h2 class="font-black text-sm uppercase text-white mt-4 mb-2">$1</h2>');
+    let finalHtml = `<div class="font-bold text-cyan-400 mb-1">🤖 AI Chemistry Tutor</div>`;
+    if (data.reasoning && data.reasoning.trim().length > 0) {
+        let escapedReasoning = escapeHtml(data.reasoning);
+        finalHtml += `
+        <details class="mb-3 text-[10px] text-slate-500 border border-white/5 rounded p-2 bg-black/20 cursor-pointer">
+            <summary class="font-semibold outline-none hover:text-cyan-400 select-none">View Tutor's thought process...</summary>
+            <div class="mt-2 whitespace-pre-wrap font-mono">${escapedReasoning}</div>
+        </details>`;
+    }
+    finalHtml += `<div>${rendered}</div>`;
 
-    tutorMsg.innerHTML = `<div class="font-bold text-cyan-400 mb-1">🤖 AI Chemistry Tutor</div><div>${rendered}</div>`;
+    tutorMsg.innerHTML = finalHtml;
     chatMessages.appendChild(tutorMsg);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 

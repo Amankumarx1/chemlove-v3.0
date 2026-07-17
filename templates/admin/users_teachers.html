@@ -62,9 +62,12 @@
                             <td class="py-4 px-4">
                                 <div class="flex items-center justify-center gap-2">
                                     <!-- Impersonate button -->
-                                    <a href="/admin/impersonate/{{ u.public_id }}" title="Impersonate Teacher" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-cyan-400 hover:bg-cyan-950/20 hover:border-cyan-500/20 transition-all flex items-center">
-                                        <span class="material-symbols-outlined text-sm">login</span>
-                                    </a>
+                                    <form action="/admin/impersonate/{{ u.public_id }}" method="POST" class="inline m-0 p-0">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <button type="submit" title="Impersonate Teacher" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-cyan-400 hover:bg-cyan-950/20 hover:border-cyan-500/20 transition-all flex items-center">
+                                            <span class="material-symbols-outlined text-sm">login</span>
+                                        </button>
+                                    </form>
                                     <!-- Monitor profile details -->
                                     <a href="/admin/teacher-monitoring/{{ u.public_id }}" title="Detailed Monitoring" class="p-1.5 rounded-lg border border-white/5 bg-slate-900 text-pink-400 hover:bg-pink-950/20 hover:border-pink-500/20 transition-all flex items-center">
                                         <span class="material-symbols-outlined text-sm">monitoring</span>

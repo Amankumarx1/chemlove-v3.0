@@ -9,6 +9,16 @@ from functools import wraps
 from dotenv import load_dotenv
 load_dotenv()
 
+from openai import OpenAI
+try:
+    openai_client = OpenAI(
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key=os.getenv("NVIDIA_API_KEY")
+    )
+except Exception as e:
+    print(f"Failed to initialize OpenAI client: {e}")
+    openai_client = None
+
 try:
     if os.getenv("VERCEL") == "1":
         # Force PyMySQL on Vercel to avoid native binary compilation issues
@@ -61,7 +71,7 @@ except (ImportError, Exception):
             
     MySQLConnectionPool = MockMySQLConnectionPool
     HAS_NATIVE_MYSQL = False
-from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, session, url_for, abort
+from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, session, url_for, abort, g, has_app_context
 from werkzeug.security import check_password_hash, generate_password_hash
 from authlib.integrations.flask_client import OAuth
 from flask_wtf.csrf import CSRFProtect
@@ -231,6 +241,42 @@ class MySQLCursorWrapper:
         return iter(self.cursor)
 
 
+import time
+import threading
+
+class SimpleCache:
+    def __init__(self, default_timeout=300):
+        self.store = {}
+        self.default_timeout = default_timeout
+        self.lock = threading.Lock()
+
+    def get(self, key):
+        with self.lock:
+            if key in self.store:
+                val, expires = self.store[key]
+                if expires > time.time():
+                    return val
+                else:
+                    del self.store[key]
+            return None
+
+    def set(self, key, value, timeout=None):
+        timeout = timeout if timeout is not None else self.default_timeout
+        with self.lock:
+            self.store[key] = (value, time.time() + timeout)
+
+    def delete(self, key):
+        with self.lock:
+            if key in self.store:
+                del self.store[key]
+
+    def clear(self):
+        with self.lock:
+            self.store.clear()
+
+curriculum_cache = SimpleCache(default_timeout=300)
+
+
 class MySQLConnectionWrapper:
     def __init__(self, pool):
         self.pool = pool
@@ -241,7 +287,13 @@ class MySQLConnectionWrapper:
         if not self.pool:
             raise RuntimeError("Database connection pool is not initialized.")
         try:
-            self.conn = self.pool.get_connection()
+            if has_app_context():
+                if not hasattr(g, 'req_db_conn') or g.req_db_conn is None:
+                    g.req_db_conn = self.pool.get_connection()
+                self.conn = g.req_db_conn
+            else:
+                self.conn = self.pool.get_connection()
+                
             self.cursor = self.conn.cursor(dictionary=True)
             return self
         except Exception as e:
@@ -259,10 +311,17 @@ class MySQLConnectionWrapper:
                     }
                     if HAS_NATIVE_MYSQL:
                         import mysql.connector
-                        self.conn = mysql.connector.connect(**fallback_config)
+                        fallback_conn = mysql.connector.connect(**fallback_config)
                     else:
                         import pymysql
-                        self.conn = MockConnection(pymysql.connect(**fallback_config))
+                        fallback_conn = MockConnection(pymysql.connect(**fallback_config))
+                    
+                    if has_app_context():
+                        g.req_db_conn = fallback_conn
+                        self.conn = g.req_db_conn
+                    else:
+                        self.conn = fallback_conn
+                        
                     self.cursor = self.conn.cursor(dictionary=True)
                     print("[DATABASE] Successfully fell back to local MySQL server.")
                     return self
@@ -278,11 +337,24 @@ class MySQLConnectionWrapper:
                 self.conn.rollback()
             else:
                 self.conn.commit()
-            self.conn.close()
+                curriculum_cache.clear()
+            
+            if not has_app_context():
+                self.conn.close()
 
     def execute(self, query, params=None):
         self.cursor.execute(query, params or ())
         return MySQLCursorWrapper(self.cursor)
+
+
+@app.teardown_appcontext
+def close_db_connection(exception=None):
+    if hasattr(g, 'req_db_conn') and g.req_db_conn is not None:
+        try:
+            g.req_db_conn.close()
+        except Exception as e:
+            print(f"[DATABASE] Error closing connection on teardown: {e}")
+        g.req_db_conn = None
 
 
 def get_db():
@@ -633,79 +705,120 @@ def check_in_version(content_type, content_id, title, content_data, user_id):
 
 
 def all_chapters():
+    cached = curriculum_cache.get("all_chapters")
+    if cached is not None:
+        return cached
     try:
         with get_db() as conn:
             rows = conn.execute("SELECT * FROM chapters ORDER BY chapter_number ASC").fetchall()
-        return [parse_chapter_json_fields(row) for row in rows]
+        res = [parse_chapter_json_fields(row) for row in rows]
+        curriculum_cache.set("all_chapters", res)
+        return res
     except Exception as e:
         print(f"Error fetching chapters: {e}")
         return []
 
 
 def get_chapter(chapter_identifier):
+    cache_key = f"chapter_{chapter_identifier}"
+    cached = curriculum_cache.get(cache_key)
+    if cached is not None:
+        return cached
     try:
         with get_db() as conn:
             if isinstance(chapter_identifier, int) or (isinstance(chapter_identifier, str) and chapter_identifier.isdigit()):
                 row = conn.execute("SELECT * FROM chapters WHERE id = %s", (chapter_identifier,)).fetchone()
             else:
                 row = conn.execute("SELECT * FROM chapters WHERE public_id = %s", (chapter_identifier,)).fetchone()
-        return parse_chapter_json_fields(row) if row else None
+        res = parse_chapter_json_fields(row) if row else None
+        if res:
+            curriculum_cache.set(cache_key, res)
+        return res
     except Exception as e:
         print(f"Error fetching chapter {chapter_identifier}: {e}")
         return None
 
 
 def all_labs():
+    cached = curriculum_cache.get("all_labs")
+    if cached is not None:
+        return cached
     try:
         with get_db() as conn:
             rows = conn.execute("SELECT * FROM labs ORDER BY id ASC").fetchall()
-        return [dict(r) for r in rows]
+        res = [dict(r) for r in rows]
+        curriculum_cache.set("all_labs", res)
+        return res
     except Exception as e:
         print(f"Error fetching labs: {e}")
         return []
 
 
 def all_badges():
+    cached = curriculum_cache.get("all_badges")
+    if cached is not None:
+        return cached
     try:
         with get_db() as conn:
             rows = conn.execute("SELECT * FROM badges ORDER BY id ASC").fetchall()
-        return [dict(r) for r in rows]
+        res = [dict(r) for r in rows]
+        curriculum_cache.set("all_badges", res)
+        return res
     except Exception as e:
         print(f"Error fetching badges: {e}")
         return []
 
 
 def get_badge(badge_identifier):
+    cache_key = f"badge_{badge_identifier}"
+    cached = curriculum_cache.get(cache_key)
+    if cached is not None:
+        return cached
     try:
         with get_db() as conn:
             if isinstance(badge_identifier, int) or (isinstance(badge_identifier, str) and badge_identifier.isdigit()):
                 row = conn.execute("SELECT * FROM badges WHERE id = %s", (badge_identifier,)).fetchone()
             else:
                 row = conn.execute("SELECT * FROM badges WHERE public_id = %s", (badge_identifier,)).fetchone()
-        return dict(row) if row else None
+        res = dict(row) if row else None
+        if res:
+            curriculum_cache.set(cache_key, res)
+        return res
     except Exception as e:
         print(f"Error fetching badge {badge_identifier}: {e}")
         return None
 
 
 def all_experiments():
+    cached = curriculum_cache.get("all_experiments")
+    if cached is not None:
+        return cached
     try:
         with get_db() as conn:
             rows = conn.execute("SELECT * FROM experiments ORDER BY id ASC").fetchall()
-        return [parse_experiment_json_fields(row) for row in rows]
+        res = [parse_experiment_json_fields(row) for row in rows]
+        curriculum_cache.set("all_experiments", res)
+        return res
     except Exception as e:
         print(f"Error fetching experiments: {e}")
         return []
 
 
 def get_experiment(experiment_identifier):
+    cache_key = f"experiment_{experiment_identifier}"
+    cached = curriculum_cache.get(cache_key)
+    if cached is not None:
+        return cached
     try:
         with get_db() as conn:
             if isinstance(experiment_identifier, int) or (isinstance(experiment_identifier, str) and experiment_identifier.isdigit()):
                 row = conn.execute("SELECT * FROM experiments WHERE id = %s", (experiment_identifier,)).fetchone()
             else:
                 row = conn.execute("SELECT * FROM experiments WHERE public_id = %s", (experiment_identifier,)).fetchone()
-        return parse_experiment_json_fields(row) if row else None
+        res = parse_experiment_json_fields(row) if row else None
+        if res:
+            curriculum_cache.set(cache_key, res)
+        return res
     except Exception as e:
         print(f"Error fetching experiment {experiment_identifier}: {e}")
         return None
@@ -1516,15 +1629,9 @@ def logout():
     return redirect(url_for('home'))
 
 
-@app.route('/admin/impersonate/<string:target_uuid>')
+@app.route('/admin/impersonate/<string:target_uuid>', methods=['POST'])
 @admin_required
 def admin_impersonate(target_uuid):
-    if target_uuid.isdigit():
-        with get_db() as conn:
-            target_user = conn.execute("SELECT public_id FROM users WHERE id = %s", (target_uuid,)).fetchone()
-            if target_user:
-                return redirect(url_for('admin_impersonate', target_uuid=target_user['public_id']), code=301)
-
     with get_db() as conn:
         target_user = conn.execute("SELECT * FROM users WHERE public_id = %s", (target_uuid,)).fetchone()
     
@@ -1830,7 +1937,7 @@ def student_chapters():
     with get_db() as conn:
         rows = conn.execute(
             """
-            SELECT * FROM chapters 
+            SELECT id, public_id, class_level, chapter_number, title, description, status, publish_at FROM chapters 
             WHERE class_level = %s 
               AND status = 'published' 
               AND (publish_at IS NULL OR publish_at <= NOW())
@@ -1838,7 +1945,7 @@ def student_chapters():
             """,
             (selected_class,)
         ).fetchall()
-    chapters = [parse_chapter_json_fields(row) for row in rows]
+    chapters = [dict(row, number=row['chapter_number']) for row in rows]
     
     if chapters:
         chap_ids = [ch['id'] for ch in chapters]
@@ -2686,166 +2793,45 @@ def api_ai_tutor():
     if not question:
         return jsonify({"error": "Question is empty"}), 400
         
-    question_lower = question.lower()
-    response_text = ""
-    
-    if "acid" in question_lower or "base" in question_lower or "ph" in question_lower:
-        response_text = """### 🧪 Acids, Bases, and the pH Scale
+    if not openai_client:
+        return jsonify({"error": "AI service is not configured on the server."}), 500
 
-**Acids** are substances that donate protons (hydrogen ions $H^+$) in a chemical reaction. They generally have a sour taste and turn blue litmus paper red.
-**Bases** are substances that accept protons or release hydroxide ions ($OH^-$). They have a bitter taste, a slippery feel, and turn red litmus paper blue.
+    system_prompt = f"""You are an advanced, empathetic, and highly knowledgeable AI Chemistry Tutor for students using the ChemLove platform.
+Your goal is to answer the student's question clearly, correctly, and engagingly.
+Current Context: The student is asking a question related to the chapter "{chapter_title}".
 
-#### Key Definitions:
-1. **Arrhenius Theory**: 
-   - *Acids* produce $H^+$ in water.
-   - *Bases* produce $OH^-$ in water.
-2. **Brønsted-Lowry Theory**:
-   - *Acids* are proton ($H^+$) donors.
-   - *Bases* are proton ($H^+$) acceptors.
-3. **Lewis Theory**:
-   - *Acids* are electron-pair acceptors.
-   - *Bases* are electron-pair donors.
+Guidelines:
+1. Explain concepts simply but accurately.
+2. Use markdown formatting (bolding, lists) to make the text readable.
+3. If they ask about a formula, provide it using standard markdown math formats.
+4. Try to relate concepts to real-world examples.
+5. If the question is NOT related to chemistry or science, politely guide them back to chemistry."""
 
-#### The pH Scale:
-The pH is calculated using the formula:
-$$\\text{pH} = -\\log_{10}[H^+]$$
-- **pH < 7**: Acidic (higher concentration of $H^+$)
-- **pH = 7**: Neutral (pure water, where $[H^+] = [OH^-] = 10^{-7}\\text{ M}$)
-- **pH > 7**: Basic/Alkaline (higher concentration of $OH^-$)"""
-
-    elif "organic" in question_lower or "alkane" in question_lower or "alkene" in question_lower or "carbon" in question_lower:
-        response_text = """### 🍀 Introduction to Organic Chemistry
-
-**Organic Chemistry** is the scientific study of the structure, properties, and reactions of organic compounds containing carbon atoms covalently bonded to hydrogen and other elements.
-
-#### Why Carbon?
-Carbon is unique because it has **4 valence electrons**, allowing it to form stable single, double, and triple covalent bonds with other carbon atoms or elements (catenation).
-
-#### Hydrocarbon Families:
-1. **Alkanes** (Saturated Hydrocarbons):
-   - General Formula: $C_nH_{2n+2}$
-   - Contains only single carbon-carbon bonds (e.g., Methane $CH_4$, Ethane $C_2H_6$).
-2. **Alkenes** (Unsaturated Hydrocarbons):
-   - General Formula: $C_nH_{2n}$
-   - Contains at least one double carbon-carbon bond (e.g., Ethene $C_2H_4$).
-3. **Alkynes** (Unsaturated Hydrocarbons):
-   - General Formula: $C_nH_{2n-2}$
-   - Contains at least one triple carbon-carbon bond (e.g., Ethyne $C_2H_2$).
-
-#### Common Functional Groups:
-- **Alcohols**: $-OH$ group (e.g., Ethanol $C_2H_5OH$)
-- **Carboxylic Acids**: $-COOH$ group (e.g., Acetic Acid $CH_3COOH$)
-- **Esters**: $-COO-$ group (responsible for fruity smells!)"""
-
-    elif "atom" in question_lower or "electron" in question_lower or "proton" in question_lower or "neutron" in question_lower or "periodic" in question_lower:
-        response_text = """### ⚛️ Atomic Structure and the Periodic Table
-
-An **atom** is the basic unit of a chemical element, consisting of a central nucleus surrounded by a cloud of negatively charged electrons.
-
-#### Subatomic Particles:
-1. **Protons**: Positively charged (+1), located in the nucleus. The number of protons defines the **Atomic Number ($Z$)**.
-2. **Neutrons**: Neutrally charged (0), located in the nucleus. Protons + Neutrons define the **Mass Number ($A$)**.
-3. **Electrons**: Negatively charged (-1), orbiting the nucleus in specific energy levels/orbitals.
-
-#### Periodic Trends:
-- **Electronegativity**: An atom's ability to attract shared electrons. It increases *up* and to the *right* on the Periodic Table (Fluorine is the most electronegative).
-- **Atomic Radius**: The size of the atom. It increases *down* and to the *left*.
-- **Ionization Energy**: The energy required to remove an electron. It increases *up* and to the *right*."""
-
-    elif "reaction" in question_lower or "stoichiometry" in question_lower:
-        response_text = """### 🔀 Chemical Reactions and Stoichiometry
-
-A **chemical reaction** rearranges constituent atoms of reactants to create different substances called products.
-
-#### Main Types of Reactions:
-1. **Combination (Synthesis)**: $A + B \\rightarrow AB$
-2. **Decomposition**: $AB \\rightarrow A + B$
-3. **Single Displacement**: $A + BC \\rightarrow AC + B$
-4. **Double Displacement**: $AB + CD \\rightarrow AD + CB$
-5. **Combustion**: Hydrocarbon + $O_2 \\rightarrow CO_2 + H_2O + \\text{Energy}$
-
-#### Balancing Equations:
-According to the **Law of Conservation of Mass**, matter cannot be created or destroyed. Therefore, equations must have the same number of each atom type on both sides.
-- *Example*: $2H_2 + O_2 \\rightarrow 2H_2O$
-- Reactants: $4\\text{ H}, 2\\text{ O}$
-- Products: $4\\text{ H}, 2\\text{ O}$ (Balanced!)"""
-
-    elif "molarity" in question_lower:
-        response_text = """### 🧪 Molarity (M) Explained Simply:
-
-Molarity is a measure of how concentrated a solution is. Specifically, it tells you how many moles of a solute (like salt) are dissolved in exactly 1 Liter of the total solution.
-
-#### Formula:
-$$\\text{Molarity (M)} = \\frac{\\text{Moles of solute (n)}}{\\text{Volume of solution in liters (V)}}$$
-Unit: mol/L or M
-
-⚠️ **Note**: Molarity depends on temperature because temperature affects volume (liquids expand when heated)."""
-
-    elif "molality" in question_lower:
-        response_text = """### 🧪 Molality (m) Explained Simply:
-
-Molality compares the moles of solute to the mass of the solvent in kilograms.
-
-#### Formula:
-$$\\text{Molality (m)} = \\frac{\\text{Moles of solute (n)}}{\\text{Mass of solvent in kilograms (kg)}}$$
-Unit: mol/kg or m
-
-💡 **Key Advantage**: Unlike Molarity, Molality DOES NOT change with temperature because mass doesn't expand or contract with temperature changes!"""
-
-    elif "solution" in question_lower:
-        response_text = """### 🧪 What is a Solution?
-
-A solution is a homogeneous mixture of two or more substances. Homogeneous means that the mixture is uniform throughout.
-
-It consists of two parts:
-1. **Solute**: The substance being dissolved (usually present in smaller amounts, e.g., sugar).
-2. **Solvent**: The dissolving medium (usually present in larger amounts, e.g., water)."""
-
-    elif "memory" in question_lower or "trick" in question_lower or "mnemonic" in question_lower:
-        response_text = """### 🧠 Chemistry Memory Tricks
-
-1. **MolaRity (with an R)** vs **MolaLity (with an L)**:
-   - **MolaRity**: Think of 'R' for 'Room' or 'Receptacle' (Liters).
-   - **MolaLity**: Think of 'L' for 'lbs' or 'Loads' (Kilograms).
-   
-2. **Solute vs Solvent**:
-   - **SOLUTE** (6 letters) -> Smaller amount (being dissolved).
-   - **SOLVENT** (7 letters) -> Larger amount (doing the dissolving)."""
-
-    elif "mcq" in question_lower or "quiz" in question_lower or "test" in question_lower:
-        response_text = """### 📝 AI Quiz Generator
-
-**Q1**. Which concentration term is temperature independent?
-A) Molarity  
-B) Molality  
-C) Normality  
-D) Formality  
-*Answer*: B (Explanation: Molality depends on solvent mass, which doesn't change with temperature).
-
-**Q2**. A solution made by dissolving 2 moles of NaCl in 2 kg of water has a molality of:
-A) 1 m  
-B) 2 m  
-C) 0.5 m  
-D) 4 m  
-*Answer*: A (Explanation: 2 mol / 2 kg = 1 m)."""
-
-    else:
-        response_text = f"""### 💡 Chemistry Tutor Insights
-
-I've analyzed your question: *"{question}"*.
-
-In chemistry, we study matter, its properties, and how it interacts. Here are the core concepts related to your query:
-1. **Chemical Properties**: Every substance has a unique arrangement of electrons, defining how it bonds and reacts.
-2. **Energy Transitions**: All chemical processes involve energy changes (breaking bonds absorbs energy, forming bonds releases energy).
-3. **Molecular Interactions**: Reactions occur when molecules collide with sufficient energy and correct orientation.
-
-**Would you like me to detail a specific topic?**
-- Try asking about: **Acids and Bases**, **Organic functional groups**, **Atomic structure**, **Molarity vs Molality**, or **Types of chemical reactions**!"""
-
-    return jsonify({
-        "ok": True,
-        "response": response_text
-    })
+    try:
+        completion = openai_client.chat.completions.create(
+            model="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": question}
+            ],
+            temperature=0.6,
+            top_p=0.95,
+            max_tokens=2000,
+            extra_body={"chat_template_kwargs": {"enable_thinking": True}, "reasoning_budget": 1024},
+            stream=False
+        )
+        
+        reasoning = getattr(completion.choices[0].message, "reasoning_content", None)
+        response_text = completion.choices[0].message.content
+        
+        return jsonify({
+            "ok": True,
+            "response": response_text,
+            "reasoning": reasoning
+        })
+    except Exception as e:
+        print(f"Error calling Nemotron AI Tutor: {e}")
+        return jsonify({"error": "Failed to generate an AI response. Please try again later."}), 500
 
 
 @app.route('/student/reactions')
@@ -3183,73 +3169,98 @@ def api_student_recommendations():
     
     try:
         with get_db() as conn:
-            ch_rows = conn.execute("SELECT * FROM chapters WHERE class_level = %s ORDER BY chapter_number ASC", (class_level,)).fetchall()
-            chapters = [parse_chapter_json_fields(row) for row in ch_rows]
+            ch_rows = conn.execute("SELECT id, public_id, title, chapter_number, description FROM chapters WHERE class_level = %s ORDER BY chapter_number ASC", (class_level,)).fetchall()
+            chapters = [dict(row) for row in ch_rows]
             
-            first_incomplete = None
-            completed_chapters = []
-            for ch in chapters:
-                lessons = conn.execute("SELECT id FROM lessons WHERE chapter_id = %s", (ch['id'],)).fetchall()
-                comp_count = 0
-                for ls in lessons:
-                    read_event = conn.execute(
-                        "SELECT id FROM user_history WHERE user_id = %s AND event_type = 'read_notes' AND event_data LIKE %s",
-                        (user['id'], f"%lesson_id={ls['id']}%")
-                    ).fetchone()
-                    if read_event:
-                        comp_count += 1
-                is_completed = (len(lessons) > 0 and comp_count == len(lessons))
-                if is_completed:
-                    completed_chapters.append(ch)
-                elif not first_incomplete:
-                    first_incomplete = ch
-                    
-            if first_incomplete:
-                recommendations["next_chapter"] = {
-                    "id": first_incomplete["id"],
-                    "public_id": first_incomplete["public_id"],
-                    "title": first_incomplete["title"],
-                    "chapter_number": first_incomplete["chapter_number"],
-                    "description": first_incomplete["description"]
-                }
-                exp_row = conn.execute("SELECT * FROM experiments WHERE chapter_id = %s LIMIT 1", (first_incomplete["id"],)).fetchone()
-                if exp_row:
-                    recommendations["suggested_experiment"] = {
-                        "id": exp_row["id"],
-                        "public_id": exp_row["public_id"],
-                        "title": exp_row["title"],
-                        "aim": exp_row["aim"]
-                    }
-                quiz_row = conn.execute("SELECT * FROM quizzes WHERE chapter_id = %s LIMIT 1", (first_incomplete["id"],)).fetchone()
-                if quiz_row:
-                    recommendations["practice_quiz"] = {
-                        "id": quiz_row["id"],
-                        "chapter_id": first_incomplete["id"],
-                        "chapter_public_id": first_incomplete["public_id"],
-                        "title": quiz_row["title"]
-                    }
-            else:
-                if completed_chapters:
-                    rev = completed_chapters[0]
+            if chapters:
+                chap_ids = [ch['id'] for ch in chapters]
+                format_strings_chaps = ','.join(['%s'] * len(chap_ids))
+                
+                lessons_rows = conn.execute(
+                    f"SELECT id, chapter_id FROM lessons WHERE chapter_id IN ({format_strings_chaps}) AND status = 'published'",
+                    tuple(chap_ids)
+                ).fetchall()
+                
+                read_events = conn.execute(
+                    "SELECT event_data FROM user_history WHERE user_id = %s AND event_type = 'read_notes'",
+                    (user['id'],)
+                ).fetchall()
+                
+                import re
+                completed_lessons = set()
+                for ev in read_events:
+                    ev_data = ev['event_data'] or ""
+                    m_match = re.search(r"lesson_id=(\d+)", ev_data)
+                    if m_match:
+                        completed_lessons.add(int(m_match.group(1)))
+                
+                lessons_by_chapter = {}
+                for ls in lessons_rows:
+                    ch_id = ls['chapter_id']
+                    if ch_id not in lessons_by_chapter:
+                        lessons_by_chapter[ch_id] = []
+                    lessons_by_chapter[ch_id].append(ls['id'])
+                
+                first_incomplete = None
+                completed_chapters = []
+                for ch in chapters:
+                    ch_id = ch['id']
+                    ch_lessons = lessons_by_chapter.get(ch_id, [])
+                    if len(ch_lessons) > 0:
+                        is_completed = all(lid in completed_lessons for lid in ch_lessons)
+                    else:
+                        is_completed = False
+                    if is_completed:
+                        completed_chapters.append(ch)
+                    elif not first_incomplete:
+                        first_incomplete = ch
+                
+                if first_incomplete:
                     recommendations["next_chapter"] = {
-                        "id": rev["id"],
-                        "public_id": rev["public_id"],
-                        "title": f"Revise: {rev['title']}",
-                        "chapter_number": rev["chapter_number"],
-                        "description": "You have completed this chapter! Time for revision."
+                        "id": first_incomplete["id"],
+                        "public_id": first_incomplete["public_id"],
+                        "title": first_incomplete["title"],
+                        "chapter_number": first_incomplete["chapter_number"],
+                        "description": first_incomplete["description"]
                     }
-                    
-            if completed_chapters:
-                rev_chap = completed_chapters[-1]
-                les_row = conn.execute("SELECT * FROM lessons WHERE chapter_id = %s LIMIT 1", (rev_chap["id"],)).fetchone()
-                if les_row:
-                    recommendations["revision_material"] = {
-                        "id": les_row["id"],
-                        "chapter_id": rev_chap["id"],
-                        "chapter_public_id": rev_chap["public_id"],
-                        "title": f"Review {les_row['title']}",
-                        "chapter_title": rev_chap["title"]
-                    }
+                    exp_row = conn.execute("SELECT id, public_id, title, aim FROM experiments WHERE chapter_id = %s LIMIT 1", (first_incomplete["id"],)).fetchone()
+                    if exp_row:
+                        recommendations["suggested_experiment"] = {
+                            "id": exp_row["id"],
+                            "public_id": exp_row["public_id"],
+                            "title": exp_row["title"],
+                            "aim": exp_row["aim"]
+                        }
+                    quiz_row = conn.execute("SELECT id, title FROM quizzes WHERE chapter_id = %s LIMIT 1", (first_incomplete["id"],)).fetchone()
+                    if quiz_row:
+                        recommendations["practice_quiz"] = {
+                            "id": quiz_row["id"],
+                            "chapter_id": first_incomplete["id"],
+                            "chapter_public_id": first_incomplete["public_id"],
+                            "title": quiz_row["title"]
+                        }
+                else:
+                    if completed_chapters:
+                        rev = completed_chapters[0]
+                        recommendations["next_chapter"] = {
+                            "id": rev["id"],
+                            "public_id": rev["public_id"],
+                            "title": f"Revise: {rev['title']}",
+                            "chapter_number": rev["chapter_number"],
+                            "description": "You have completed this chapter! Time for revision."
+                        }
+                        
+                if completed_chapters:
+                    rev_chap = completed_chapters[-1]
+                    les_row = conn.execute("SELECT id, title FROM lessons WHERE chapter_id = %s LIMIT 1", (rev_chap["id"],)).fetchone()
+                    if les_row:
+                        recommendations["revision_material"] = {
+                            "id": les_row["id"],
+                            "chapter_id": rev_chap["id"],
+                            "chapter_public_id": rev_chap["public_id"],
+                            "title": f"Review {les_row['title']}",
+                            "chapter_title": rev_chap["title"]
+                        }
     except Exception as e:
         print(f"Error compiling recommendations: {e}")
         
@@ -3747,12 +3758,6 @@ def admin_users_content_managers():
 @app.route('/admin/student-monitoring/<string:user_uuid>', methods=['GET', 'POST'])
 @admin_required
 def admin_student_monitoring(user_uuid):
-    if user_uuid.isdigit():
-        with get_db() as conn:
-            student_row = conn.execute("SELECT public_id FROM users WHERE id = %s AND role = 'student'", (user_uuid,)).fetchone()
-            if student_row:
-                return redirect(url_for('admin_student_monitoring', user_uuid=student_row['public_id']), code=301)
-
     with get_db() as conn:
         student_row = conn.execute("SELECT * FROM users WHERE public_id = %s AND role = 'student'", (user_uuid,)).fetchone()
         
@@ -3888,12 +3893,6 @@ def admin_student_monitoring(user_uuid):
 @app.route('/admin/teacher-monitoring/<string:user_uuid>', methods=['GET', 'POST'])
 @admin_required
 def admin_teacher_monitoring(user_uuid):
-    if user_uuid.isdigit():
-        with get_db() as conn:
-            teacher_row = conn.execute("SELECT public_id FROM users WHERE id = %s AND role = 'teacher'", (user_uuid,)).fetchone()
-            if teacher_row:
-                return redirect(url_for('admin_teacher_monitoring', user_uuid=teacher_row['public_id']), code=301)
-
     with get_db() as conn:
         teacher_row = conn.execute("SELECT * FROM users WHERE public_id = %s AND role = 'teacher'", (user_uuid,)).fetchone()
         
@@ -6306,42 +6305,72 @@ def admin_analytics():
 def admin_activity():
     user = get_current_user()
     logs = []
+    
+    page = max(1, int(request.args.get('page', 1)))
+    limit = max(10, min(250, int(request.args.get('limit', 50))))
+    offset = (page - 1) * limit
+    
+    audit_page = max(1, int(request.args.get('audit_page', 1)))
+    audit_limit = 50
+    audit_offset = (audit_page - 1) * audit_limit
+    
     filters = {
         'event_type': request.args.get('event_type', ''),
         'user_id': request.args.get('user_id', ''),
-        'limit': int(request.args.get('limit', 100))
+        'limit': limit
     }
+    
+    total_pages = 1
+    audit_total_pages = 1
+    
     try:
         with get_db() as conn:
-            query = """
+            where_clauses = ["1=1"]
+            params = []
+            if filters['event_type']:
+                where_clauses.append("h.event_type = %s")
+                params.append(filters['event_type'])
+            if filters['user_id']:
+                where_clauses.append("h.user_id = %s")
+                params.append(filters['user_id'])
+                
+            where_sql = " AND ".join(where_clauses)
+            
+            count_row = conn.execute(
+                f"SELECT COUNT(*) as cnt FROM user_history h WHERE {where_sql}",
+                tuple(params)
+            ).fetchone()
+            total_records = count_row['cnt'] if count_row else 0
+            total_pages = max(1, (total_records + limit - 1) // limit)
+            
+            query = f"""
                 SELECT h.*, u.name AS user_name, u.role AS user_role
                 FROM user_history h
                 LEFT JOIN users u ON h.user_id = u.id
-                WHERE 1=1
+                WHERE {where_sql}
+                ORDER BY h.created_at DESC
+                LIMIT %s OFFSET %s
             """
-            params = []
-            if filters['event_type']:
-                query += " AND h.event_type = %s"
-                params.append(filters['event_type'])
-            if filters['user_id']:
-                query += " AND h.user_id = %s"
-                params.append(filters['user_id'])
-            query += " ORDER BY h.created_at DESC LIMIT %s"
-            params.append(filters['limit'])
-            rows = conn.execute(query, tuple(params)).fetchall()
+            rows = conn.execute(query, tuple(params) + (limit, offset)).fetchall()
             for r in rows:
                 l_dict = dict(r)
                 if isinstance(l_dict.get('created_at'), datetime):
                     l_dict['created_at'] = l_dict['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                l_dict['meta'] = l_dict.get('event_data')
                 logs.append(l_dict)
-            # Also pull audit logs
-            audit_rows = conn.execute("""
+                
+            audit_count_row = conn.execute("SELECT COUNT(*) as cnt FROM audit_logs").fetchone()
+            audit_total_records = audit_count_row['cnt'] if audit_count_row else 0
+            audit_total_pages = max(1, (audit_total_records + audit_limit - 1) // audit_limit)
+            
+            audit_rows = conn.execute(f"""
                 SELECT a.*, u.name AS operator_name 
                 FROM audit_logs a 
                 LEFT JOIN users u ON a.user_id = u.id 
                 ORDER BY a.created_at DESC 
-                LIMIT 200
-            """).fetchall()
+                LIMIT %s OFFSET %s
+            """, (audit_limit, audit_offset)).fetchall()
+            
             audit_logs = []
             for r in audit_rows:
                 a_dict = dict(r)
@@ -6351,7 +6380,19 @@ def admin_activity():
     except Exception as e:
         print(f"Error loading activity logs: {e}")
         audit_logs = []
-    return render_template('admin/activity.html', current_user=user, logs=logs, audit_logs=audit_logs, filters=filters, active_tab='activity')
+        
+    return render_template(
+        'admin/activity.html', 
+        current_user=user, 
+        logs=logs, 
+        audit_logs=audit_logs, 
+        filters=filters, 
+        page=page, 
+        total_pages=total_pages, 
+        audit_page=audit_page, 
+        audit_total_pages=audit_total_pages, 
+        active_tab='activity'
+    )
 
 
 # ============================================================
@@ -7695,151 +7736,74 @@ def api_ai_scientist():
     ph = telemetry.get("ph", 7.0)
     temp = telemetry.get("temp", 24.5)
     
-    # Analyze active compounds in flask
-    has_acid = any(c in ['HCl', 'HNO3', 'H2SO4', 'CH3COOH'] for c in chemicals)
-    has_base = any(c in ['NaOH', 'KOH', 'Ca(OH)2'] for c in chemicals)
-    has_ch4 = 'CH4' in chemicals
-    has_o2 = 'O2' in chemicals
-    has_kclo3 = 'KClO3' in chemicals
-    has_fe = 'Fe' in chemicals
-    has_cuso4 = 'CuSO4' in chemicals
-    
-    response_text = ""
-    predicted_product = "N/A"
-    suggested_next = "N/A"
-    viva_questions = []
-    lab_report = {}
-    
-    # Default outputs based on chemicals
-    if has_acid and has_base:
-        predicted_product = "Salt + Water (e.g. NaCl + H2O)"
-        suggested_next = "Indicator (like Phenolphthalein) to test pH equivalence"
-        viva_questions = [
-            "Why does acid-base neutralization increase the temperature?",
-            "What defines a strong acid versus a weak acid?",
-            "What is the spectator ion in this neutralization?"
-        ]
-        lab_report = {
-            "objective": "To perform acid-base neutralization between acid and base.",
-            "procedure": "1. Measure acid and base reagents.\n2. Dispense acid into the flask.\n3. Add base drop-by-drop until pH reaches 7.0.",
-            "observations": f"The temperature rose to {temp}°C, indicating an exothermic reaction. The pH stabilized at {ph}.",
-            "calculations": "n(Acid) = Concentration * Volume = n(Base)",
-            "result": "Successful synthesis of neutral salt solution.",
-            "conclusion": "The reaction completed cleanly. Hydroxide and hydronium ions formed neutral water."
-        }
-        
-        if "Explain" in user_query or "explain" in user_query.lower():
-            response_text = "The hydronium ions (H⁺) from the acid are combining with the hydroxide ions (OH⁻) from the base to produce neutral water molecules (H₂O). This neutralization reaction is exothermic, releasing thermal energy and causing the temperature to rise."
-        elif "Predict" in user_query or "predict" in user_query.lower():
-            response_text = "The reaction will produce water and a dissolved salt. For example, HCl + NaOH will yield NaCl (Sodium Chloride) and H₂O."
-        elif "Suggest" in user_query or "suggest" in user_query.lower():
-            response_text = "To find the exact endpoint, you should add an indicator such as Phenolphthalein, which changes from colorless to pink as the solution crosses pH 8.3."
-        else:
-            response_text = "I observe an acid-base neutralization. Adding more base will increase the pH, while adding more acid will decrease it."
-            
-    elif has_ch4 and has_o2:
-        predicted_product = "CO2 + H2O + Heat (Carbon Dioxide and Water)"
-        suggested_next = "Measure carbon dioxide levels or collect water vapor"
-        viva_questions = [
-            "Why is combustion of methane classified as a redox reaction?",
-            "What is the activation energy required for methane combustion?",
-            "How does limiting oxygen affect the combustion products?"
-        ]
-        lab_report = {
-            "objective": "To observe the combustion of methane in the presence of oxygen.",
-            "procedure": "1. Introduce methane (CH4) gas into the chamber.\n2. Supply oxygen (O2).\n3. Ignite to initiate combustion.",
-            "observations": f"Rapid heat release (temperature reached {temp}°C). Carbon dioxide and water vapor were generated.",
-            "calculations": "CH4 + 2O2 -> CO2 + 2H2O",
-            "result": "Methane fully combusted into carbon dioxide and water.",
-            "conclusion": "Combustion of hydrocarbons is highly exothermic and yields carbon dioxide and water under sufficient oxygen supply."
-        }
-        if "Explain" in user_query or "explain" in user_query.lower():
-            response_text = "Methane is reacting with oxygen in a combustion reaction. The C-H bonds in methane and O=O bonds in oxygen are broken, forming more stable C=O bonds in carbon dioxide and H-O bonds in water, releasing a significant amount of heat."
-        elif "Predict" in user_query or "predict" in user_query.lower():
-            response_text = "Methane combustion produces Carbon Dioxide (CO₂) and Water (H₂O) along with significant heat release."
-        else:
-            response_text = "Methane combustion is active. The carbon atoms are being oxidized, and oxygen atoms are being reduced."
-            
-    elif has_kclo3:
-        predicted_product = "2KCl + 3O2 (Potassium Chloride and Oxygen Gas)"
-        suggested_next = "Heat the flask using the burner setup to decompose KClO3"
-        viva_questions = [
-            "What is the role of MnO2 catalyst in the decomposition of KClO3?",
-            "How do you test for the presence of oxygen gas?",
-            "What type of chemical reaction is this decomposition?"
-        ]
-        lab_report = {
-            "objective": "Preparation of Oxygen gas via thermal decomposition of Potassium Chlorate.",
-            "procedure": "1. Add solid Potassium Chlorate (KClO3) to the flask.\n2. Heat the flask using the burner.\n3. Collect the evolved gas via downward displacement of water.",
-            "observations": "Gas bubbles evolved rapidly upon heating. A white solid residue of KCl remained at the bottom.",
-            "calculations": "2KClO3 -> 2KCl + 3O2",
-            "result": "Oxygen gas successfully prepared and collected.",
-            "conclusion": "Thermal decomposition of chlorates yields chloride salt and oxygen gas."
-        }
-        if "Explain" in user_query or "explain" in user_query.lower():
-            response_text = "Upon heating, Potassium Chlorate decomposes thermally to produce Potassium Chloride solid and oxygen gas. This is a decomposition reaction."
-        elif "Predict" in user_query or "predict" in user_query.lower():
-            response_text = "The thermal decomposition of KClO₃ yields Potassium Chloride (KCl) solid residue and Oxygen (O₂) gas."
-        else:
-            response_text = "This setup is configured for Oxygen preparation. Apply heat to trigger decomposition of Potassium Chlorate!"
-            
-    elif has_fe and has_cuso4:
-        predicted_product = "FeSO4 + Cu (Iron(II) Sulfate and Metallic Copper)"
-        suggested_next = "Filter the mixture to retrieve the precipitated copper"
-        viva_questions = [
-            "Why does iron displace copper from its sulfate solution?",
-            "What color change is observed in the solution during this reaction?",
-            "Is this reaction a redox reaction?"
-        ]
-        lab_report = {
-            "objective": "To study the displacement reaction between Iron and Copper Sulfate.",
-            "procedure": "1. Dispense blue Copper Sulfate (CuSO4) solution into the flask.\n2. Add metallic Iron (Fe).\n3. Wait for the displacement reaction to occur.",
-            "observations": "The blue solution gradually turned green (FeSO4). A reddish-brown deposit of copper formed on the iron.",
-            "calculations": "Fe + CuSO4 -> FeSO4 + Cu",
-            "result": "Iron successfully displaced copper, producing copper precipitate.",
-            "conclusion": "Iron is more reactive than copper, displacing it in a single displacement redox reaction."
-        }
-        if "Explain" in user_query or "explain" in user_query.lower():
-            response_text = "Iron is more electropositive (reactive) than copper. It loses electrons to copper ions, dissolving to form Iron(II) Sulfate (green solution) while metallic copper deposits as a reddish-brown precipitate."
-        elif "Predict" in user_query or "predict" in user_query.lower():
-            response_text = "The products are Iron(II) Sulfate (FeSO₄) in solution and solid Copper (Cu) precipitate."
-        else:
-            response_text = "I observe a displacement reaction. Iron is displacing copper due to its higher reactivity."
-    else:
-        predicted_product = "N/A (No reaction active)"
-        suggested_next = "Add compatible reagents (e.g. Acid + Base, or Hydrocarbon + Oxygen)"
-        viva_questions = [
-            "What is the definition of a chemical element?",
-            "How does temperature affect chemical reaction rates?",
-            "What is the pH scale and what does it measure?"
-        ]
-        lab_report = {
-            "objective": "General chemical exploration inside the Virtual Sandbox.",
-            "procedure": f"1. Select chemicals from the shelf.\n2. Dispense them into the flask drop-zone.\n3. Observe telemetry changes.",
-            "observations": f"Flask currently contains: {', '.join(chemicals) if chemicals else 'No chemicals'}. pH is {ph} and Temperature is {temp}°C.",
-            "calculations": "N/A",
-            "result": "Explored chemical combinations.",
-            "conclusion": "Sandbox simulator is fully operational."
-        }
-        
-        if "ph" in user_query.lower():
-            response_text = f"The current pH is {ph}. In chemistry, pH is a scale used to specify the acidity or basicity of an aqueous solution. Acidic solutions have a lower pH, while basic solutions have a higher pH."
-        elif "temp" in user_query.lower() or "temperature" in user_query.lower():
-            response_text = f"The current temperature is {temp}°C. Dissolving solutes or mixing reagents can release heat (exothermic) or absorb heat (endothermic), altering the flask temperature."
-        elif "next" in user_query.lower() or "suggest" in user_query.lower():
-            response_text = "To start an experiment, try adding Hydrochloric Acid (HCl) and Sodium Hydroxide (NaOH) to perform an acid-base neutralization reaction."
-        elif "report" in user_query.lower() or "generate" in user_query.lower():
-            response_text = "Lab report outline generated. You can click 'Generate Lab Report' to download the full documentation!"
-        else:
-            response_text = f"Hello! I am your AI Scientist. I observe the flask currently contains {', '.join(chemicals) if chemicals else 'no chemicals'}. The pH is {ph} and temperature is {temp}°C."
+    if not openai_client:
+        return jsonify({"error": "AI service is not configured on the server."}), 500
 
-    return jsonify({
-        "response": response_text,
-        "predicted_product": predicted_product,
-        "suggested_next": suggested_next,
-        "viva_questions": viva_questions,
-        "lab_report": lab_report
-    })
+    system_prompt = f"""You are an AI Lab Scientist assisting a student in a virtual chemistry lab.
+Current Flask Telemetry:
+- Chemicals: {', '.join(chemicals) if chemicals else 'None'}
+- pH: {ph}
+- Temperature: {temp}°C
+
+Student Query: "{user_query}"
+
+You MUST output your final answer as a RAW JSON object. Do not include markdown code blocks like ```json around it. The JSON must exactly match this structure:
+{{
+  "response": "Your conversational, helpful response to the student's query based on the flask state.",
+  "predicted_product": "The chemical products formed by the chemicals in the flask, or 'N/A'.",
+  "suggested_next": "A suggestion for what the student should add or do next.",
+  "viva_questions": ["Question 1", "Question 2", "Question 3"],
+  "lab_report": {{
+    "objective": "Objective of the current experiment",
+    "procedure": "Steps being taken",
+    "observations": "What is observed based on the telemetry",
+    "calculations": "Any relevant chemical equations",
+    "result": "Result of the reaction",
+    "conclusion": "Final scientific conclusion"
+  }}
+}}"""
+
+    try:
+        completion = openai_client.chat.completions.create(
+            model="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": "Analyze the lab state and provide the JSON response."}
+            ],
+            temperature=0.4,
+            top_p=0.95,
+            max_tokens=2048,
+            extra_body={"chat_template_kwargs": {"enable_thinking": True}, "reasoning_budget": 1024},
+            stream=False
+        )
+        
+        reasoning = getattr(completion.choices[0].message, "reasoning_content", None)
+        content = completion.choices[0].message.content
+        
+        # Clean up in case the LLM outputs markdown formatting around the JSON
+        content = content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+        
+        parsed_data = json.loads(content)
+        parsed_data["reasoning"] = reasoning
+        return jsonify(parsed_data)
+        
+    except Exception as e:
+        print(f"Error calling Nemotron AI Scientist: {e}")
+        # Fallback to basic if LLM fails
+        return jsonify({
+            "response": "The AI Scientist encountered an error generating the complex analysis.",
+            "predicted_product": "Unknown",
+            "suggested_next": "Try restarting the experiment.",
+            "viva_questions": ["What went wrong?"],
+            "lab_report": {"objective": "", "procedure": "", "observations": "", "calculations": "", "result": "", "conclusion": ""}
+        })
 
 
 @app.route('/api/student/lab/reward', methods=['POST'])

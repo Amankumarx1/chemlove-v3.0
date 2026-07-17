@@ -106,6 +106,26 @@
             box-shadow: none !important;
         }
     </style>
+    <script>
+        // Global Fetch Interceptor for CSRF
+        const originalFetch = window.fetch;
+        window.fetch = async function() {
+            let [resource, config] = arguments;
+            if (!config) config = {};
+            
+            const method = (config.method || 'GET').toUpperCase();
+            if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+                const csrfInput = document.querySelector('input[name="csrf_token"]');
+                if (csrfInput && csrfInput.value) {
+                    config.headers = {
+                        ...config.headers,
+                        'X-CSRFToken': csrfInput.value
+                    };
+                }
+            }
+            return originalFetch(resource, config);
+        };
+    </script>
 </head>
 <body class="bg-background text-on-surface font-body min-h-screen relative overflow-x-hidden flex flex-col">
     <canvas class="particle-canvas" id="particles"></canvas>

@@ -1,4 +1,4 @@
-﻿{% extends "layouts/admin_base.html" %}
+{% extends "layouts/admin_base.html" %}
 {% block title %}Activity Logs | ChemLove Admin{% endblock %}
 {% block breadcrumb_active %}Activity Logs{% endblock %}
 
@@ -67,6 +67,14 @@
         <div class="px-4 py-12 text-center text-slate-600 text-xs">No user events recorded</div>
         {% endfor %}
       </div>
+      <!-- Pagination for User Events -->
+      <div class="p-3 border-t border-white/5 flex items-center justify-between text-[10px] text-slate-500 bg-black/10">
+        <a href="{{ url_for('admin_activity', event_type=filters.event_type, limit=filters.limit, page=page-1, audit_page=audit_page) }}" 
+           class="px-2 py-1 rounded bg-white/5 hover:bg-white/10 {% if page <= 1 %}pointer-events-none opacity-50{% endif %}">Prev</a>
+        <span>Page {{ page }} of {{ total_pages }}</span>
+        <a href="{{ url_for('admin_activity', event_type=filters.event_type, limit=filters.limit, page=page+1, audit_page=audit_page) }}" 
+           class="px-2 py-1 rounded bg-white/5 hover:bg-white/10 {% if page >= total_pages %}pointer-events-none opacity-50{% endif %}">Next</a>
+      </div>
     </div>
 
     <!-- Audit Log -->
@@ -91,6 +99,14 @@
         {% else %}
         <div class="px-4 py-12 text-center text-slate-600 text-xs">No admin actions recorded</div>
         {% endfor %}
+      </div>
+      <!-- Pagination for Audit Logs -->
+      <div class="p-3 border-t border-white/5 flex items-center justify-between text-[10px] text-slate-500 bg-black/10">
+        <a href="{{ url_for('admin_activity', event_type=filters.event_type, limit=filters.limit, page=page, audit_page=audit_page-1) }}" 
+           class="px-2 py-1 rounded bg-white/5 hover:bg-white/10 {% if audit_page <= 1 %}pointer-events-none opacity-50{% endif %}">Prev</a>
+        <span>Page {{ audit_page }} of {{ audit_total_pages }}</span>
+        <a href="{{ url_for('admin_activity', event_type=filters.event_type, limit=filters.limit, page=page, audit_page=audit_page+1) }}" 
+           class="px-2 py-1 rounded bg-white/5 hover:bg-white/10 {% if audit_page >= audit_total_pages %}pointer-events-none opacity-50{% endif %}">Next</a>
       </div>
     </div>
   </div>
