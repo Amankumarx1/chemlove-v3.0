@@ -1,3 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-primary: var(--color-primary, #4cd7f6);
+  --color-on-primary: var(--color-on-primary, #001f26);
+  --color-secondary: var(--color-secondary, #a1cedb);
+  --color-tertiary: var(--color-tertiary, #ffb0cd);
+  --color-background: var(--color-background, #0e1416);
+  --color-surface: var(--color-surface, #0e1416);
+  --color-primary-container: var(--color-primary-container, #06b6d4);
+  --color-tertiary-container: var(--color-tertiary-container, #ff79b4);
+  --color-surface-container: var(--color-surface-container, #1b2122);
+  --color-surface-container-low: var(--color-surface-container-low, #171d1e);
+  --color-surface-container-high: var(--color-surface-container-high, #252b2d);
+  --color-on-surface: var(--color-on-surface, #dee3e6);
+
+  --font-headline: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
